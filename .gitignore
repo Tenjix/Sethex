@@ -1,0 +1,36 @@
+## Ignore temporary files, build results and user specific files created by Visual Studio
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+x64/
+x86/
+[Dd]ebug/
+[Rr]elease/
+[Pp]ackages/
+[Gg]enerated/
+[Bb]inary/
+[Ll]og/
+
+# Cache/Options directory
+.vs/
+
+# Visual C++ cache files
+ipch/
+*.aps
+*.ncb
+*.opendb
+*.opensdf
+*.sdf
+*.cachefile
+*.VC.db
+
+# Visual Studio profiler
+*.psess
+*.vsp
+*.vspx
+*.sap
