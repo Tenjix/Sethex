@@ -6,6 +6,7 @@
 #include <cinder/Font.h>
 #include <cinder/ImageIo.h>
 #include <cinder/Unicode.h>
+#include <cinder/CameraUi.h>
 
 #include <utilities/Standard.h>
 
@@ -24,7 +25,7 @@ class Game {
 
 public:
 
-	void setup();
+	void setup(ci::CameraUi& camera_ui);
 	void resize();
 	void update(float elapsed_seconds, unsigned frames_per_second);
 	void render();

@@ -47,9 +47,6 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="resource.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
     <ClInclude Include="source\game\Game.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>

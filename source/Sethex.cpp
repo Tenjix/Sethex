@@ -1,6 +1,8 @@
 #include <cinder/app/App.h>
 #include <cinder/app/RendererGl.h>
 
+#include <cinder/CameraUi.h>
+
 #include <game/Game.h>
 
 using namespace ci;
@@ -10,6 +12,7 @@ using namespace std;
 
 class Sethex : public App {
 
+	CameraUi camera_ui;
 	Game game;
 
 public:
@@ -19,7 +22,11 @@ public:
 	void update() override;
 	void draw() override;
 
-	void mouseDown(MouseEvent event) override;
+	void mouseMove(MouseEvent event) override {};
+	void mouseDrag(MouseEvent event) override { camera_ui.mouseDrag(event); };
+	void mouseDown(MouseEvent event) override { camera_ui.mouseDown(event); };
+	void mouseUp(MouseEvent event) override { camera_ui.mouseUp(event); };
+	void mouseWheel(MouseEvent event) override { camera_ui.mouseWheel(event); };
 	void keyDown(KeyEvent event)override;
 	void keyUp(KeyEvent event) override;
 
@@ -27,10 +34,11 @@ public:
 
 void Sethex::setup() {
 	console() << "Sethex by Tenjix (Thomas Würstle)" << endl;
-	game.setup();
+	game.setup(camera_ui);
 }
 
 void Sethex::resize() {
+	camera_ui.setWindowSize(getWindowSize());
 	game.resize();
 }
 
@@ -41,8 +49,6 @@ void Sethex::update() {
 void Sethex::draw() {
 	game.render();
 }
-
-void Sethex::mouseDown(MouseEvent event) {}
 
 void Sethex::keyDown(KeyEvent event) {}
 

@@ -7,10 +7,11 @@ using namespace ci::app;
 using namespace gl;
 using namespace std;
 
-void Game::setup() {
+void Game::setup(CameraUi& camera_ui) {
+	camera_ui.setCamera(&camera);
 	font = Font(loadAsset("fonts/Icomoon.ttf"), 20.0f);
 	texture = Texture::create(loadImage(loadAsset("images/Background.jpg")));
-	shader = getStockShader(ShaderDef().lambert());
+	shader = getStockShader(ShaderDef().lambert().color());
 	camera.lookAt(vec3(5), vec3(0));
 	enableVerticalSync(false);
 }
@@ -26,7 +27,6 @@ void Game::update(float elapsed_seconds, unsigned frames_per_second) {
 	time += time_delta;
 }
 
-
 void Game::render() {
 	clear();
 
@@ -36,7 +36,15 @@ void Game::render() {
 	enableDepth(true);
 	setMatrices(camera);
 	shader->bind();
-	drawSphere(vec3(), 1.0f, 32);
+	//drawSphere(vec3(), 1.0f, 32);
+	drawColorCube(vec3(), vec3(1));
+	color(Color("red"));
+	drawVector(vec3(), vec3(1, 0, 0));
+	color(Color("green"));
+	drawVector(vec3(), vec3(0, 1, 0));
+	color(Color("blue"));
+	drawVector(vec3(), vec3(0, 0, 1));
+	color(Color("white"));
 	enableDepth(false);
 
 	setMatricesWindow(display_size);
