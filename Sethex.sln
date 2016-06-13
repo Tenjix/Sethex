@@ -3,8 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sethex", "Sethex.vcxproj", "{FF2D06EE-489C-4748-BC53-8D5BB1E7078C}"
+	ProjectSection(ProjectDependencies) = postProject
+		{6DF4559F-FA4B-42E9-A4E4-58A0582F8681} = {6DF4559F-FA4B-42E9-A4E4-58A0582F8681}
+		{434C06C2-924E-4408-9596-E89B8267921F} = {434C06C2-924E-4408-9596-E89B8267921F}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Ensys", "..\Ensys\Ensys.vcxproj", "{434C06C2-924E-4408-9596-E89B8267921F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{6DF4559F-FA4B-42E9-A4E4-58A0582F8681} = {6DF4559F-FA4B-42E9-A4E4-58A0582F8681}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Utilities", "..\Utilities\Utilities.vcxproj", "{6DF4559F-FA4B-42E9-A4E4-58A0582F8681}"
 EndProject

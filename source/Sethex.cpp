@@ -1,4 +1,4 @@
-#include <cinder/app/App.h>
+﻿#include <cinder/app/App.h>
 #include <cinder/app/RendererGl.h>
 
 #include <cinder/CameraUi.h>
@@ -33,7 +33,7 @@ public:
 };
 
 void Sethex::setup() {
-	console() << "Sethex by Tenjix (Thomas W�rstle)" << endl;
+	console() << "Sethex by Tenjix (Thomas Würstle)" << endl;
 	game.setup(camera_ui);
 }
 

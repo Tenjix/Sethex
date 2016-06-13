@@ -8,9 +8,13 @@
 #include <cinder/Unicode.h>
 #include <cinder/CameraUi.h>
 
+#include <ensys/World.h>
+
 #include <utilities/Standard.h>
 
 class Game {
+
+	es::World world;
 
 	ci::Font font;
 	ci::CameraPersp camera;
