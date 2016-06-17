@@ -1,38 +1,39 @@
 #pragma once
 
-#include <cinder/gl/gl.h>
-#include <cinder/gl/Texture.h>
-
 #include <cinder/Font.h>
 #include <cinder/ImageIo.h>
 #include <cinder/Unicode.h>
 #include <cinder/CameraUi.h>
 
-#include <ensys/World.h>
+#include <sethex/Common.h>
+#include <sethex/EntitySystem.h>
+#include <sethex/Graphics.h>
 
-#include <utilities/Standard.h>
+namespace sethex {
 
-class Game {
+	class Game {
 
-	es::World world;
+		World world;
 
-	ci::Font font;
-	ci::CameraPersp camera;
-	shared<ci::gl::GlslProg> shader;
-	shared<ci::gl::Texture> texture;
-	shared<ci::gl::TextureFont> texture_font;
-	glm::ivec2 display_size;
+		Font font;
+		PerspectiveCamera camera;
 
-	float time;
-	float time_delta;
-	unsigned frames_per_second;
+		shared<FrameBuffer> framebuffer;
+		shared<Texture> background;
 
-public:
+		unsigned2 display_size;
 
-	void setup(ci::CameraUi& camera_ui);
-	void resize();
-	void update(float elapsed_seconds, unsigned frames_per_second);
-	void render();
+		float time;
+		float time_delta;
+		unsigned frames_per_second;
 
-};
+	public:
 
+		void setup(ci::CameraUi& camera_ui);
+		void resize();
+		void update(float elapsed_seconds, unsigned frames_per_second);
+		void render();
+
+	};
+
+}

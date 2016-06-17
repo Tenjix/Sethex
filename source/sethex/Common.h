@@ -1,0 +1,21 @@
+#pragma once
+
+#include <glm/glm.hpp>
+
+#include <utilities/Properties.h>
+#include <utilities/Standard.h>
+
+namespace sethex {
+
+	using float2 = glm::vec2;
+	using float3 = glm::vec3;
+	using float4 = glm::vec4;
+	using signed2 = glm::ivec2;
+	using signed3 = glm::ivec3;
+	using signed4 = glm::ivec4;
+	using unsigned2 = glm::uvec2;
+	using unsigned3 = glm::uvec3;
+	using unsigned4 = glm::uvec4;
+	using quaternion = glm::quat;
+
+}

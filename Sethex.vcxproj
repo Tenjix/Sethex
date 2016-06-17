@@ -205,12 +205,20 @@
   <ItemGroup>
     <ClCompile Include="source\game\Game.cpp" />
     <ClCompile Include="source\Sethex.cpp" />
+    <ClCompile Include="source\systems\RenderSystem.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="assets\texts\Credits.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\components\Geometry.h" />
+    <ClInclude Include="source\components\Material.h" />
     <ClInclude Include="source\game\Game.h" />
+    <ClInclude Include="source\sethex\EntitySystem.h" />
+    <ClInclude Include="source\sethex\Graphics.h" />
+    <ClInclude Include="source\sethex\Common.h" />
+    <ClInclude Include="source\systems\RenderSystem.h" />
+    <ClInclude Include="source\utilities\cinder\OutputRedirection.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
