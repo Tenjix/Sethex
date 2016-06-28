@@ -1,7 +1,7 @@
 #pragma once
 
-#include <components/Geometry.h>
-#include <components/Material.h>
+#include <sethex/components/Geometry.h>
+#include <sethex/components/Material.h>
 
 namespace sethex {
 
@@ -13,7 +13,7 @@ namespace sethex {
 			filter.required_types.insert<Geometry, Material>();
 		}
 
-		void update(float delta_time) override {}; // do nothing on update
+		void update(float delta_time) override {};
 		void render();
 
 	};

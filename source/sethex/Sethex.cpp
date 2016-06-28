@@ -2,13 +2,13 @@
 #include <cinder/app/RendererGl.h>
 #include <cinder/CameraUi.h>
 
-#include <game/Game.h>
+#include <sethex/game/Game.h>
 
 #include <utilities/cinder/OutputRedirection.h>
 
-using namespace ci;
-using namespace ci::app;
-using namespace ci::utilities;
+using namespace cinder;
+using namespace cinder::app;
+using namespace cinder::utilities;
 using namespace std;
 
 namespace sethex {
@@ -39,6 +39,7 @@ namespace sethex {
 	void Sethex::setup() {
 		redirectOutputStreams(redirection_buffer);
 		print("Sethex by Tenjix (Thomas Würstle)");
+		debug("Cinder Version ", CINDER_VERSION_STR);
 		game.setup(camera_ui);
 	}
 
@@ -60,6 +61,10 @@ namespace sethex {
 	void Sethex::keyUp(KeyEvent event) {
 		if (event.getCode() == KeyEvent::KEY_F11) {
 			getWindow()->setFullScreen(!getWindow()->isFullScreen());
+		}
+		if (event.getCode() == KeyEvent::KEY_SPACE) {
+			auto& camera = const_cast<CameraPersp&>(camera_ui.getCamera());
+			camera.lookAt(vec3(0, 0, 2), vec3(0));
 		}
 	}
 

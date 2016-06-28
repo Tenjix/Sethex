@@ -99,7 +99,8 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>"..\..\..\..\..\External Projects\C++\Cinder\include";..\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>Ensys.lib;OpenGL32.lib;cinder-$(PlatformToolset)_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -125,7 +126,8 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>source;"..\..\..\External Projects\C++\Cinder\include"</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>Ensys.lib;OpenGL32.lib;cinder-$(PlatformToolset)_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -151,7 +153,8 @@
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
     </ProjectReference>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>"..\..\..\..\..\External Projects\C++\Cinder\include";..\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>Ensys.lib;OpenGL32.lib;cinder-$(PlatformToolset).lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -180,7 +183,8 @@
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
     </ProjectReference>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>source;"..\..\..\..\External Projects\C++\Cinder\include"</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>Ensys.lib;OpenGL32.lib;cinder-$(PlatformToolset).lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -203,22 +207,29 @@
     <ResourceCompile Include="Resources.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\game\Game.cpp" />
-    <ClCompile Include="source\Sethex.cpp" />
-    <ClCompile Include="source\systems\RenderSystem.cpp" />
+    <ClCompile Include="source\sethex\data\ModelLoader.cpp" />
+    <ClCompile Include="source\sethex\data\ModelSource.cpp" />
+    <ClCompile Include="source\sethex\game\Game.cpp" />
+    <ClCompile Include="source\sethex\Sethex.cpp" />
+    <ClCompile Include="source\sethex\systems\RenderSystem.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="assets\texts\Credits.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="source\components\Geometry.h" />
-    <ClInclude Include="source\components\Material.h" />
-    <ClInclude Include="source\game\Game.h" />
+    <ClInclude Include="source\sethex\components\Geometry.h" />
+    <ClInclude Include="source\sethex\components\Material.h" />
+    <ClInclude Include="source\sethex\data\Model.h" />
+    <ClInclude Include="source\sethex\data\ModelLoader.h" />
+    <ClInclude Include="source\sethex\data\ModelSource.h" />
+    <ClInclude Include="source\sethex\game\Game.h" />
     <ClInclude Include="source\sethex\EntitySystem.h" />
     <ClInclude Include="source\sethex\Graphics.h" />
     <ClInclude Include="source\sethex\Common.h" />
-    <ClInclude Include="source\systems\RenderSystem.h" />
+    <ClInclude Include="source\sethex\systems\RenderSystem.h" />
     <ClInclude Include="source\utilities\cinder\OutputRedirection.h" />
+    <ClInclude Include="source\utilities\cinder\ShaderUtilities.h" />
+    <ClInclude Include="source\utilities\cinder\Watchdog.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

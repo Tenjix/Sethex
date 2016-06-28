@@ -1,8 +1,6 @@
 #pragma once
 
 #include <cinder/Font.h>
-#include <cinder/ImageIo.h>
-#include <cinder/Unicode.h>
 #include <cinder/CameraUi.h>
 
 #include <sethex/Common.h>
@@ -16,18 +14,22 @@ namespace sethex {
 		World world;
 
 		Font font;
+		Color font_color;
 		PerspectiveCamera camera;
 
 		shared<FrameBuffer> framebuffer;
 		shared<Texture> background;
 
 		unsigned2 display_size;
+		cinder::vec2 x;
 
 		float time;
 		float time_delta;
 		unsigned frames_per_second;
 
 	public:
+
+		String message;
 
 		void setup(ci::CameraUi& camera_ui);
 		void resize();

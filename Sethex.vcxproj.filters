@@ -29,13 +29,19 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\Sethex.cpp">
+    <ClCompile Include="source\sethex\game\Game.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="source\game\Game.cpp">
+    <ClCompile Include="source\sethex\systems\RenderSystem.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="source\systems\RenderSystem.cpp">
+    <ClCompile Include="source\sethex\Sethex.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="source\sethex\data\ModelLoader.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="source\sethex\data\ModelSource.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
@@ -50,18 +56,6 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="source\game\Game.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="source\systems\RenderSystem.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="source\components\Geometry.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="source\components\Material.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
     <ClInclude Include="source\sethex\Graphics.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
@@ -71,7 +65,34 @@
     <ClInclude Include="source\sethex\Common.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="source\sethex\components\Geometry.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sethex\components\Material.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sethex\data\Model.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sethex\data\ModelLoader.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sethex\game\Game.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sethex\systems\RenderSystem.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
     <ClInclude Include="source\utilities\cinder\OutputRedirection.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sethex\data\ModelSource.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\utilities\cinder\Watchdog.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\utilities\cinder\ShaderUtilities.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>
