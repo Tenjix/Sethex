@@ -15,8 +15,11 @@ namespace sethex {
 		SharedPointerProperty<Shader, Material> shader;
 		std::vector<shared<Texture>> textures;
 
+		Property<bool, Material> transparent = false;
+
 		Material(const shared<Shader>& shader = nullptr) : shader(shader) {
 			this->shader._property_owner(this);
+			this->transparent._property_owner(this);
 		}
 
 		static shared<Material> create(const shared<Shader>& shader = nullptr) {

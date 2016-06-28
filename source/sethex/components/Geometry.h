@@ -27,7 +27,7 @@ namespace sethex {
 			return std::make_shared<Geometry>(mesh);
 		}
 
-		void bind() {
+		void render() {
 			using namespace ci::gl;
 			pushModelMatrix();
 			translate(position);

@@ -1,3 +1,4 @@
+// shadertype=glsl
 #version 150
 
 // #undef DIFFUSE_TEXTURE
@@ -40,11 +41,11 @@ void main() {
 	float roughness = clamp(uRoughness, 0.0001, 1.0);
 	float transparency = clamp(uTransparency, 0.0, 1.0);
 	float alpha = 1.0 - transparency;
-	
+
 	vec3 diffuse_color = uDiffuseColor;
 	vec3 specular_color = uSpecularColor;
 	vec3 emissive_color = uEmissiveColor;
-	
+
 	#ifdef DIFFUSE_TEXTURE
 		vec4 mapped_diffuse = texture(uDiffuseTexture, vTexCoord0);
 		diffuse_color *= mapped_diffuse.rgb;
@@ -73,7 +74,7 @@ void main() {
 	vec3 reflection_direction = normalize(reflect(-direction_to_light, normal_direction));
 
 	float diffuse_intensity = light_intensity * max(dot(normal_direction, direction_to_light), 0.0);
-	float specular_intensity = light_intensity * pow(max(dot(reflection_direction, direction_to_camera), 0.0), 1.0/roughness);
+	float specular_intensity = light_intensity * pow(max(dot(reflection_direction, direction_to_camera), 0.0), 1.0 / roughness);
 	float emissive_intensity = 1.0 + max(dot(normal_direction, direction_to_camera), 0.0);
 
 	vec3 diffuse = diffuse_color * max(diffuse_intensity, ambience);

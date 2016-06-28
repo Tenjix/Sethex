@@ -64,7 +64,7 @@ namespace sethex {
 		}
 		if (event.getCode() == KeyEvent::KEY_SPACE) {
 			auto& camera = const_cast<CameraPersp&>(camera_ui.getCamera());
-			camera.lookAt(vec3(0, 0, 2), vec3(0));
+			camera.lookAt(vec3(0, 0, 2.5), vec3(0));
 		}
 	}
 

@@ -24,7 +24,7 @@ namespace sethex {
 		font = Font(loadAsset("fonts/Icomoon.ttf"), 20.0f);
 		font_color = Color::white();
 		background = Texture::create(loadImage(loadAsset("images/Background.jpg")));
-		camera.lookAt(float3(0, 0, 2), float3(0));
+		camera.lookAt(float3(0, 0, 2.5), float3(0));
 		enableVerticalSync(false);
 
 		vector<float3> positions = {
@@ -52,6 +52,7 @@ namespace sethex {
 
 		shared<Shader> unlit_texture_shader = getStockShader(ShaderDef().texture());
 		shared<Shader> lit_texture_shader = getStockShader(ShaderDef().texture().lambert());
+		shared<Shader> lambert_shader = getStockShader(ShaderDef().lambert());
 
 		//Entity entity1 = world.create_entity();
 		//entity1.add<Geometry>().mesh = plane_mesh;
@@ -87,6 +88,7 @@ namespace sethex {
 		//mesh = Mesh::create(geom::Sphere());
 
 		//string vertex_shader = loadString(loadAsset("shaders/Material.vertex.shader"));
+		//shader::define(vertex_shader, "HEIGHT_MAP");
 		//string fragment_shader = loadString(loadAsset("shaders/Material.fragment.shader"));
 		//shader::define(fragment_shader, "DIFFUSE_TEXTURE", "SPECULAR_TEXTURE", "EMISSIVE_TEXTURE", "NORMAL_MAP");
 		//shared<Shader> material_shader = Shader::create(vertex_shader, fragment_shader);
@@ -97,36 +99,82 @@ namespace sethex {
 
 		Entity cube = world.create_entity();
 		cube.add<Geometry>().mesh(Mesh::create(Cube())).position(float3(0, 0, 0));
-		Material& material = cube.add<Material>()
+		Material& cube_material = cube.add<Material>()
 			.add_texture(Texture::create(loadImage(loadAsset("textures/test.diffuse.png"))))
 			.add_texture(Texture::create(loadImage(loadAsset("textures/test.specular.png"))))
 			.add_texture(Texture::create(loadImage(loadAsset("textures/test.emission.png"))))
 			.add_texture(Texture::create(loadImage(loadAsset("textures/test.normal.png"))));
 
-		//Entity cube = world.create_entity();
-		//cube.add<Geometry>().mesh(Mesh::create(Cube())).position(float3(0, 0, 0));
-		//Material& material = cube.add<Material>()
-		//	.add_texture(Texture::create(loadImage(loadAsset("textures/earth/diffuse.jpg"))))
-		//	.add_texture(Texture::create(loadImage(loadAsset("textures/earth/specular.jpg"))))
-		//	.add_texture(Texture::create(loadImage(loadAsset("textures/earth/emission.jpg"))))
-		//	.add_texture(Texture::create(loadImage(loadAsset("textures/earth/normal.jpg"))))
-		//	.add_texture(Texture::create(loadImage(loadAsset("textures/earth/height.jpg"))))
-		//	.add_texture(Texture::create(loadImage(loadAsset("textures/earth/clouds.png"))));
+		Entity transparent_cube = world.create_entity();
+		transparent_cube.add<Geometry>().mesh(Mesh::create(Cube())).position(float3(0, 0, 0));
+		Material& transparent_cube_material = transparent_cube.add<Material>().transparent(true)
+			.add_texture(Texture::create(loadImage(loadAsset("textures/frame.png"))));
 
-		wd::watch("shaders/*", [&game = *this, &shader = material.shader](const fs::path& path) {
-			print("compiling shader ", path, " ...");
+		//shared<Mesh> plane = Mesh::create(geom::Plane() >> geom::Scale(0.5));
+		//shared<Mesh> plane = plane_mesh;
+
+		//world.create_entity("top", [&plane, &cube](Entity entity) {
+		//	entity.add<Geometry>().mesh(plane).position(float3(0.0, 0.5, 0.0));
+		//	entity.add_shared<Material>(cube);
+		//});
+		//world.create_entity("bottom", [&plane, &cube](Entity entity) {
+		//	entity.add<Geometry>().mesh(plane).position(float3(0.0, -0.5, 0.0)).rotation(quaternion(vec3(M_PI, 0.0, 0.0)));
+		//	entity.add_shared<Material>(cube);
+		//});
+		//world.create_entity("right", [&plane, &cube](Entity entity) {
+		//	entity.add<Geometry>().mesh(plane).position(float3(0.5, 0.0, 0.0)).rotation(quaternion(vec3(0.0, 0.0, -0.5 * M_PI)));
+		//	entity.add_shared<Material>(cube);
+		//});
+		//world.create_entity("left", [&plane, &cube](Entity entity) {
+		//	entity.add<Geometry>().mesh(plane).position(float3(-0.5, 0, 0)).rotation(quaternion(vec3(0.0, 0.0, 0.5 * M_PI)));
+		//	entity.add_shared<Material>(cube);
+		//});
+		//world.create_entity("front", [&plane, &cube](Entity entity) {
+		//	entity.add<Geometry>().mesh(plane).position(float3(0.0, 0.0, 0.5)).rotation(quaternion(vec3(0.5 * M_PI, 0.0, 0.0)));
+		//	entity.add_shared<Material>(cube);
+		//});
+		//world.create_entity("back", [&plane, &cube](Entity entity) {
+		//	entity.add<Geometry>().mesh(plane).position(float3(0.0, 0.0, -0.5)).rotation(quaternion(vec3(-0.5 * M_PI, 0.0, 0.0)));
+		//	entity.add_shared<Material>(cube);
+		//});
+
+		//Entity e = world.create_entity();
+		//e.add<Geometry>().mesh(Mesh::create(WireIcosahedron()));
+		//e.add<Material>().shader(lambert_shader);
+
+		//Entity earth = world.create_entity();
+		//earth.add<Geometry>().mesh(Mesh::create(geom::Icosphere().subdivisions(4))).position(float3(0, 0, 0));
+		//Material& earth_material = earth.add<Material>()
+		//	.add_texture(Texture::create(loadImage(loadAsset("textures/earth/day.jpg"))))
+		//	.add_texture(Texture::create(loadImage(loadAsset("textures/earth/specular.jpg"))))
+		//	.add_texture(Texture::create(loadImage(loadAsset("textures/earth/lights.jpg"))))
+		//	.add_texture(Texture::create(loadImage(loadAsset("textures/earth/normal.jpg"))))
+		//	.add_texture(Texture::create(loadImage(loadAsset("textures/earth/topography.jpg"))));
+		//.add_texture(Texture::create(loadImage(loadAsset("textures/earth/bathymetry.jpg"))))
+		//.add_texture(Texture::create(loadImage(loadAsset("textures/earth/night.jpg"))))
+		//.add_texture(Texture::create(loadImage(loadAsset("textures/earth/clouds.png"))));
+
+		wd::watch("shaders/*", [&game = *this, &shader = cube_material.shader](const fs::path& path) {
+			print("compiling shader ...");
 			try {
-				string vertex_shader = loadString(loadAsset("shaders/Material.vertex.shader"));
-				string fragment_shader = loadString(loadAsset("shaders/Material.fragment.shader"));
-				shader::define(fragment_shader, "DIFFUSE_TEXTURE", "SPECULAR_TEXTURE", "EMISSIVE_TEXTURE", "NORMAL_MAP");
-				//shader::define(fragment_shader, "NORMAL_MAP");
-				shader = Shader::create(vertex_shader, fragment_shader);
-				shader->uniform("uDiffuseTexture", 0);
-				shader->uniform("uSpecularTexture", 1);
-				shader->uniform("uEmissiveTexture", 2);
-				shader->uniform("uNormalMap", 3);
-				//shader->uniform("uDiffuseColor", vec3(0.0));
-				//shader->uniform("uEmissiveColor", vec3(0.0));
+				if (true) {
+					string vertex_shader = loadString(loadAsset("shaders/Wireframe.vertex.shader"));
+					string fragment_shader = loadString(loadAsset("shaders/Wireframe.fragment.shader"));
+					string geometry_shader = loadString(loadAsset("shaders/Wireframe.geometry.shader"));
+					shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
+				} else {
+					string vertex_shader = loadString(loadAsset("shaders/Material.vertex.shader"));
+					//shader::define(vertex_shader, "HEIGHT_MAP");
+					string fragment_shader = loadString(loadAsset("shaders/Material.fragment.shader"));
+					shader::define(fragment_shader, "DIFFUSE_TEXTURE", "SPECULAR_TEXTURE", "EMISSIVE_TEXTURE", "NORMAL_MAP");
+					//shader::define(fragment_shader, "DIFFUSE_TEXTURE");
+					shader = Shader::create(vertex_shader, fragment_shader);
+					shader->uniform("uDiffuseTexture", 0);
+					shader->uniform("uSpecularTexture", 1);
+					shader->uniform("uEmissiveTexture", 2);
+					shader->uniform("uNormalMap", 3);
+					//shader->uniform("uHeightMap", 4);
+				}
 				game.message = "shader compiled successfully";
 			} catch (GlslProgCompileExc exception) {
 				error(exception.what());
@@ -157,9 +205,9 @@ namespace sethex {
 		draw(background);
 
 		framebuffer->bindFramebuffer();
+		enableDepth(true);
 		clear(Color(0, 0, 0, 0));
 		setMatrices(camera);
-		enableDepth(true);
 		world.get<RenderSystem>().render();
 		enableDepth(false);
 		framebuffer->unbindFramebuffer();
