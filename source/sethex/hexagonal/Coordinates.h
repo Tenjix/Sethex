@@ -143,6 +143,14 @@ namespace sethex {
 				return not operator==(other);
 			}
 
+			String to_string(unsigned spacing = 3) const;
+
+			operator String() const { return to_string(); }
+
+			float2 to_floats() const { return float2(_u, _v); }
+
+			operator float2() const { return to_floats(); }
+
 			// Convertes these hexagonal coordinates to cartesian coordinates.
 			float2 to_cartesian() const {
 				return float2(static_cast<float>(Sqrt_3 * (_u + _v / 2.0)), static_cast<float>(3.0 / 2.0 * _v));
@@ -153,10 +161,6 @@ namespace sethex {
 				float2 cartesian = to_cartesian();
 				return float3(cartesian.x, 0.0f, cartesian.y);
 			}
-
-			String to_string(unsigned spacing = 3) const;
-
-			operator String() const { return to_string(); }
 
 			// Calculates the hexagonal coordinates of the given cartesian coordinates.
 			static Coordinates of(float x, float y) {

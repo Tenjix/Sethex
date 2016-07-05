@@ -47,10 +47,10 @@ namespace sethex {
 			//.add_texture(Texture::create(loadImage(loadAsset("textures/test.emission.png"))))
 			//.add_texture(Texture::create(loadImage(loadAsset("textures/test.normal.png"))))
 
-		map = Coordinates::rectangle(4, 3);
-		auto iterator = map.begin();
-		world.create_entities(map.size(), "", [&iterator, &mesh, &material, &sethex, &labels = this->labels](Entity entity) {
-			Coordinates& coordinates = *iterator++;
+		map = Map(4, 3);
+		auto iterator = map.coordinates().begin();
+		world.create_entities(map.coordinates().size(), "", [&iterator, &mesh, &material, &sethex, &labels = this->labels](Entity entity) {
+			const Coordinates& coordinates = *iterator++;
 			//print(coordinates, " -> ", coordinates.to_position());
 			entity.add<Geometry>().mesh(mesh).position(coordinates.to_position());
 			entity.add(material);
@@ -124,8 +124,8 @@ namespace sethex {
 		enableDepth(false);
 
 		getStockShader(ShaderDef().color())->bind();
-		float2 screen_position = mouse;
-		Ray ray = camera.generateRay(screen_position, display_size);
+		float2 mouse_position = mouse;
+		Ray ray = camera.generateRay(mouse_position, display_size);
 		float distance;
 		bool hit = ray.calcPlaneIntersection(float3(), float3(0, 1, 0), &distance);
 		float3 intersection_position;
@@ -133,16 +133,17 @@ namespace sethex {
 		if (hit) {
 			intersection_position = ray.calcPosition(distance);
 			intersection_coordinates = Coordinates::of(intersection_position);
-			drawCube(intersection_coordinates.to_position(), float3(0.1f));
+			//drawCube(intersection_coordinates.to_position(), float3(0.1f));
 		}
 		drawVector(ray.getOrigin(), ray.getOrigin() + ray.getDirection() * 10.0f);
 		drawCoordinateFrame();
 		framebuffer->unbindFramebuffer();
 
 		setMatricesWindow(display_size);
+		draw(framebuffer->getColorTexture());
 		int i = 0;
 		Area display_area(getWindowBounds());
-		for (Coordinates& coordinates : map) {
+		for (const Coordinates& coordinates : map.coordinates()) {
 			auto texture = labels[i++];
 			float3 world_position = coordinates.to_position();
 			bool behind_camera = camera.worldToEyeDepth(world_position) > 0.0;
@@ -153,16 +154,23 @@ namespace sethex {
 			draw(texture, screen_position - float2(texture->getSize()) / 2.0f);
 
 			//String text = coordinates.to_string();
-			if (hit and coordinates == intersection_coordinates) {
-				String text = "hit";
-				vec2 offset = font->measureString(text) / 2.0f;
-				offset.x = -offset.x;
-				font->drawString(text, screen_position + offset);
-			}
+			//if (hit and coordinates == intersection_coordinates) {
+			//	String text = "hit";
+			//	vec2 offset = font->measureString(text) / 2.0f;
+			//	offset.x = -offset.x;
+			//	font->drawString(text, screen_position + offset);
+			//}
 
 			//drawStringCentered(coordinates.to_string(), screen_position, font_color, font);
 		}
-		draw(framebuffer->getColorTexture());
+		if (hit) {
+			String text = map.contains(intersection_coordinates) ? "in" : "out";
+			vec2 offset = font->measureString(text) / 2.0f;
+			offset.x = -offset.x;
+			float3 world_position = intersection_coordinates.to_position();
+			float2 screen_position = camera.worldToScreen(world_position, static_cast<float>(display_size.x), static_cast<float>(display_size.y));
+			font->drawString(text, screen_position + offset);
+		}
 		//color(1.0, 0.0, 0.0, 1.0);
 		//texture_font->drawString(u8"\ue000 Sethex by Thomas Würstle \ue001", float2(250, 250));
 		drawString(u8"\ue000 Sethex", float2(10, 10), font_color, font->getFont());

@@ -6,7 +6,7 @@
 #include <sethex/Common.h>
 #include <sethex/EntitySystem.h>
 #include <sethex/Graphics.h>
-#include <sethex/hexagonal/Coordinates.h>
+#include <sethex/hexagonal/Map.h>
 
 namespace sethex {
 
@@ -28,7 +28,7 @@ namespace sethex {
 		float time_delta;
 		unsigned frames_per_second;
 
-		vector<hexagonal::Coordinates> map;
+		hexagonal::Map map;
 		vector<shared<Texture>> labels;
 
 	public:

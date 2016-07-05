@@ -35,15 +35,15 @@ namespace sethex {
 
 		vector<Coordinates> Coordinates::rectangle(unsigned width, unsigned height, const Coordinates& origin, bool centered) {
 			vector<Coordinates> rectangle;
+			rectangle.reserve(width * height);
 			if (width == 0 and height == 0) return rectangle;
-			int v_start = centered ? -static_cast<int>(height / 2) : 0;
-			int v_end = centered ? v_start + height : height;
-			int u_start = centered ? -static_cast<int>(width / 2) : 0;
-			int u_end = centered ? u_start + width : width;
-			for (int v = v_start; v < v_end; v++) {
-				int offset = v / 2;
-				if (v % 2 == -1) offset--;
-				for (int u = u_start - offset; u < u_end - offset; u++) {
+			int v_begin = centered ? -static_cast<int>(height / 2) : 0;
+			int v_end = centered ? v_begin + height : height;
+			int u_begin = centered ? -static_cast<int>(width / 2) : 0;
+			int u_end = centered ? u_begin + width : width;
+			for (int v = v_begin; v < v_end; v++) {
+				int shift = v / 2 - (v % 2 == -1);
+				for (int u = u_begin - shift; u < u_end - shift; u++) {
 					rectangle.push_back(origin + Coordinates(u, v));
 				}
 			}
