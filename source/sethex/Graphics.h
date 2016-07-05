@@ -10,6 +10,7 @@ namespace sethex {
 	using Color = ci::ColorA;
 	using Font = ci::Font;
 
+	using TextureFont = ci::gl::TextureFont;
 	using Texture = ci::gl::Texture;
 	using Shader = ci::gl::GlslProg;
 	using Mesh = ci::gl::VboMesh;

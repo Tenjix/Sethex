@@ -19,8 +19,8 @@ uniform vec3 uEmissiveColor = vec3(1.0);
 uniform float uNormalIntensity = 1.0;
 
 uniform float uAmbience = 0.1;
-uniform float uSpecularity = 1.0;
-uniform float uLuminosity = 1.0;
+uniform float uSpecularity = 0.0;
+uniform float uLuminosity = 0.0;
 uniform float uRoughness = 0.1;
 uniform float uTransparency = 0.0;
 

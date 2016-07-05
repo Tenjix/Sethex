@@ -210,6 +210,7 @@
     <ClCompile Include="source\sethex\data\ModelLoader.cpp" />
     <ClCompile Include="source\sethex\data\ModelSource.cpp" />
     <ClCompile Include="source\sethex\game\Game.cpp" />
+    <ClCompile Include="source\sethex\hexagonal\Coordinates.cpp" />
     <ClCompile Include="source\sethex\Sethex.cpp" />
     <ClCompile Include="source\sethex\systems\RenderSystem.cpp" />
   </ItemGroup>
@@ -222,10 +223,13 @@
     <ClInclude Include="source\sethex\data\Model.h" />
     <ClInclude Include="source\sethex\data\ModelLoader.h" />
     <ClInclude Include="source\sethex\data\ModelSource.h" />
+    <ClInclude Include="source\sethex\data\Text.h" />
     <ClInclude Include="source\sethex\game\Game.h" />
     <ClInclude Include="source\sethex\EntitySystem.h" />
     <ClInclude Include="source\sethex\Graphics.h" />
     <ClInclude Include="source\sethex\Common.h" />
+    <ClInclude Include="source\sethex\hexagonal\Coordinates.h" />
+    <ClInclude Include="source\sethex\hexagonal\Map.h" />
     <ClInclude Include="source\sethex\systems\RenderSystem.h" />
     <ClInclude Include="source\utilities\cinder\OutputRedirection.h" />
     <ClInclude Include="source\utilities\cinder\ShaderUtilities.h" />

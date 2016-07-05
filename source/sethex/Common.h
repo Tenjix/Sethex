@@ -1,6 +1,10 @@
 #pragma once
 
+#include <vector>
+#include <unordered_map>
+
 #include <glm/glm.hpp>
+#include <glm/gtx/io.hpp>
 
 #include <utilities/Properties.h>
 #include <utilities/Standard.h>
@@ -17,5 +21,9 @@ namespace sethex {
 	using unsigned3 = glm::uvec3;
 	using unsigned4 = glm::uvec4;
 	using quaternion = glm::quat;
+	using matrix = glm::mat4x4;
+
+	using std::vector;
+	using std::unordered_map;
 
 }

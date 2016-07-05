@@ -6,6 +6,7 @@
 #include <sethex/Common.h>
 #include <sethex/EntitySystem.h>
 #include <sethex/Graphics.h>
+#include <sethex/hexagonal/Coordinates.h>
 
 namespace sethex {
 
@@ -13,7 +14,7 @@ namespace sethex {
 
 		World world;
 
-		Font font;
+		shared<TextureFont> font;
 		Color font_color;
 		PerspectiveCamera camera;
 
@@ -27,9 +28,13 @@ namespace sethex {
 		float time_delta;
 		unsigned frames_per_second;
 
+		vector<hexagonal::Coordinates> map;
+		vector<shared<Texture>> labels;
+
 	public:
 
 		String message;
+		unsigned2 mouse;
 
 		void setup(ci::CameraUi& camera_ui);
 		void resize();

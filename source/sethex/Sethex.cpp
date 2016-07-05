@@ -26,7 +26,7 @@ namespace sethex {
 		void update() override;
 		void draw() override;
 
-		void mouseMove(MouseEvent event) override {};
+		void mouseMove(MouseEvent event) override { game.mouse = event.getPos(); };
 		void mouseDrag(MouseEvent event) override { camera_ui.mouseDrag(event); };
 		void mouseDown(MouseEvent event) override { camera_ui.mouseDown(event); };
 		void mouseUp(MouseEvent event) override { camera_ui.mouseUp(event); };
@@ -38,6 +38,7 @@ namespace sethex {
 
 	void Sethex::setup() {
 		redirectOutputStreams(redirection_buffer);
+		getWindow()->setTitle("Sethex");
 		print("Sethex by Tenjix (Thomas Würstle)");
 		debug("Cinder Version ", CINDER_VERSION_STR);
 		game.setup(camera_ui);
@@ -64,7 +65,7 @@ namespace sethex {
 		}
 		if (event.getCode() == KeyEvent::KEY_SPACE) {
 			auto& camera = const_cast<CameraPersp&>(camera_ui.getCamera());
-			camera.lookAt(vec3(0, 0, 2.5), vec3(0));
+			camera.lookAt(vec3(0, 2.5, 2.5), vec3(0));
 		}
 	}
 

@@ -44,6 +44,9 @@
     <ClCompile Include="source\sethex\data\ModelSource.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="source\sethex\hexagonal\Coordinates.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resources.rc">
@@ -68,9 +71,6 @@
     <ClInclude Include="source\sethex\components\Geometry.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="source\sethex\components\Material.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
     <ClInclude Include="source\sethex\data\Model.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
@@ -93,6 +93,18 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="source\utilities\cinder\ShaderUtilities.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sethex\hexagonal\Coordinates.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sethex\components\Material.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sethex\data\Text.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sethex\hexagonal\Map.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,5 +1,7 @@
 #include "RenderSystem.h"
 
+#include <sethex/hexagonal/Coordinates.h>
+
 using namespace cinder::gl;
 
 namespace sethex {
@@ -20,7 +22,7 @@ namespace sethex {
 			} else {
 				geometry.render();
 			}
-
+			material.unbind();
 		}
 	}
 
