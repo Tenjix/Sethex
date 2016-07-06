@@ -41,13 +41,16 @@ namespace sethex {
 
 		//Entity entity = world.create_entity();
 		//entity.add<Geometry>().mesh(mesh).position(float3(0, 0, 0));
+		//entity.has<Geometry>().then([](Geometry& geometry) {
+		//	print("yup");
+		//});
 		//entity.add(material);
 			//.add_texture(Texture::create(loadImage(loadAsset("textures/test.diffuse.png"))))
 			//.add_texture(Texture::create(loadImage(loadAsset("textures/test.specular.png"))))
 			//.add_texture(Texture::create(loadImage(loadAsset("textures/test.emission.png"))))
 			//.add_texture(Texture::create(loadImage(loadAsset("textures/test.normal.png"))))
 
-		map = Map(4, 3);
+		map = Map(9, 8);
 		auto iterator = map.coordinates().begin();
 		world.create_entities(map.coordinates().size(), "", [&iterator, &mesh, &material, &sethex, &labels = this->labels](Entity entity) {
 			const Coordinates& coordinates = *iterator++;
@@ -56,7 +59,6 @@ namespace sethex {
 			entity.add(material);
 
 			TextLayout layout;
-			//layout.clear(Color(0.2f, 0.2f, 0.2f, 0.2f));
 			layout.setFont(sethex);
 			layout.setColor(Color(1, 1, 1));
 			layout.addLine(coordinates.w + "     " + coordinates.u);
@@ -113,6 +115,7 @@ namespace sethex {
 
 	void Game::render() {
 		if (display_size.x == 0 or display_size.y == 0) return;
+		float2 screen_size = display_size;
 		setMatricesWindow(display_size);
 		draw(background);
 
@@ -148,7 +151,7 @@ namespace sethex {
 			float3 world_position = coordinates.to_position();
 			bool behind_camera = camera.worldToEyeDepth(world_position) > 0.0;
 			if (behind_camera) continue;
-			float2 screen_position = camera.worldToScreen(world_position, static_cast<float>(display_size.x), static_cast<float>(display_size.y));
+			float2 screen_position = camera.worldToScreen(world_position, screen_size.x, screen_size.y);
 			bool on_screen = display_area.contains(screen_position);
 			if (not on_screen) continue;
 			draw(texture, screen_position - float2(texture->getSize()) / 2.0f);
@@ -164,12 +167,38 @@ namespace sethex {
 			//drawStringCentered(coordinates.to_string(), screen_position, font_color, font);
 		}
 		if (hit) {
-			String text = map.contains(intersection_coordinates) ? "in" : "out";
+			bool on_map = map.contains(intersection_coordinates);
+			String text = on_map ? "in" : "out";
 			vec2 offset = font->measureString(text) / 2.0f;
 			offset.x = -offset.x;
 			float3 world_position = intersection_coordinates.to_position();
-			float2 screen_position = camera.worldToScreen(world_position, static_cast<float>(display_size.x), static_cast<float>(display_size.y));
+			float2 screen_position = camera.worldToScreen(world_position, screen_size.x, screen_size.y);
+			Color color(0, 1, 0);
 			font->drawString(text, screen_position + offset);
+			auto draw_coordinates = [&instance = *this, &screen_size, &color](const Coordinates& coordinates) {
+				float2 screen_position = instance.camera.worldToScreen(coordinates.to_position(), screen_size.x, screen_size.y);
+				TextLayout layout;
+				layout.setFont(instance.font->getFont());
+				layout.setColor(color);
+				layout.addLine(coordinates.w + "     " + coordinates.u);
+				layout.addCenteredLine("" + coordinates.v);
+				auto texture = Texture::create(layout.render(true, false));
+				draw(texture, screen_position - float2(texture->getSize()) / 2.0f);
+			};
+			Coordinates reprojected_coordinates = map.reproject(intersection_coordinates);
+			draw_coordinates(reprojected_coordinates);
+			color = Color(0, 0, 1);
+			map.neighbor(reprojected_coordinates, Direction::NorthEast).then(draw_coordinates);
+			color = Color(0, 0.5f, 1);
+			map.neighbor(reprojected_coordinates, Direction::East).then(draw_coordinates);
+			color = Color(0, 1, 1);
+			map.neighbor(reprojected_coordinates, Direction::SouthEast).then(draw_coordinates);
+			color = Color(1, 0, 0);
+			map.neighbor(reprojected_coordinates, Direction::SouthWest).then(draw_coordinates);
+			color = Color(1, 0.5f, 0);
+			map.neighbor(reprojected_coordinates, Direction::West).then(draw_coordinates);
+			color = Color(1, 1, 0);
+			map.neighbor(reprojected_coordinates, Direction::NorthWest).then(draw_coordinates);
 		}
 		//color(1.0, 0.0, 0.0, 1.0);
 		//texture_font->drawString(u8"\ue000 Sethex by Thomas Würstle \ue001", float2(250, 250));

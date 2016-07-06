@@ -3,6 +3,7 @@
 #include <sethex/hexagonal/Coordinates.h>
 
 #include <utilities/Optional.h>
+#include <utilities/Mathematics.h>
 
 namespace sethex {
 
@@ -20,6 +21,18 @@ namespace sethex {
 
 			vector<Coordinates> content;
 
+			int u_offset(int v) {
+				return v / 2 - (v < 0 and odd(v));
+			}
+
+			bool within_horizontal_limits(int u, int offset) {
+				return u >= u_begin - offset and u <= u_end - offset;
+			}
+
+			bool within_vertical_limits(int v) {
+				return v >= v_begin and v <= v_end;
+			}
+
 		public:
 
 			const vector<Coordinates>& coordinates() const {
@@ -30,33 +43,49 @@ namespace sethex {
 
 			Map(unsigned width, unsigned height) : width(width), height(height) {
 				u_begin = -static_cast<int>(width / 2);
-				u_end = u_begin + width;
+				u_end = u_begin + width - 1;
 				v_begin = -static_cast<int>(height / 2);
-				v_end = v_begin + height;
+				v_end = v_begin + height - 1;
 				content.reserve(width * height);
-				for (int v = v_begin; v < v_end; v++) {
-					int shift = (v % 2 == -1) ? (v / 2 - 1) : (v / 2);
-					for (int u = u_begin - shift; u < u_end - shift; u++) {
+				for (int v = v_begin; v <= v_end; v++) {
+					int offset = u_offset(v);
+					for (int u = u_begin - offset; u <= u_end - offset; u++) {
 						content.push_back(Coordinates(u, v));
 					}
 				}
 			}
 
 			bool within_horizontal_limits(Coordinates coordinates) {
-				int shift = coordinates.v / 2 - (coordinates.v % 2 == -1);
-				return coordinates.u >= u_begin - shift and coordinates.u < u_end - shift;
+				return within_horizontal_limits(coordinates.u, u_offset(coordinates.v));
 			}
 
 			bool within_vertical_limits(Coordinates coordinates) {
-				return coordinates.v >= v_begin and coordinates.v < v_end;
+				return within_vertical_limits(coordinates.v);
 			}
 
 			bool contains(Coordinates coordinates) {
 				return within_vertical_limits(coordinates) and within_horizontal_limits(coordinates);
 			}
 
-			Optional<Coordinates> neighbor(Coordinates coordinates, Direction direction) {
-				return Optional<Coordinates>();
+			Potential<Coordinates> neighbor(const Coordinates& coordinates, Direction direction) {
+				Coordinates neighbor_coordinates = coordinates.neighbor(direction);
+				if (not within_vertical_limits(neighbor_coordinates)) return nullptr;
+				return reproject(neighbor_coordinates);
+			}
+
+			// reprojects "coordinates" into the map by wrapping horizontally and vertically
+			Coordinates reproject(const Coordinates& coordinates) {
+				int u = coordinates.u;
+				int v = coordinates.v;
+				int offset = u_offset(v);
+				if (not within_horizontal_limits(u, offset)) {
+					u = project(u, u_begin - offset, u_end - offset);
+				}
+				if (not within_vertical_limits(v)) {
+					v = project(v, v_begin, v_end);
+					u -= u_offset(v) - offset;
+				}
+				return Coordinates(u, v);
 			}
 
 		};

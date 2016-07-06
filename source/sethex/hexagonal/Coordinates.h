@@ -6,6 +6,7 @@
 #include <sethex/Common.h>
 
 #include <utilities/Exceptions.h>
+#include <utilities/Mathematics.h>
 
 namespace sethex {
 
@@ -25,13 +26,17 @@ namespace sethex {
 			int get_v() const { return _v; }
 			int get_w() const { return 0 - _u - _v; }
 
+			int set_u(int u) { return _u = u; }
+			int set_v(int v) { return _v = v; }
+			int set_w(int w) { _u = 0 - _v - w; return w; }
+
 		public:
 
 			static const Coordinates Origin;
 
-			ReadonlyValueProperty<int, Coordinates, &Coordinates::get_u> u;
-			ReadonlyValueProperty<int, Coordinates, &Coordinates::get_v> v;
-			ReadonlyValueProperty<int, Coordinates, &Coordinates::get_w> w;
+			UnrestrictedValueProperty<int, Coordinates, &Coordinates::get_u, &Coordinates::set_u> u;
+			UnrestrictedValueProperty<int, Coordinates, &Coordinates::get_v, &Coordinates::set_v> v;
+			UnrestrictedValueProperty<int, Coordinates, &Coordinates::get_w, &Coordinates::set_w> w;
 
 			// Creates coordinates by rounding from floating point values. The value with the biggest deviation from an integer will be adjusted to satisfy u + v + w = 0.
 			Coordinates(double u, double v, double w) {
