@@ -3,6 +3,7 @@
 #include <vector>
 #include <unordered_map>
 
+#define GLM_SWIZZLE
 #include <glm/glm.hpp>
 #include <glm/gtx/io.hpp>
 
@@ -23,6 +24,7 @@ namespace sethex {
 	using quaternion = glm::quat;
 	using matrix = glm::mat4x4;
 
+	using std::pair;
 	using std::vector;
 	using std::unordered_map;
 

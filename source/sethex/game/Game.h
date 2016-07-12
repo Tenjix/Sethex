@@ -6,6 +6,9 @@
 #include <sethex/Common.h>
 #include <sethex/EntitySystem.h>
 #include <sethex/Graphics.h>
+#include <sethex/game/Input.h>
+
+#include <sethex/components/Display.h>
 #include <sethex/hexagonal/Map.h>
 
 namespace sethex {
@@ -16,13 +19,8 @@ namespace sethex {
 
 		shared<TextureFont> font;
 		Color font_color;
-		PerspectiveCamera camera;
 
-		shared<FrameBuffer> framebuffer;
 		shared<Texture> background;
-
-		unsigned2 display_size;
-		cinder::vec2 x;
 
 		float time;
 		float time_delta;
@@ -33,8 +31,8 @@ namespace sethex {
 
 	public:
 
+		Input input;
 		String message;
-		unsigned2 mouse;
 
 		void setup(ci::CameraUi& camera_ui);
 		void resize();

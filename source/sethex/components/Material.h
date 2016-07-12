@@ -14,7 +14,7 @@ namespace sethex {
 
 		Property<String, Material> name;
 		SharedPointerProperty<Shader, Material> shader;
-		std::vector<shared<Texture>> textures;
+		Textures textures;
 
 		Property<bool, Material> transparent = false;
 
@@ -34,13 +34,22 @@ namespace sethex {
 		}
 
 		virtual void bind() {
+			//if (gl::context()->getGlslProg() != shader().get())	
 			shader->bind();
+			bind_textures();
+		}
+
+		virtual void unbind() {
+			unbind_textures();
+		}
+
+		virtual void bind_textures() {
 			for (uint8 i = 0; i < number_of_textures(); i++) {
 				textures[i]->bind(i);
 			}
 		}
 
-		virtual void unbind() {
+		virtual void unbind_textures() {
 			for (uint8 i = 0; i < number_of_textures(); i++) {
 				textures[i]->unbind(i);
 			}

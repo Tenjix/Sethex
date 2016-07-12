@@ -33,6 +33,8 @@ namespace sethex {
 		public:
 
 			static const Coordinates Origin;
+			static const float2 Spacing;
+			static const float2 Tilesize;
 
 			UnrestrictedValueProperty<int, Coordinates, &Coordinates::get_u, &Coordinates::set_u> u;
 			UnrestrictedValueProperty<int, Coordinates, &Coordinates::get_v, &Coordinates::set_v> v;
@@ -152,9 +154,9 @@ namespace sethex {
 
 			operator String() const { return to_string(); }
 
-			float2 to_floats() const { return float2(_u, _v); }
+			float3 to_floats() const { return float3(_u, _v, w); }
 
-			operator float2() const { return to_floats(); }
+			operator float3() const { return to_floats(); }
 
 			// Convertes these hexagonal coordinates to cartesian coordinates.
 			float2 to_cartesian() const {

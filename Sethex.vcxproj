@@ -97,6 +97,7 @@
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <DisableSpecificWarnings>4503</DisableSpecificWarnings>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>
@@ -124,6 +125,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <DisableSpecificWarnings>4503</DisableSpecificWarnings>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>
@@ -148,6 +150,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <DisableSpecificWarnings>4503</DisableSpecificWarnings>
     </ClCompile>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -178,6 +181,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <DisableSpecificWarnings>4503</DisableSpecificWarnings>
     </ClCompile>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -213,13 +217,17 @@
     <ClCompile Include="source\sethex\hexagonal\Coordinates.cpp" />
     <ClCompile Include="source\sethex\Sethex.cpp" />
     <ClCompile Include="source\sethex\systems\RenderSystem.cpp" />
+    <ClCompile Include="source\sethex\systems\TileSystem.cpp" />
+    <ClCompile Include="source\utilities\cinder\Assets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="assets\texts\Credits.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\sethex\components\Display.h" />
     <ClInclude Include="source\sethex\components\Geometry.h" />
     <ClInclude Include="source\sethex\components\Material.h" />
+    <ClInclude Include="source\sethex\components\Tile.h" />
     <ClInclude Include="source\sethex\data\Model.h" />
     <ClInclude Include="source\sethex\data\ModelLoader.h" />
     <ClInclude Include="source\sethex\data\ModelSource.h" />
@@ -230,9 +238,12 @@
     <ClInclude Include="source\sethex\Common.h" />
     <ClInclude Include="source\sethex\hexagonal\Coordinates.h" />
     <ClInclude Include="source\sethex\hexagonal\Map.h" />
+    <ClInclude Include="source\sethex\game\Input.h" />
     <ClInclude Include="source\sethex\systems\RenderSystem.h" />
+    <ClInclude Include="source\sethex\systems\TileSystem.h" />
+    <ClInclude Include="source\utilities\cinder\Assets.h" />
     <ClInclude Include="source\utilities\cinder\OutputRedirection.h" />
-    <ClInclude Include="source\utilities\cinder\ShaderUtilities.h" />
+    <ClInclude Include="source\utilities\cinder\Shaders.h" />
     <ClInclude Include="source\utilities\cinder\Watchdog.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

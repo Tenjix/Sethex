@@ -26,7 +26,7 @@ namespace sethex {
 		void update() override;
 		void draw() override;
 
-		void mouseMove(MouseEvent event) override { game.mouse = event.getPos(); };
+		void mouseMove(MouseEvent event) override { game.input.mouse.position = event.getPos(); };
 		void mouseDrag(MouseEvent event) override { camera_ui.mouseDrag(event); };
 		void mouseDown(MouseEvent event) override { camera_ui.mouseDown(event); };
 		void mouseUp(MouseEvent event) override { camera_ui.mouseUp(event); };
