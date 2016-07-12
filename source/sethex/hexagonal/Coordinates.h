@@ -26,9 +26,9 @@ namespace sethex {
 			int get_v() const { return _v; }
 			int get_w() const { return 0 - _u - _v; }
 
-			int set_u(int u) { return _u = u; }
-			int set_v(int v) { return _v = v; }
-			int set_w(int w) { _u = 0 - _v - w; return w; }
+			void set_u(int u) { _u = u; }
+			void set_v(int v) { _v = v; }
+			void set_w(int w) { _u = 0 - _v - w; }
 
 		public:
 
@@ -36,9 +36,9 @@ namespace sethex {
 			static const float2 Spacing;
 			static const float2 Tilesize;
 
-			UnrestrictedValueProperty<int, Coordinates, &Coordinates::get_u, &Coordinates::set_u> u;
-			UnrestrictedValueProperty<int, Coordinates, &Coordinates::get_v, &Coordinates::set_v> v;
-			UnrestrictedValueProperty<int, Coordinates, &Coordinates::get_w, &Coordinates::set_w> w;
+			ByValueProperty<int, Coordinates, &Coordinates::get_u, &Coordinates::set_u> u;
+			ByValueProperty<int, Coordinates, &Coordinates::get_v, &Coordinates::set_v> v;
+			ByValueProperty<int, Coordinates, &Coordinates::get_w, &Coordinates::set_w> w;
 
 			// Creates coordinates by rounding from floating point values. The value with the biggest deviation from an integer will be adjusted to satisfy u + v + w = 0.
 			Coordinates(double u, double v, double w) {
@@ -53,9 +53,9 @@ namespace sethex {
 				else if (delta_v > delta_w) rounded_v = 0 - rounded_u - rounded_w;
 				_u = static_cast<int>(rounded_u);
 				_v = static_cast<int>(rounded_v);
-				this->u._property_owner(this);
-				this->v._property_owner(this);
-				this->w._property_owner(this);
+				this->u.owner = this;
+				this->v.owner = this;
+				this->w.owner = this;
 			}
 
 			// Creates coordinates by rounding from floating point values.
@@ -68,9 +68,9 @@ namespace sethex {
 
 			// Creates coordinates with constraint u + v + w = 0.
 			Coordinates(int u, int v) : _u(u), _v(v) {
-				this->u._property_owner(this);
-				this->v._property_owner(this);
-				this->w._property_owner(this);
+				this->u.owner = this;
+				this->v.owner = this;
+				this->w.owner = this;
 			}
 
 			// Creates coordinates of the origin.

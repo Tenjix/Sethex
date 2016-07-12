@@ -12,16 +12,16 @@ namespace sethex {
 
 	public:
 
-		Property<String, Material> name;
-		SharedPointerProperty<Shader, Material> shader;
+		SharedProperty<Shader, Material> shader;
 		Textures textures;
 
-		Property<bool, Material> transparent = false;
+		Property<String, Material> name;
+		Property<bool, Material> transparent;
 
-		Material() {
-			this->name._property_owner(this);
-			this->shader._property_owner(this);
-			this->transparent._property_owner(this);
+		Material(const shared<Shader>& shader = nullptr) : transparent(false) {
+			this->shader.owner = this;
+			name.owner = this;
+			transparent.owner = this;
 		}
 
 		static shared<Material> create() {
@@ -34,7 +34,6 @@ namespace sethex {
 		}
 
 		virtual void bind() {
-			//if (gl::context()->getGlslProg() != shader().get())	
 			shader->bind();
 			bind_textures();
 		}

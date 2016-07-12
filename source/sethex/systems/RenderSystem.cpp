@@ -75,19 +75,19 @@ namespace sethex {
 	void RenderSystem::on_entity_added(const Entity& entity) {
 		auto& material = entity.get<Material>();
 		auto& geometry = entity.get<Geometry>();
-		auto shader = material.shader.address();
+		auto& shader = *material.shader;
 		auto& textures = material.textures;
-		auto mesh = geometry.mesh.address();
-		entity_mapping[shader][&material][mesh].insert(entity);
+		auto& mesh = *geometry.mesh;
+		entity_mapping[&shader][&material][&mesh].insert(entity);
 	}
 
 	void RenderSystem::on_entity_removed(const Entity& entity) {
 		auto& material = entity.get<Material>();
 		auto& geometry = entity.get<Geometry>();
-		auto shader = material.shader.address();
+		auto& shader = *material.shader;
 		auto& textures = material.textures;
-		auto mesh = geometry.mesh.address();
-		entity_mapping[shader][&material][mesh].erase(entity);
+		auto& mesh = *geometry.mesh;
+		entity_mapping[&shader][&material][&mesh].erase(entity);
 	}
 
 }

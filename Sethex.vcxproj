@@ -231,7 +231,6 @@
     <ClInclude Include="source\sethex\data\Model.h" />
     <ClInclude Include="source\sethex\data\ModelLoader.h" />
     <ClInclude Include="source\sethex\data\ModelSource.h" />
-    <ClInclude Include="source\sethex\data\Text.h" />
     <ClInclude Include="source\sethex\game\Game.h" />
     <ClInclude Include="source\sethex\EntitySystem.h" />
     <ClInclude Include="source\sethex\Graphics.h" />

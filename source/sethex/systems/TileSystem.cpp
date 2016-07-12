@@ -55,7 +55,7 @@ namespace sethex {
 
 	void TileSystem::update(float delta_time) {
 		static Display& display = world->find_entity("Main Display").get<Display>();
-		focus_position = display.camera.getEyePoint();
+		focus_position = display.camera.getPivotPoint();
 		focus_position.z = 0;
 		focus_coordinates = Coordinates::of(focus_position);
 		focus_range = { focus_position.x - focus_expansion, focus_position.x + focus_expansion };
@@ -76,11 +76,11 @@ namespace sethex {
 	void TileSystem::update(Entity& entity, float delta_time) {
 		auto& geometry = entity.get<Geometry>();
 		auto& tile = entity.get<Tile>();
-		auto position = geometry.position();
+		auto& position = geometry.position();
 		if (not focus_range.contains(position.x)) {
-			position.x += map.width * Coordinates::Spacing.x * signum(focus_position.x - position.x);
+			geometry.position->x += map.width * Coordinates::Spacing.x * signum(focus_position.x - position.x);
+			//position.x += map.width * Coordinates::Spacing.x * signum(focus_position.x - position.x);
 		}
-		geometry.position = position;
 		//auto area = Coordinates::rectangle(map.width, map.height, focus_coordinates);
 		//for (auto coordinates : area) {
 		//	auto reprojected_coordinates = map.reproject(coordinates);

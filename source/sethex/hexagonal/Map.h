@@ -49,13 +49,13 @@ namespace sethex {
 			}
 
 			Map() : width(), height(), u_begin(), u_end(), v_begin(), v_end() {
-				width.object = this;
-				height.object = this;
+				width.owner = this;
+				height.owner = this;
 			}
 
 			Map(unsigned width, unsigned height) : width(width), height(height) {
-				this->width.object = this;
-				this->height.object = this;
+				this->width.owner = this;
+				this->height.owner = this;
 				u_begin = -static_cast<int>(width / 2);
 				u_end = u_begin + width - 1;
 				v_begin = -static_cast<int>(height / 2);

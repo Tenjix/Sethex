@@ -104,9 +104,6 @@
     <ClInclude Include="source\sethex\components\Material.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="source\sethex\data\Text.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
     <ClInclude Include="source\sethex\hexagonal\Map.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
