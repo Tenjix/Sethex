@@ -8,7 +8,7 @@
 
 namespace sethex {
 
-	class Material : public Component {
+	class Material : public ObservableComponent {
 
 	public:
 
@@ -18,17 +18,18 @@ namespace sethex {
 		Property<String, Material> name;
 		Property<bool, Material> transparent;
 
-		Material(const shared<Shader>& shader = nullptr) : transparent(false) {
+		Material(const shared<Shader>& shader = nullptr) : shader(shader), transparent(false) {
 			this->shader.owner = this;
+			this->shader.attach([this]() { notify(); });
 			name.owner = this;
 			transparent.owner = this;
 		}
 
-		static shared<Material> create() {
-			return std::make_shared<Material>();
+		static shared<Material> create(const shared<Shader>& shader = nullptr) {
+			return std::make_shared<Material>(shader);
 		}
 
-		Material& add_texture(const shared<Texture>& texture) {
+		Material& add(const shared<Texture>& texture) {
 			textures.push_back(texture);
 			return *this;
 		}

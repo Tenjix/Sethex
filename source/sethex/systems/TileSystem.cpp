@@ -30,20 +30,23 @@ namespace sethex {
 		shader->uniform("uDiffuseTexture", 0);
 		shader->uniform("uOverlayTexture", 1);
 		shared<Texture> hexagon_texure = Texture::create(loadImage(loadAsset("textures/pointy.png")), Texture::Format().mipmap());
+		//auto material = Material::create(shader);
+		//material->add(hexagon_texure);
 
 		auto iterator = map.coordinates().begin();
-		world->create_entities(map.coordinates().size(), "Tile #", [&iterator, &mesh, &shader, &font, &hexagon_texure](Entity entity) {
+		world->create_entities(map.coordinates().size(), "Tile #", [&iterator, &mesh, &shader, &font, &hexagon_texure/*, &material*/](Entity entity) {
 			const Coordinates& coordinates = *iterator++;
 			entity.add<Geometry>().mesh(mesh).position(coordinates.to_position());
-			auto& material = entity.add<Material>().name(entity.name + " Material").shader(shader).add_texture(hexagon_texure);
 			entity.add<Tile>().coordinates = coordinates;
+			//entity.add(material);
+			auto& material = entity.add<Material>().name(entity.name + " Material").shader(shader).add(hexagon_texure);
 			TextLayout layout;
 			layout.setFont(font);
 			layout.setColor(Color(1, 1, 1));
 			layout.addLine(coordinates.w + "     " + coordinates.u);
 			layout.addCenteredLine("" + coordinates.v);
 			auto texture = Texture::create(layout.render(true, false));
-			material.add_texture(texture);
+			material.add(texture);
 		});
 		//for (size_t i = 0; i < map.coordinates().size(); i++) {
 		//	auto& coordinates = map.coordinates()[i];

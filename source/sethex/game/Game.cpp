@@ -9,8 +9,8 @@
 #include <sethex/systems/RenderSystem.h>
 #include <sethex/systems/TileSystem.h>
 
-//#include <utilities/cinder/Watchdog.h>
-//#include <utilities/cinder/Shaders.h>
+#include <utilities/cinder/Watchdog.h>
+#include <utilities/cinder/Shaders.h>
 
 using namespace cinder;
 using namespace cinder::geom;
@@ -32,40 +32,48 @@ namespace sethex {
 		display.camera.lookAt(float3(0, 2.5, 2.5), float3(0));
 		enableVerticalSync(false);
 
-		//shared<Texture> texinate_texture = Texture::create(loadImage(loadAsset("images/Texinates.jpg")));
-		//shared<Texture> checker_texture = Texture::create(loadImage(loadAsset("images/Checker.jpg")));
+		shared<Mesh> mesh = Mesh::create(geom::Plane() >> geom::Rotate(quaternion(float3())));
 
-		//shared<Shader> unlit_texture_shader = getStockShader(ShaderDef().texture());
-		//shared<Shader> lit_texture_shader = getStockShader(ShaderDef().texture().lambert());
-		//shared<Shader> lambert_shader = getStockShader(ShaderDef().lambert());
+		Entity terrain = world.create_entity();
+		terrain.add<Geometry>().mesh(mesh).position(float3(0.0, 0.01, 0.0));
+		auto& material = terrain.add<Material>()
+			.add(Texture::create(loadImage(loadAsset("textures/test.diffuse.png"))))
+			.add(Texture::create(loadImage(loadAsset("textures/test.specular.png"))))
+			.add(Texture::create(loadImage(loadAsset("textures/test.emissive.png"))))
+			.add(Texture::create(loadImage(loadAsset("textures/test.normal.png"))));
 
-		//shared<Mesh> mesh = Mesh::create(geom::Circle() >> geom::Rotate(quaternion(float3(-Pi_Half, Pi_Half, 0.0f))));
+		wd::watch("shaders/*", [this, &shader = material.shader](const fs::path& path) {
+			print("compiling shader ...");
+			try {
+				if (false) {
+					string vertex_shader = loadString(loadAsset("shaders/Wireframe.vertex.shader"));
+					string fragment_shader = loadString(loadAsset("shaders/Wireframe.fragment.shader"));
+					string geometry_shader = loadString(loadAsset("shaders/Wireframe.geometry.shader"));
+					shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
+				} else {
+					string vertex_shader = loadString(loadAsset("shaders/Material.vertex.shader"));
+					//shader::define(vertex_shader, "HEIGHT_MAP");
+					string fragment_shader = loadString(loadAsset("shaders/Material.fragment.shader"));
+					shader::define(fragment_shader, "DIFFUSE_TEXTURE", "SPECULAR_TEXTURE", "EMISSIVE_TEXTURE", "NORMAL_MAP");
+					shader = Shader::create(vertex_shader, fragment_shader);
+					shader->uniform("uDiffuseTexture", 0);
+					shader->uniform("uSpecularTexture", 1);
+					shader->uniform("uEmissiveTexture", 2);
+					shader->uniform("uNormalMap", 3);
+					//shader->uniform("uHeightMap", 4);
+					shader->uniform("uSpecularity", 1.0f);
+					shader->uniform("uLuminosity", 1.0f);
 
-		//string vertex_shader = loadString(loadAsset("shaders/Material.vertex.shader"));
-		//string fragment_shader = loadString(loadAsset("shaders/Material.fragment.shader"));
-		//shader::define(fragment_shader, "DIFFUSE_TEXTURE", "OVERLAY_TEXTURE");
-		//shared<Shader> shader = Shader::create(vertex_shader, fragment_shader);
-		//shader->setLabel("Tile Shader");
-		//shader->uniform("uDiffuseTexture", 0);
-		//shader->uniform("uOverlayTexture", 1);
-		//shared<Texture> hexagon_texure = Texture::create(loadImage(loadAsset("textures/pointy.png")), Texture::Format().mipmap());
+				}
+				message = "shader compiled successfully";
 
-		//Font coordinate_font = Font(font_type, 100.0f);
-		//map = Map(9, 8);
-		//auto iterator = map.coordinates().begin();
-		//world.create_entities(map.coordinates().size(), "Tile #", [&iterator, &mesh, &shader, &coordinate_font, &hexagon_texure, &labels = this->labels](Entity entity) {
-		//	const Coordinates& coordinates = *iterator++;
-		//	entity.add<Geometry>().mesh(mesh).position(coordinates.to_position());
-		//	auto& material = entity.add<Material>().name(entity.name + " Material").shader(shader).add_texture(hexagon_texure);
-		//	TextLayout layout;
-		//	layout.setFont(coordinate_font);
-		//	layout.setColor(Color(1, 1, 1));
-		//	layout.addLine(coordinates.w + "     " + coordinates.u);
-		//	layout.addCenteredLine("" + coordinates.v);
-		//	auto texture = Texture::create(layout.render(true, false));
-		//	labels.push_back(texture);
-		//	material.add_texture(texture);
-		//});
+			} catch (GlslProgCompileExc exception) {
+				error(exception.what());
+				message = exception.what();
+
+			}
+		});
+
 
 		world.add<RenderSystem>();
 		world.add<TileSystem>(input);
@@ -95,94 +103,6 @@ namespace sethex {
 
 		world.get<RenderSystem>().render();
 
-		//display.framebuffer->bindFramebuffer();
-		//enableDepth(true);
-		//clear(Color(0, 0, 0, 0));
-		//setMatrices(display.camera);
-		//world.get<RenderSystem>().render();
-		//enableDepth(false);
-
-		//getStockShader(ShaderDef().color())->bind();
-		//float2 mouse_position = mouse;
-		//Ray ray = display.camera.generateRay(mouse_position, display.size);
-		//float distance;
-		//bool hit = ray.calcPlaneIntersection(float3(), float3(0, 1, 0), &distance);
-		//float3 intersection_position;
-		//Coordinates intersection_coordinates;
-		//if (hit) {
-		//	intersection_position = ray.calcPosition(distance);
-		//	intersection_coordinates = Coordinates::of(intersection_position);
-		//	//drawCube(intersection_coordinates.to_position(), float3(0.1f));
-		//}
-		//drawVector(ray.getOrigin(), ray.getOrigin() + ray.getDirection() * 10.0f);
-		//drawCoordinateFrame();
-		//display.framebuffer->unbindFramebuffer();
-
-		//setMatricesWindow(display.size);
-		//draw(display.framebuffer->getColorTexture());
-
-		//int i = 0;
-		//Area display_area(getWindowBounds());
-		//for (const Coordinates& coordinates : map.coordinates()) {
-		//	auto texture = labels[i++];
-		//	float3 world_position = coordinates.to_position();
-		//	bool behind_camera = camera.worldToEyeDepth(world_position) > 0.0;
-		//	if (behind_camera) continue;
-		//	float2 screen_position = camera.worldToScreen(world_position, screen_size.x, screen_size.y);
-		//	bool on_screen = display_area.contains(screen_position);
-		//	if (not on_screen) continue;
-		//	draw(texture, screen_position - float2(texture->getSize()) / 2.0f);
-
-		//	//String text = coordinates.to_string();
-		//	//if (hit and coordinates == intersection_coordinates) {
-		//	//	String text = "hit";
-		//	//	vec2 offset = font->measureString(text) / 2.0f;
-		//	//	offset.x = -offset.x;
-		//	//	font->drawString(text, screen_position + offset);
-		//	//}
-
-		//	//drawStringCentered(coordinates.to_string(), screen_position, font_color, font);
-		//}
-
-		//bool hit = false;
-		//Coordinates intersection_coordinates;
-		//if (hit) {
-		//	bool on_map = map.contains(intersection_coordinates);
-		//	String text = on_map ? "in" : "out";
-		//	vec2 offset = font->measureString(text) / 2.0f;
-		//	offset.x = -offset.x;
-		//	float3 world_position = intersection_coordinates.to_position();
-		//	float2 screen_position = display.camera.worldToScreen(world_position, screen_size.x, screen_size.y);
-		//	Color color(0, 1, 0);
-		//	font->drawString(text, screen_position + offset);
-		//	auto draw_coordinates = [&instance = *this, &screen_size, &color](const Coordinates& coordinates) {
-		//		float2 screen_position = display.camera.worldToScreen(coordinates.to_position(), screen_size.x, screen_size.y);
-		//		TextLayout layout;
-		//		layout.setFont(instance.font->getFont());
-		//		layout.setColor(color);
-		//		layout.addLine(coordinates.w + "     " + coordinates.u);
-		//		layout.addCenteredLine("" + coordinates.v);
-		//		auto texture = Texture::create(layout.render(true, false));
-		//		draw(texture, screen_position - float2(texture->getSize()) / 2.0f);
-		//	};
-		//	Coordinates reprojected_coordinates = map.reproject(intersection_coordinates);
-		//	draw_coordinates(reprojected_coordinates);
-		//	color = Color(0, 0, 1);
-		//	map.neighbor(reprojected_coordinates, Direction::NorthEast).then(draw_coordinates);
-		//	color = Color(0, 0.5f, 1);
-		//	map.neighbor(reprojected_coordinates, Direction::East).then(draw_coordinates);
-		//	color = Color(0, 1, 1);
-		//	map.neighbor(reprojected_coordinates, Direction::SouthEast).then(draw_coordinates);
-		//	color = Color(1, 0, 0);
-		//	map.neighbor(reprojected_coordinates, Direction::SouthWest).then(draw_coordinates);
-		//	color = Color(1, 0.5f, 0);
-		//	map.neighbor(reprojected_coordinates, Direction::West).then(draw_coordinates);
-		//	color = Color(1, 1, 0);
-		//	map.neighbor(reprojected_coordinates, Direction::NorthWest).then(draw_coordinates);
-		//}
-
-		//color(1.0, 0.0, 0.0, 1.0);
-		//texture_font->drawString(u8"\ue000 Sethex by Thomas Würstle \ue001", float2(250, 250));
 		drawString(u8"\ue000 Sethex", float2(10, 10), font_color, font->getFont());
 		drawString(u8"\ue001 \ue002 \ue003 \ue004 \ue005 \ue006", float2(10, 40), font_color, font->getFont());
 		drawString(message, float2(5, display.size.y - 50), font_color, font->getFont());

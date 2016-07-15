@@ -16,6 +16,9 @@ uniform sampler2D uEmissiveTexture;
 uniform sampler2D uOverlayTexture;
 uniform sampler2D uNormalMap;
 
+uniform vec3 uLightPosition = vec3(0, 1, 0);
+uniform float uLightIntensity = 1.0;
+
 uniform vec3 uDiffuseColor = vec3(1.0);
 uniform vec3 uSpecularColor = vec3(1.0);
 uniform vec3 uEmissiveColor = vec3(1.0);
@@ -48,9 +51,8 @@ vec2 rotate_texinates(vec2 texinates, mat2x2 rotation, bool centered = true) {
 }
 
 void main() {
-	vec3 light_position = vec3(0, 5, 0);
-	vec3 camera_position = vec3(0, 0, 0);
-	float light_intensity = 1.0;
+	vec3 light_position = uLightPosition;
+	float light_intensity = uLightIntensity;
 
 	float ambience = clamp(uAmbience, 0.0, 1.0);
 	float specularity = uSpecularity;
@@ -83,7 +85,7 @@ void main() {
 
 	vec3 position = vPosition.xyz;
 	vec3 direction_to_light = normalize(light_position - position);
-	vec3 direction_to_camera = normalize(camera_position - position);
+	vec3 direction_to_camera = normalize(-position);
 	vec3 normal_direction = normalize(vNormal);
 
 	#ifdef NORMAL_MAP

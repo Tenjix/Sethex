@@ -6,7 +6,7 @@
 
 namespace sethex {
 
-	class Geometry : public Component {
+	class Geometry : public ObservableComponent {
 
 	public:
 
@@ -16,8 +16,9 @@ namespace sethex {
 		Property<quaternion, Geometry> rotation;
 		Property<float3, Geometry> scaling;
 
-		Geometry(const shared<Mesh>& mesh = nullptr) : scaling(float3(1.0f)), mesh(mesh) {
+		Geometry(const shared<Mesh>& mesh = nullptr) : mesh(mesh), scaling(float3(1.0f)) {
 			this->mesh.owner = this;
+			this->mesh.attach([this]() { notify(); });
 			position.owner = this;
 			rotation.owner = this;
 			scaling.owner = this;

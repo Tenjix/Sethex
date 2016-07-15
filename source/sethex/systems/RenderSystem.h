@@ -17,8 +17,11 @@ namespace sethex {
 		void render(const Display& display);
 		void render(const Entity& entity);
 
+		bool validate(const Entity& entity, Shader* mapped_shader, Mesh* mapped_mesh);
+
 		void on_entity_added(const Entity& entity) override;
 		void on_entity_removed(const Entity& entity) override;
+		void on_entity_modified(const Entity & entity) override;
 
 	public:
 

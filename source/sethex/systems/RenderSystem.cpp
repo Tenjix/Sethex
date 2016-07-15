@@ -31,8 +31,11 @@ namespace sethex {
 				for (auto& mesh_entiry : material_entry.second) {
 					auto& mesh = *mesh_entiry.first;
 					trace("render entities with mesh ", &mesh);
-					for (auto& entity : mesh_entiry.second) {
-						render(entity);
+					auto& entities = mesh_entiry.second;
+					auto iterator = entities.begin();
+					while (iterator != entities.end()) {
+						Entity entity = *iterator++;
+						if (validate(entity, &shader, &mesh)) render(entity);
 					}
 				}
 				material.unbind_textures();
@@ -51,7 +54,7 @@ namespace sethex {
 
 		entity.has<Tile>().then([&material, &geometry](Tile& tile) {
 			float3 color = glm::mix(float3(1.0), tile.coordinates.to_floats(), 0.25);
-			material.shader->uniform("uDiffuseColor", color);
+			material.shader()->uniform("uDiffuseColor", color);
 		});
 
 		if (material.transparent) {
@@ -72,12 +75,25 @@ namespace sethex {
 		//batch.draw();
 	}
 
+	bool RenderSystem::validate(const Entity& entity, Shader* mapped_shader, Mesh* mapped_mesh) {
+		auto& material = entity.get<Material>();
+		auto& geometry = entity.get<Geometry>();
+		runtime_assert(material.shader, entity, "'s material has no shader");
+		if (material.shader != mapped_shader or geometry.mesh != mapped_mesh) {
+			entity_mapping[mapped_shader][&material][mapped_mesh].erase(entity);
+			return false;
+		}
+		return true;
+	}
+
 	void RenderSystem::on_entity_added(const Entity& entity) {
 		auto& material = entity.get<Material>();
 		auto& geometry = entity.get<Geometry>();
 		auto& shader = *material.shader;
 		auto& textures = material.textures;
 		auto& mesh = *geometry.mesh;
+		material.attach(this, entity);
+		//Batch::create(geometry.mesh, material.shader);
 		entity_mapping[&shader][&material][&mesh].insert(entity);
 	}
 
@@ -87,7 +103,14 @@ namespace sethex {
 		auto& shader = *material.shader;
 		auto& textures = material.textures;
 		auto& mesh = *geometry.mesh;
+		material.detach(this, entity);
 		entity_mapping[&shader][&material][&mesh].erase(entity);
+	}
+
+	void RenderSystem::on_entity_modified(const Entity& entity) {
+		auto& material = entity.get<Material>();
+		auto& geometry = entity.get<Geometry>();
+		entity_mapping[material.shader.pointer()][&material][geometry.mesh.pointer()].insert(entity);
 	}
 
 }
