@@ -60,6 +60,7 @@ namespace sethex {
 					shader->uniform("uSpecularTexture", 1);
 					shader->uniform("uEmissiveTexture", 2);
 					shader->uniform("uNormalMap", 3);
+					//shader->uniform("uOverlayTexture", 3);
 					//shader->uniform("uHeightMap", 4);
 					shader->uniform("uSpecularity", 1.0f);
 					shader->uniform("uLuminosity", 1.0f);

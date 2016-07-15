@@ -9,6 +9,7 @@
 #define Pi_Half = 1.57079632679489661923;
 
 #include <shaders/Normals.h>
+#include <shaders/Texinates.h>
 
 uniform sampler2D uDiffuseTexture;
 uniform sampler2D uSpecularTexture;
@@ -33,22 +34,17 @@ uniform float uTransparency = 0.0;
 
 uniform vec2 uTextureScale = vec2(1.0);
 uniform vec2 uTextureShift = vec2(0.0);
-uniform mat2x2 uTextureRotation = mat2x2(0.0, 1.0, -1.0, 0.0);
+uniform mat2x2 uTextureRotation = mat2x2(1.0);
+
+uniform vec2 uOverlayScale = vec2(1.0);
+uniform vec2 uOverlayShift = vec2(0.0);
+uniform mat2x2 uOverlayRotation = mat2x2(1.0);
 
 in vec4 vPosition;
 in vec3 vNormal;
 in vec2 vTexCoord0;
 
 out vec4 oColor;
-
-vec2 scale_texinates(vec2 texinates, vec2 scaling, bool centered = true) {
-	scaling = max(scaling, 0.001);
-	return centered? ((texinates - 0.5) / scaling + 0.5) : (texinates / scaling);
-}
-
-vec2 rotate_texinates(vec2 texinates, mat2x2 rotation, bool centered = true) {
-	return centered? (rotation * (texinates - 0.5) + 0.5) : (rotation * texinates);
-}
 
 void main() {
 	vec3 light_position = uLightPosition;
@@ -61,8 +57,7 @@ void main() {
 	float transparency = clamp(uTransparency, 0.0, 1.0);
 	float alpha = 1.0 - transparency;
 
-	vec2 texinates = scale_texinates(vTexCoord0, uTextureScale) - uTextureShift;
-	texinates = rotate_texinates(texinates, uTextureRotation);
+	vec2 texinates = transform_texinates(vTexCoord0, uTextureScale, uTextureShift, uTextureRotation);
 
 	vec3 diffuse_color = uDiffuseColor;
 	vec3 specular_color = uSpecularColor;
@@ -107,8 +102,9 @@ void main() {
 	oColor.a = alpha;
 
 	#ifdef OVERLAY_TEXTURE
-		vec4 overlay_color = texture(uOverlayTexture, scale_texinates(texinates, vec2(0.5)));
-		overlay_color.rgb *= uOverlayColor;
-		oColor = mix(oColor, overlay_color, overlay_color.a);		
+		vec2 overlay_texinates = transform_texinates(vTexCoord0, uOverlayScale, uOverlayShift, uOverlayRotation);
+		vec4 overlay_color = texture(uOverlayTexture, overlay_texinates);
+		oColor.rgb = mix(oColor.rgb, overlay_color.rgb * uOverlayColor, overlay_color.a);
+		oColor.a = max(oColor.a, overlay_color.a);
 	#endif
 }

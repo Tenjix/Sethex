@@ -17,6 +17,7 @@ using namespace sethex::hexagonal;
 namespace sethex {
 
 	void TileSystem::initialize() {
+		using namespace glm;
 		Font font = Font(Assets::get("fonts/Nunito.ttf"), 100.0f);
 		map = Map(9, 8);
 
@@ -29,6 +30,9 @@ namespace sethex {
 		shader->setLabel("Tile Shader");
 		shader->uniform("uDiffuseTexture", 0);
 		shader->uniform("uOverlayTexture", 1);
+		shader->uniform("uTextureRotation", mat2x2(0.0, 1.0, -1.0, 0.0));
+		shader->uniform("uOverlayScale", vec2(0.5));
+		shader->uniform("uOverlayRotation", mat2x2(0.0, 1.0, -1.0, 0.0));
 		shared<Texture> hexagon_texure = Texture::create(loadImage(loadAsset("textures/pointy.png")), Texture::Format().mipmap());
 		//auto material = Material::create(shader);
 		//material->add(hexagon_texure);
