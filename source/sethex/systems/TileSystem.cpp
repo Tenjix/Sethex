@@ -1,12 +1,12 @@
 #include "TileSystem.h"
 
+#include <cinder/utilities/Assets.h>
+#include <cinder/utilities/Shaders.h>
+
 #include <sethex/components/Display.h>
 #include <sethex/components/Geometry.h>
 #include <sethex/components/Material.h>
 #include <sethex/components/Tile.h>
-
-#include <utilities/cinder/Assets.h>
-#include <utilities/cinder/Shaders.h>
 
 using namespace std;
 using namespace cinder;

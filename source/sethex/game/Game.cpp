@@ -4,13 +4,13 @@
 #include <cinder/ImageIo.h>
 #include <cinder/Utilities.h>
 #include <cinder/app/App.h>
+#include <cinder/utilities/Watchdog.h>
+#include <cinder/utilities/Shaders.h>
+#include <cinder/interface/CinderImGui.h>
 
 #include <sethex/data/ModelLoader.h>
 #include <sethex/systems/RenderSystem.h>
 #include <sethex/systems/TileSystem.h>
-
-#include <utilities/cinder/Watchdog.h>
-#include <utilities/cinder/Shaders.h>
 
 using namespace cinder;
 using namespace cinder::geom;
@@ -41,6 +41,7 @@ namespace sethex {
 			.add(Texture::create(loadImage(loadAsset("textures/test.specular.png"))))
 			.add(Texture::create(loadImage(loadAsset("textures/test.emissive.png"))))
 			.add(Texture::create(loadImage(loadAsset("textures/test.normal.png"))));
+		terrain.deactivate();
 
 		wd::watch("shaders/*", [this, &shader = material.shader](const fs::path& path) {
 			print("compiling shader ...");
@@ -98,12 +99,27 @@ namespace sethex {
 	void Game::render() {
 		static Display& display = world.find_entity("Main Display").get<Display>();
 		if (display.size.x == 0 or display.size.y == 0) return;
-		float2 screen_size = display.size;
+
+		static bool render_background = true;
+		static bool render_world = true;
+		static bool render_overlay = true;
+		static bool render_interface = false;
+		{
+			ui::ScopedWindow ui_window("", ImGuiWindowFlags_NoTitleBar);
+			ui::Checkbox("Background", &render_background);
+			ui::Checkbox("World", &render_world);
+			ui::Checkbox("Overlay", &render_overlay);
+			ui::Checkbox("Interface", &render_interface);
+		}
+
 		setMatricesWindow(display.size);
-		draw(background);
+		if (render_background) draw(background);
+		else clear();
 
-		world.get<RenderSystem>().render();
+		if (render_world) world.get<RenderSystem>().render();
+		if (render_interface) ui::ShowTestWindow();
 
+		if (not render_overlay) return;
 		drawString(u8"\ue000 Sethex", float2(10, 10), font_color, font->getFont());
 		drawString(u8"\ue001 \ue002 \ue003 \ue004 \ue005 \ue006", float2(10, 40), font_color, font->getFont());
 		drawString(message, float2(5, display.size.y - 50), font_color, font->getFont());

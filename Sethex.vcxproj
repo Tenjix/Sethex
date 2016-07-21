@@ -211,6 +211,10 @@
     <ResourceCompile Include="Resources.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\cinder\interface\CinderImGui.cpp" />
+    <ClCompile Include="source\cinder\interface\imgui.cpp" />
+    <ClCompile Include="source\cinder\interface\imgui_demo.cpp" />
+    <ClCompile Include="source\cinder\interface\imgui_draw.cpp" />
     <ClCompile Include="source\sethex\data\ModelLoader.cpp" />
     <ClCompile Include="source\sethex\data\ModelSource.cpp" />
     <ClCompile Include="source\sethex\game\Game.cpp" />
@@ -218,12 +222,19 @@
     <ClCompile Include="source\sethex\Sethex.cpp" />
     <ClCompile Include="source\sethex\systems\RenderSystem.cpp" />
     <ClCompile Include="source\sethex\systems\TileSystem.cpp" />
-    <ClCompile Include="source\utilities\cinder\Assets.cpp" />
+    <ClCompile Include="source\cinder\utilities\Assets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="assets\texts\Credits.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\cinder\interface\CinderImGui.h" />
+    <ClInclude Include="source\cinder\interface\imconfig.h" />
+    <ClInclude Include="source\cinder\interface\imgui.h" />
+    <ClInclude Include="source\cinder\interface\imgui_internal.h" />
+    <ClInclude Include="source\cinder\interface\stb_rect_pack.h" />
+    <ClInclude Include="source\cinder\interface\stb_textedit.h" />
+    <ClInclude Include="source\cinder\interface\stb_truetype.h" />
     <ClInclude Include="source\sethex\components\Display.h" />
     <ClInclude Include="source\sethex\components\Geometry.h" />
     <ClInclude Include="source\sethex\components\Material.h" />
@@ -240,10 +251,11 @@
     <ClInclude Include="source\sethex\game\Input.h" />
     <ClInclude Include="source\sethex\systems\RenderSystem.h" />
     <ClInclude Include="source\sethex\systems\TileSystem.h" />
-    <ClInclude Include="source\utilities\cinder\Assets.h" />
-    <ClInclude Include="source\utilities\cinder\OutputRedirection.h" />
-    <ClInclude Include="source\utilities\cinder\Shaders.h" />
-    <ClInclude Include="source\utilities\cinder\Watchdog.h" />
+    <ClInclude Include="source\cinder\utilities\Assets.h" />
+    <ClInclude Include="source\cinder\utilities\OutputRedirection.h" />
+    <ClInclude Include="source\cinder\utilities\Shaders.h" />
+    <ClInclude Include="source\cinder\utilities\Simplex.h" />
+    <ClInclude Include="source\cinder\utilities\Watchdog.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

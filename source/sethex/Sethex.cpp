@@ -1,10 +1,10 @@
-﻿#include <cinder/app/App.h>
+﻿#include <cinder/CameraUi.h>
+#include <cinder/app/App.h>
 #include <cinder/app/RendererGl.h>
-#include <cinder/CameraUi.h>
+#include <cinder/utilities/OutputRedirection.h>
+#include <cinder/interface/CinderImGui.h>
 
 #include <sethex/game/Game.h>
-
-#include <utilities/cinder/OutputRedirection.h>
 
 using namespace cinder;
 using namespace cinder::app;
@@ -38,6 +38,7 @@ namespace sethex {
 
 	void Sethex::setup() {
 		redirectOutputStreams(redirection_buffer);
+		ui::initialize(ui::Options().darkTheme().fonts({ { getAssetPath("fonts/Nunito.ttf"), 20.0f } }).fontGlyphRanges("Nunito", { 0x0020, 0x00FF, 0xe000, 0xe006, 0 }));
 		getWindow()->setTitle("Sethex");
 		print("Sethex by Tenjix (Thomas Würstle)");
 		debug("Cinder Version ", CINDER_VERSION_STR);

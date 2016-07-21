@@ -34,3 +34,5 @@ ipch/
 *.vsp
 *.vspx
 *.sap
+
+assets/imgui.ini

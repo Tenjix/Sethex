@@ -47,10 +47,22 @@
     <ClCompile Include="source\sethex\hexagonal\Coordinates.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="source\utilities\cinder\Assets.cpp">
+    <ClCompile Include="source\sethex\systems\TileSystem.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="source\sethex\systems\TileSystem.cpp">
+    <ClCompile Include="source\cinder\utilities\Assets.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="source\cinder\interface\imgui.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="source\cinder\interface\imgui_demo.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="source\cinder\interface\imgui_draw.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="source\cinder\interface\CinderImGui.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
@@ -89,13 +101,7 @@
     <ClInclude Include="source\sethex\systems\RenderSystem.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="source\utilities\cinder\OutputRedirection.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
     <ClInclude Include="source\sethex\data\ModelSource.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="source\utilities\cinder\Watchdog.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="source\sethex\hexagonal\Coordinates.h">
@@ -116,13 +122,43 @@
     <ClInclude Include="source\sethex\game\Input.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="source\utilities\cinder\Assets.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
     <ClInclude Include="source\sethex\systems\TileSystem.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="source\utilities\cinder\Shaders.h">
+    <ClInclude Include="source\cinder\utilities\Watchdog.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\cinder\utilities\Assets.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\cinder\utilities\OutputRedirection.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\cinder\utilities\Shaders.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\cinder\utilities\Simplex.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\cinder\interface\imconfig.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\cinder\interface\imgui.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\cinder\interface\imgui_internal.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\cinder\interface\stb_rect_pack.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\cinder\interface\stb_textedit.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\cinder\interface\stb_truetype.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\cinder\interface\CinderImGui.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

@@ -7,7 +7,6 @@
 #include <sethex/EntitySystem.h>
 #include <sethex/Graphics.h>
 #include <sethex/game/Input.h>
-
 #include <sethex/components/Display.h>
 #include <sethex/hexagonal/Map.h>
 
