@@ -7,6 +7,7 @@
  https://github.com/ocornut
 
  Copyright (c) 2013-2015, Simon Geilfus - All rights reserved.
+ Modified by Tenjix
 
  Redistribution and use in source and binary forms, with or without modification, are permitted provided that
  the following conditions are met:
@@ -41,7 +42,6 @@
 #include "cinder/gl/Texture.h"
 #include "cinder/gl/GlslProg.h"
 #include "cinder/Clipboard.h"
-#include "cinder/CinderAssert.h"
 #include "cinder/Log.h"
 
 using namespace std;
@@ -465,7 +465,7 @@ namespace ImGui {
 		void* bufferCopy = (void*)malloc(buffer->getSize());
 		memcpy(bufferCopy, buffer->getData(), buffer->getSize());
 
-		if (buffer->getSize() > INT_MAX) throw std::exception("CinderImGui: font buffer exceeded limit");
+		CI_ASSERT_MSG(buffer->getSize() <= INT_MAX, "CinderImGui: font buffer exceeded limit");
 
 		ImFontConfig config;
 		ImFont* newFont = fontAtlas->AddFontFromMemoryTTF(bufferCopy, static_cast<int>(buffer->getSize()), size, &config, glyph_ranges);
@@ -626,7 +626,7 @@ namespace ImGui {
 
 	// Std Helpers
 	bool ListBox(const char* label, int* current_item, const std::vector<std::string>& items, int height_in_items) {
-		if (items.size() > INT_MAX) throw std::exception("CinderImGui: number of list box items excceded limit");
+		CI_ASSERT_MSG(items.size() <= INT_MAX, "CinderImGui: number of list box items excceded limit");
 
 		// copy names to a vector
 		vector<const char*> names;

@@ -134,12 +134,6 @@
     <ClInclude Include="source\cinder\utilities\OutputRedirection.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="source\cinder\utilities\Shaders.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="source\cinder\utilities\Simplex.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
     <ClInclude Include="source\cinder\interface\imconfig.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
@@ -159,6 +153,12 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="source\cinder\interface\CinderImGui.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\cinder\utilities\Shaders.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\cinder\utilities\Simplex.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

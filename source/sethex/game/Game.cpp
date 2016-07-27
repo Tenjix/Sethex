@@ -5,8 +5,9 @@
 #include <cinder/Utilities.h>
 #include <cinder/app/App.h>
 #include <cinder/utilities/Watchdog.h>
-#include <cinder/utilities/Shaders.h>
 #include <cinder/interface/CinderImGui.h>
+#include <cinder/utilities/Shaders.h>
+#include <cinder/utilities/Simplex.h>
 
 #include <sethex/data/ModelLoader.h>
 #include <sethex/systems/RenderSystem.h>
@@ -21,6 +22,8 @@ using namespace sethex::hexagonal;
 
 namespace sethex {
 
+	shared<Texture> noise_texture;
+
 	void Game::setup(CameraUi& camera_ui) {
 		Display& display = world.create_entity("Main Display").add<Display>();
 
@@ -30,7 +33,6 @@ namespace sethex {
 		font_color = Color::white();
 		background = Texture::create(loadImage(loadAsset("images/Background.jpg")));
 		display.camera.lookAt(float3(0, 2.5, 2.5), float3(0));
-		enableVerticalSync(false);
 
 		shared<Mesh> mesh = Mesh::create(geom::Plane() >> geom::Rotate(quaternion(float3())));
 
@@ -76,7 +78,6 @@ namespace sethex {
 			}
 		});
 
-
 		world.add<RenderSystem>();
 		world.add<TileSystem>(input);
 	}
@@ -94,6 +95,78 @@ namespace sethex {
 		time_delta = elapsed_seconds;
 		time += time_delta;
 		world.update(elapsed_seconds);
+
+		{
+			static int seed = 0, seed_maximum = 1000000000;
+			static float2 shift;
+			static float scale = 1.0f;
+			static Simplex::Options current_options;
+			static Simplex::Options saved_options;
+			static bool threshold = false;
+			static bool update_noise = true;
+
+			ui::ScopedWindow ui_window("Noise Texture", ImGuiWindowFlags_HorizontalScrollbar);
+
+			if (update_noise) {
+				//debug("update noise");
+				if (seed < 0 || seed > seed_maximum) seed = seed_maximum;
+				Simplex::seed(seed);
+				Channel channel(512, 512);
+				auto iterator = channel.getIter();
+				while (iterator.line()) {
+					while (iterator.pixel()) {
+						float2 position = iterator.getPos();
+						position += shift * float2(channel.getSize());
+						position *= scale * 0.01f;
+						float noise = Simplex::noise(position, current_options);
+						//float noise = amplitude * Simplex::fBm(position * frequency, octaves, lacunarity, persistence);
+						//if (positive) noise = (noise + 1) / 2;
+						//noise = amplitude * pow(noise, exponent);
+						if (threshold) {
+							iterator.v() = noise < 0.0f ? 0 : 255;
+						} else {
+							iterator.v() = static_cast<uint8>((noise + 1) / 2 * 255);
+						}
+					}
+				}
+				noise_texture = Texture::create(channel);
+				update_noise = false;
+			}
+
+			ui::BeginChild("l", noise_texture->getSize(), false, ImGuiWindowFlags_HorizontalScrollbar);
+			ui::Image(noise_texture, noise_texture->getSize());
+			ui::EndChild();
+
+			ui::SameLine();
+
+			ui::BeginChild("r", noise_texture->getSize());
+			ui::Text("Presets:");
+			if (ui::Button("Reset")) {
+				shift = {};
+				current_options = {};
+				update_noise = true;
+			}
+			ui::SameLine();
+			if (ui::Button("Mist")) {
+				shift = { -0.5f, -0.5f };
+				current_options = {};
+				current_options.octaves = 5;
+				update_noise = true;
+			}
+			update_noise |= ui::DragInt("Seed", seed, 1.0f, 0, seed_maximum);
+			update_noise |= ui::SliderFloat("Scale", scale, 0.1f, 10.0f, "%.2f", 3.45f);
+			update_noise |= ui::SliderFloat2("Shift", shift, -1.0f, 1.0f, "%.2f");
+			update_noise |= ui::SliderUnsigned("Octaves", current_options.octaves, 1, 15, "%.0f", &saved_options.octaves);
+			update_noise |= ui::SliderFloat("Amplitude", current_options.amplitude, 0.0f, 10.0f, "%.2f", 1.0f, &saved_options.amplitude); ui::Hint("Ctrl+Click to enter an exact value");
+			update_noise |= ui::SliderFloat("Frequency", current_options.frequency, 0.0f, 10.0f, "%.2f", 1.0f, &saved_options.frequency); ui::Hint("Ctrl+Click to enter an exact value");
+			update_noise |= ui::SliderFloat("Lacunarity", current_options.lacunarity, 0.0f, 10.0f, "%.2f", 1.0f, &saved_options.lacunarity); ui::Hint("Ctrl+Click to enter an exact value");
+			update_noise |= ui::SliderFloat("Persistence", current_options.persistence, 0.0f, 2.0f, "%.2f", 1.0f, &saved_options.persistence); ui::Hint("Ctrl+Click to enter an exact value");
+			update_noise |= ui::SliderFloat("Power", current_options.power, 0.1f, 10.0f, "%.2f", 1.0f, &saved_options.power); ui::Hint("Ctrl+Click to enter an exact value");
+			update_noise |= ui::Checkbox("Positive", current_options.positive); ui::Tooltip("sets noise range to [0,1] instead of [-1,1]");
+			ui::SameLine();
+			update_noise |= ui::Checkbox("Threshold", threshold); ui::Tooltip("map positive values to white, negative ones to black");
+			ui::EndChild();
+		}
 	}
 
 	void Game::render() {
@@ -104,12 +177,14 @@ namespace sethex {
 		static bool render_world = true;
 		static bool render_overlay = true;
 		static bool render_interface = false;
+		static bool vertical_synchronization = true;
 		{
 			ui::ScopedWindow ui_window("", ImGuiWindowFlags_NoTitleBar);
 			ui::Checkbox("Background", &render_background);
 			ui::Checkbox("World", &render_world);
 			ui::Checkbox("Overlay", &render_overlay);
 			ui::Checkbox("Interface", &render_interface);
+			if (ui::Checkbox("V-Sync", &vertical_synchronization)) enableVerticalSync(vertical_synchronization);
 		}
 
 		setMatricesWindow(display.size);

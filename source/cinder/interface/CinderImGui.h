@@ -7,6 +7,7 @@
  https://github.com/ocornut
 
  Copyright (c) 2013-2015, Simon Geilfus - All rights reserved.
+ Modified by Tenjix
 
  Redistribution and use in source and binary forms, with or without modification, are permitted provided that
  the following conditions are met:
@@ -30,8 +31,8 @@
 #include <memory>
 #include <vector>
 #include <map>
-#include <exception>
 
+#include "cinder/CinderAssert.h"
 #include "cinder/Color.h"
 #include "cinder/Noncopyable.h"
 #include "cinder/Vector.h"
@@ -178,17 +179,20 @@ namespace ImGui {
 	void    disconnectWindow(ci::app::WindowRef window);
 
 	// Cinder Helpers
+
 	void Image(const ci::gl::Texture2dRef &texture, const ImVec2& size, const ImVec2& uv0 = ImVec2(0, 1), const ImVec2& uv1 = ImVec2(1, 0), const ImVec4& tint_col = ImVec4(1, 1, 1, 1), const ImVec4& border_col = ImVec4(0, 0, 0, 0));
 	bool ImageButton(const ci::gl::Texture2dRef &texture, const ImVec2& size, const ImVec2& uv0 = ImVec2(0, 1), const ImVec2& uv1 = ImVec2(1, 0), int frame_padding = -1, const ImVec4& bg_col = ImVec4(0, 0, 0, 1), const ImVec4& tint_col = ImVec4(1, 1, 1, 1));
 	void PushFont(const std::string& name = "");
 
 	// Std Helpers
+
 	bool ListBox(const char* label, int* current_item, const std::vector<std::string>& items, int height_in_items = -1);
 	bool InputText(const char* label, std::string* buf, ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
 	bool InputTextMultiline(const char* label, std::string* buf, const ImVec2& size = ImVec2(0, 0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
 	bool Combo(const char* label, int* current_item, const std::vector<std::string>& items, int height_in_items = -1);
 
 	// Getters/Setters Helpers
+
 	template<typename T>
 	bool InputText(const char* label, T *object, std::string(T::*get)() const, void(T::*set)(const std::string&), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
 	template<typename T>
@@ -211,6 +215,175 @@ namespace ImGui {
 	bool DragInt3(const char* label, T *object, ci::ivec3(T::*get)() const, void(T::*set)(const ci::ivec3&), float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* display_format = "%.0f");
 	template<typename T>
 	bool DragInt4(const char* label, T *object, ci::ivec4(T::*get)() const, void(T::*set)(const ci::ivec4&), float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* display_format = "%.0f");
+
+	// shows "tooltip" if the previous control is hovered
+	inline void Tooltip(const char* tooltip = nullptr) {
+		if (tooltip && IsItemHovered()) SetTooltip(tooltip);
+	}
+	// adds a hint on the same line indicated by an appended "indicator" which has "text" as tooltip
+	inline void Hint(const char* text, const char* indicator = "*") {
+		ImGui::SameLine(); ImGui::TextDisabled(indicator); Tooltip(text);
+	}
+
+	// reference overloads
+
+	inline bool Checkbox(const char* label, bool& value) {
+		return Checkbox(label, &value);
+	}
+	inline bool ColorEdit3(const char* label, ci::Color& color) {
+		return ColorEdit3(label, reinterpret_cast<float*>(&color));
+	}
+	inline bool ColorEdit4(const char* label, ci::ColorA& color, bool show_alpha = true) {
+		return ColorEdit4(label, reinterpret_cast<float*>(&color), show_alpha);
+	}
+	inline bool DragFloat(const char* label, float& value, float value_speed = 1.0f, float value_minimum = 0.0f, float value_maximum = 0.0f, const char* display_format = "%.3f", float power = 1.0f) {
+		return DragFloat(label, &value, value_speed, value_minimum, value_maximum, display_format, power);
+	}
+	inline bool DragFloat2(const char* label, ci::vec2& value, float value_speed = 1.0f, float value_minimum = 0.0f, float value_maximum = 0.0f, const char* display_format = "%.3f", float power = 1.0f) {
+		return DragFloat2(label, reinterpret_cast<float*>(&value), value_speed, value_minimum, value_maximum, display_format, power);
+	}
+	inline bool DragFloat3(const char* label, ci::vec3& value, float value_speed = 1.0f, float value_minimum = 0.0f, float value_maximum = 0.0f, const char* display_format = "%.3f", float power = 1.0f) {
+		return DragFloat3(label, reinterpret_cast<float*>(&value), value_speed, value_minimum, value_maximum, display_format, power);
+	}
+	inline bool DragFloat4(const char* label, ci::vec4& value, float value_speed = 1.0f, float value_minimum = 0.0f, float value_maximum = 0.0f, const char* display_format = "%.3f", float power = 1.0f) {
+		return DragFloat4(label, reinterpret_cast<float*>(&value), value_speed, value_minimum, value_maximum, display_format, power);
+	}
+	inline bool DragInt(const char* label, int& value, float value_speed = 1.0f, int value_minimum = 0, int value_maximum = 0, const char* display_format = "%.0f") {
+		return DragInt(label, &value, value_speed, value_minimum, value_maximum, display_format);
+	}
+	inline bool DragInt2(const char* label, ci::ivec2& value, float value_speed = 1.0f, int value_minimum = 0, int value_maximum = 0, const char* display_format = "%.0f") {
+		return DragInt2(label, reinterpret_cast<int*>(&value), value_speed, value_minimum, value_maximum, display_format);
+	}
+	inline bool DragInt3(const char* label, ci::ivec3& value, float value_speed = 1.0f, int value_minimum = 0, int value_maximum = 0, const char* display_format = "%.0f") {
+		return DragInt3(label, reinterpret_cast<int*>(&value), value_speed, value_minimum, value_maximum, display_format);
+	}
+	inline bool DragInt4(const char* label, ci::ivec4& value, float value_speed = 1.0f, int value_minimum = 0, int value_maximum = 0, const char* display_format = "%.0f") {
+		return DragInt4(label, reinterpret_cast<int*>(&value), value_speed, value_minimum, value_maximum, display_format);
+	}
+	inline bool DragUnsigned(const char* label, unsigned& value, float value_speed = 1.0f, unsigned short value_minimum = 0, unsigned short value_maximum = 100, const char* display_format = "%.0f") {
+		CI_ASSERT_MSG(value < INT_MAX - 63, "CinderImGui: unsigned integer slider value exceeded limit"); // assuming 32-bit int and IEEE-754 float
+		float slider_value = static_cast<float>(value);
+		bool changed = DragFloat(label, &slider_value, value_speed, static_cast<float>(value_minimum), static_cast<float>(value_maximum), display_format, 1.0f);
+		value = static_cast<unsigned>(slider_value);
+		return changed;
+	}
+	inline bool DragUnsigned2(const char* label, ci::uvec2& value, float value_speed = 1.0f, unsigned short value_minimum = 0, unsigned short value_maximum = 100, const char* display_format = "%.0f") {
+		constexpr unsigned n = 2;
+		float slider_value[n];
+		for (unsigned i = 0; i < n; i++) {
+			CI_ASSERT_MSG(value[i] < INT_MAX - 63, "CinderImGui: unsigned integer slider value exceeded limit"); // assuming 32-bit int and IEEE-754 float
+			slider_value[n] = static_cast<float>(value[n]);
+		}
+		bool changed = DragFloat2(label, slider_value, value_speed, static_cast<float>(value_minimum), static_cast<float>(value_maximum), display_format, 1.0f);
+		for (unsigned i = 0; i < n; i++) value[i] = static_cast<unsigned>(slider_value[i]);
+		return changed;
+	}
+	inline bool DragUnsigned3(const char* label, ci::uvec3& value, float value_speed = 1.0f, unsigned short value_minimum = 0, unsigned short value_maximum = 100, const char* display_format = "%.0f") {
+		constexpr unsigned n = 3;
+		float slider_value[n];
+		for (unsigned i = 0; i < n; i++) {
+			CI_ASSERT_MSG(value[i] < INT_MAX - 63, "CinderImGui: unsigned integer slider value exceeded limit"); // assuming 32-bit int and IEEE-754 float
+			slider_value[n] = static_cast<float>(value[n]);
+		}
+		bool changed = DragFloat3(label, slider_value, value_speed, static_cast<float>(value_minimum), static_cast<float>(value_maximum), display_format, 1.0f);
+		for (unsigned i = 0; i < n; i++) value[i] = static_cast<unsigned>(slider_value[i]);
+		return changed;
+	}
+	inline bool DragUnsigned4(const char* label, ci::uvec4& value, float value_speed = 1.0f, unsigned short value_minimum = 0, unsigned short value_maximum = 100, const char* display_format = "%.0f") {
+		constexpr unsigned n = 4;
+		float slider_value[n];
+		for (unsigned i = 0; i < n; i++) {
+			CI_ASSERT_MSG(value[i] < INT_MAX - 63, "CinderImGui: unsigned integer slider value exceeded limit"); // assuming 32-bit int and IEEE-754 float
+			slider_value[n] = static_cast<float>(value[n]);
+		}
+		bool changed = DragFloat4(label, slider_value, value_speed, static_cast<float>(value_minimum), static_cast<float>(value_maximum), display_format, 1.0f);
+		for (unsigned i = 0; i < n; i++) value[i] = static_cast<unsigned>(slider_value[i]);
+		return changed;
+	}
+	inline bool SliderAngle(const char* label, float& value_radians, float value_degrees_minimum = -360.0f, float value_degrees_maximum = +360.0f) {
+		return SliderAngle(label, &value_radians, value_degrees_minimum, value_degrees_maximum);
+	}
+	inline bool SliderFloat(const char* label, float& value, float value_minimum = 0.0f, float value_maximum = 1.0f, const char* display_format = "%.3f", float power = 1.0f, float* reset_value = nullptr, const char* reset_label = "Reset") {
+		bool changed = SliderFloat(label, &value, value_minimum, value_maximum, display_format, power);
+		if (reset_value && value != *reset_value) {
+			PushID(label);
+			SameLine(); if (Button(reset_label)) { value = *reset_value; changed = true; }
+			PopID();
+		}
+		return changed;
+	}
+	inline bool SliderFloat2(const char* label, ci::vec2& value, float value_minimum = 0.0f, float value_maximum = 1.0f, const char* display_format = "%.3f", float power = 1.0f) {
+		return SliderFloat2(label, reinterpret_cast<float*>(&value), value_minimum, value_maximum, display_format, power);
+	}
+	inline bool SliderFloat3(const char* label, ci::vec3& value, float value_minimum = 0.0f, float value_maximum = 1.0f, const char* display_format = "%.3f", float power = 1.0f) {
+		return SliderFloat3(label, reinterpret_cast<float*>(&value), value_minimum, value_maximum, display_format, power);
+	}
+	inline bool SliderFloat4(const char* label, ci::vec4& value, float value_minimum = 0.0f, float value_maximum = 1.0f, const char* display_format = "%.3f", float power = 1.0f) {
+		return SliderFloat4(label, reinterpret_cast<float*>(&value), value_minimum, value_maximum, display_format, power);
+	}
+	inline bool SliderInt(const char* label, int& value, int value_minimum = 0, int value_maximum = 100, const char* display_format = "%.0f", int* reset_value = nullptr, const char* reset_label = "Reset") {
+		bool changed = SliderInt(label, &value, value_minimum, value_maximum, display_format);
+		if (reset_value && value != *reset_value) {
+			PushID(label);
+			SameLine(); if (Button(reset_label)) { value = *reset_value; changed = true; }
+			PopID();
+		}
+		return changed;
+	}
+	inline bool SliderInt2(const char* label, ci::ivec2& value, int value_minimum = 0, int value_maximum = 100, const char* display_format = "%.0f") {
+		return SliderInt2(label, reinterpret_cast<int*>(&value), value_minimum, value_maximum, display_format);
+	}
+	inline bool SliderInt3(const char* label, ci::ivec3& value, int value_minimum = 0, int value_maximum = 100, const char* display_format = "%.0f") {
+		return SliderInt3(label, reinterpret_cast<int*>(&value), value_minimum, value_maximum, display_format);
+	}
+	inline bool SliderInt4(const char* label, ci::ivec4& value, int value_minimum = 0, int value_maximum = 100, const char* display_format = "%.0f") {
+		return SliderInt4(label, reinterpret_cast<int*>(&value), value_minimum, value_maximum, display_format);
+	}
+	inline bool SliderUnsigned(const char* label, unsigned& value, unsigned short value_minimum = 0, unsigned short value_maximum = 100, const char* display_format = "%.0f", unsigned* reset_value = nullptr, const char* reset_label = "Reset") {
+		CI_ASSERT_MSG(value < INT_MAX - 63, "CinderImGui: unsigned integer slider value exceeded limit"); // assuming 32-bit int and IEEE-754 float
+		float slider_value = static_cast<float>(value);
+		bool changed = SliderFloat(label, &slider_value, static_cast<float>(value_minimum), static_cast<float>(value_maximum), display_format, 1.0f);
+		value = static_cast<unsigned>(slider_value);
+		if (reset_value && value != *reset_value) {
+			PushID(label);
+			SameLine(); if (Button(reset_label)) { value = *reset_value; changed = true; }
+			PopID();
+		}
+		return changed;
+	}
+	inline bool SliderUnsigned2(const char* label, ci::uvec2& value, int value_minimum = 0, int value_maximum = 100, const char* display_format = "%.0f") {
+		constexpr unsigned n = 2;
+		float slider_value[n];
+		for (unsigned i = 0; i < n; i++) {
+			CI_ASSERT_MSG(value[i] < INT_MAX - 63, "CinderImGui: unsigned integer slider value exceeded limit"); // assuming 32-bit int and IEEE-754 float
+			slider_value[n] = static_cast<float>(value[n]);
+		}
+		bool changed = SliderFloat2(label, slider_value, static_cast<float>(value_minimum), static_cast<float>(value_maximum), display_format, 1.0f);
+		for (unsigned i = 0; i < n; i++) value[i] = static_cast<unsigned>(slider_value[i]);
+		return changed;
+	}
+	inline bool SliderUnsigned3(const char* label, ci::uvec3& value, int value_minimum = 0, int value_maximum = 100, const char* display_format = "%.0f") {
+		constexpr unsigned n = 3;
+		float slider_value[n];
+		for (unsigned i = 0; i < n; i++) {
+			CI_ASSERT_MSG(value[i] < INT_MAX - 63, "CinderImGui: unsigned integer slider value exceeded limit"); // assuming 32-bit int and IEEE-754 float
+			slider_value[n] = static_cast<float>(value[n]);
+		}
+		bool changed = SliderFloat3(label, slider_value, static_cast<float>(value_minimum), static_cast<float>(value_maximum), display_format, 1.0f);
+		for (unsigned i = 0; i < n; i++) value[i] = static_cast<unsigned>(slider_value[i]);
+		return changed;
+	}
+	inline bool SliderUnsigned4(const char* label, ci::uvec4& value, int value_minimum = 0, int value_maximum = 100, const char* display_format = "%.0f") {
+		constexpr unsigned n = 4;
+		float slider_value[n];
+		for (unsigned i = 0; i < n; i++) {
+			CI_ASSERT_MSG(value[i] < INT_MAX - 63, "CinderImGui: unsigned integer slider value exceeded limit"); // assuming 32-bit int and IEEE-754 float
+			slider_value[n] = static_cast<float>(value[n]);
+		}
+		bool changed = SliderFloat4(label, slider_value, static_cast<float>(value_minimum), static_cast<float>(value_maximum), display_format, 1.0f);
+		for (unsigned i = 0; i < n; i++) value[i] = static_cast<unsigned>(slider_value[i]);
+		return changed;
+	}
 
 	// Scoped objects goodness (push the state when created and pop it when destroyed)
 
@@ -269,6 +442,7 @@ namespace ImGui {
 	};
 
 	// Getters/Setters Helpers Implementation
+
 	template<typename T>
 	bool InputText(const char* label, T *object, std::string(T::*get)() const, void(T::*set)(const std::string&), ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data) {
 		std::string text = (object->*get)();
