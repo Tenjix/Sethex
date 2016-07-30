@@ -22,7 +22,8 @@ using namespace sethex::hexagonal;
 
 namespace sethex {
 
-	shared<Texture> noise_texture;
+	shared<Texture> elevation_texture;
+	shared<Texture> terrain_texture;
 
 	void Game::setup(CameraUi& camera_ui) {
 		Display& display = world.create_entity("Main Display").add<Display>();
@@ -102,54 +103,79 @@ namespace sethex {
 			static float scale = 1.0f;
 			static Simplex::Options current_options;
 			static Simplex::Options saved_options;
+			static float details = 1.0f, default_details = 1.0f;
 			static bool threshold = false;
 			static bool update_noise = true;
 
 			ui::ScopedWindow ui_window("Noise Texture", ImGuiWindowFlags_HorizontalScrollbar);
+
+			auto assign = [](const Surface::Iter& iterator, const Color8u& color) {
+				iterator.r() = color.r;
+				iterator.g() = color.g;
+				iterator.b() = color.b;
+			};
+			auto assign_elevation = [&assign](const Surface::Iter& iterator, float elevation) {
+				if (elevation < -0.25f) { assign(iterator, { 0, 0, 128 }); return; } // ocean
+				if (elevation < -0.0f) { assign(iterator, { 25, 25, 150 }); return; } // coast
+				if (elevation < 0.1f) { assign(iterator, { 240, 240, 64 }); return; } // beach
+				if (elevation < 0.33f) { assign(iterator, { 50, 220, 20 }); return; } // prairie
+				if (elevation < 0.5f) { assign(iterator, { 16, 160, 0 }); return; } // forrest
+				if (elevation < 0.66f) { assign(iterator, { 128, 128, 128 }); return; } // mountain
+				assign(iterator, { 255, 255, 255 }); // snowcap
+			};
 
 			if (update_noise) {
 				//debug("update noise");
 				if (seed < 0 || seed > seed_maximum) seed = seed_maximum;
 				Simplex::seed(seed);
 				Channel channel(512, 512);
-				auto iterator = channel.getIter();
-				while (iterator.line()) {
-					while (iterator.pixel()) {
-						float2 position = iterator.getPos();
-						position += shift * float2(channel.getSize());
-						position *= scale * 0.01f;
-						float noise = Simplex::noise(position, current_options);
-						//float noise = amplitude * Simplex::fBm(position * frequency, octaves, lacunarity, persistence);
-						//if (positive) noise = (noise + 1) / 2;
-						//noise = amplitude * pow(noise, exponent);
+				Surface surface(channel.getWidth(), channel.getHeight(), false, SurfaceChannelOrder::RGB);
+				float2 size = channel.getSize();
+				float2 center = size / 2.0f;
+				auto channel_iterator = channel.getIter();
+				auto surface_iterator = surface.getIter();
+				while (channel_iterator.line() and surface_iterator.line()) {
+					while (channel_iterator.pixel() and surface_iterator.pixel()) {
+						float2 position = float2(channel_iterator.getPos());
+						position = (position - center) / scale + center;
+						position += shift * size;
+						float elevation = Simplex::noise(position * 0.01f, current_options);
 						if (threshold) {
-							iterator.v() = noise < 0.0f ? 0 : 255;
+							channel_iterator.v() = elevation < 0.0f ? 0 : 255;
 						} else {
-							iterator.v() = static_cast<uint8>((noise + 1) / 2 * 255);
+							channel_iterator.v() = static_cast<uint8>((elevation + 1) / 2 * 255);
 						}
+						assign_elevation(surface_iterator, elevation);
 					}
 				}
-				noise_texture = Texture::create(channel);
+				elevation_texture = Texture::create(channel);
+				terrain_texture = Texture::create(surface);
 				update_noise = false;
 			}
 
-			ui::BeginChild("l", noise_texture->getSize(), false, ImGuiWindowFlags_HorizontalScrollbar);
-			ui::Image(noise_texture, noise_texture->getSize());
+			ui::BeginChild("l", elevation_texture->getSize(), false);
+			ui::Image(elevation_texture, elevation_texture->getSize());
 			ui::EndChild();
 
 			ui::SameLine();
 
-			ui::BeginChild("r", noise_texture->getSize());
+			ui::BeginChild("r", elevation_texture->getSize());
 			ui::Text("Presets:");
 			if (ui::Button("Reset")) {
+				seed = 0;
+				scale = 1.0f;
 				shift = {};
 				current_options = {};
+				details = default_details;
 				update_noise = true;
 			}
 			ui::SameLine();
-			if (ui::Button("Mist")) {
-				shift = { -0.5f, -0.5f };
+			if (ui::Button("World")) {
+				seed = 0;
+				scale = 2.0f;
+				shift = {};
 				current_options = {};
+				details = default_details;
 				current_options.octaves = 5;
 				update_noise = true;
 			}
@@ -162,10 +188,18 @@ namespace sethex {
 			update_noise |= ui::SliderFloat("Lacunarity", current_options.lacunarity, 0.0f, 10.0f, "%.2f", 1.0f, &saved_options.lacunarity); ui::Hint("Ctrl+Click to enter an exact value");
 			update_noise |= ui::SliderFloat("Persistence", current_options.persistence, 0.0f, 2.0f, "%.2f", 1.0f, &saved_options.persistence); ui::Hint("Ctrl+Click to enter an exact value");
 			update_noise |= ui::SliderFloat("Power", current_options.power, 0.1f, 10.0f, "%.2f", 1.0f, &saved_options.power); ui::Hint("Ctrl+Click to enter an exact value");
+			if (ui::SliderFloat("Details", details, 0.0f, 1.0f, "%.2f", 1.0f, &default_details)) {
+				current_options.lacunarity = 2.0f * details;
+				current_options.persistence = 1.0f / current_options.lacunarity;
+				update_noise = true;
+			}
 			update_noise |= ui::Checkbox("Positive", current_options.positive); ui::Tooltip("sets noise range to [0,1] instead of [-1,1]");
 			ui::SameLine();
 			update_noise |= ui::Checkbox("Threshold", threshold); ui::Tooltip("map positive values to white, negative ones to black");
+			ui::Text("0.5 ^ %.1f -> %.1f", current_options.power, glm::pow(0.5, current_options.power));
 			ui::EndChild();
+
+			ui::Image(terrain_texture, terrain_texture->getSize());
 		}
 	}
 

@@ -2115,9 +2115,10 @@ namespace Simplex {
 			frequency *= lacunarity;
 			octave_amplitude *= persistence;
 		}
-		float normalized = sum / range;
-		if (positive) normalized = (normalized + 1.0f) / 2.0f;
-		return glm::pow(normalized, power) * amplitude;
+		float value = sum / range;
+		if (positive) value = (value + 1.0f) / 2.0f;
+		else if (value < 0.0f) return -glm::pow(-value, power) * amplitude;
+		return glm::pow(value, power) * amplitude;
 	}
 
 };
