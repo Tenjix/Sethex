@@ -28,6 +28,7 @@
  */
 #pragma once
 
+#include <cmath>
 #include <memory>
 #include <vector>
 #include <map>
@@ -303,11 +304,14 @@ namespace ImGui {
 	inline bool SliderAngle(const char* label, float& value_radians, float value_degrees_minimum = -360.0f, float value_degrees_maximum = +360.0f) {
 		return SliderAngle(label, &value_radians, value_degrees_minimum, value_degrees_maximum);
 	}
-	inline bool SliderFloat(const char* label, float& value, float value_minimum = 0.0f, float value_maximum = 1.0f, const char* display_format = "%.3f", float power = 1.0f, float* reset_value = nullptr, const char* reset_label = "Reset") {
-		bool changed = SliderFloat(label, &value, value_minimum, value_maximum, display_format, power);
-		if (reset_value && value != *reset_value) {
+	inline bool SliderFloat(const char* label, float& value, float value_minimum = 0.0f, float value_maximum = 1.0f, const char* display_format = "%.3f", float power = 1.0f) {
+		return SliderFloat(label, &value, value_minimum, value_maximum, display_format, power);
+	}
+	inline bool SliderFloat(const char* label, float& value, float value_minimum, float value_maximum, const char* display_format, float power, float reset_value, const char* reset_label = "Reset") {
+		bool changed = SliderFloat(label, value, value_minimum, value_maximum, display_format, power);
+		if (value != reset_value) {
 			PushID(label);
-			SameLine(); if (Button(reset_label)) { value = *reset_value; changed = true; }
+			SameLine(); if (Button(reset_label)) { value = reset_value; changed = true; }
 			PopID();
 		}
 		return changed;
@@ -321,11 +325,14 @@ namespace ImGui {
 	inline bool SliderFloat4(const char* label, ci::vec4& value, float value_minimum = 0.0f, float value_maximum = 1.0f, const char* display_format = "%.3f", float power = 1.0f) {
 		return SliderFloat4(label, reinterpret_cast<float*>(&value), value_minimum, value_maximum, display_format, power);
 	}
-	inline bool SliderInt(const char* label, int& value, int value_minimum = 0, int value_maximum = 100, const char* display_format = "%.0f", int* reset_value = nullptr, const char* reset_label = "Reset") {
-		bool changed = SliderInt(label, &value, value_minimum, value_maximum, display_format);
-		if (reset_value && value != *reset_value) {
+	inline bool SliderInt(const char* label, int& value, int value_minimum = 0, int value_maximum = 100, const char* display_format = "%.0f") {
+		return SliderInt(label, &value, value_minimum, value_maximum, display_format);
+	}
+	inline bool SliderInt(const char* label, int& value, int value_minimum, int value_maximum, const char* display_format, int reset_value, const char* reset_label = "Reset") {
+		bool changed = SliderInt(label, value, value_minimum, value_maximum, display_format);
+		if (value != reset_value) {
 			PushID(label);
-			SameLine(); if (Button(reset_label)) { value = *reset_value; changed = true; }
+			SameLine(); if (Button(reset_label)) { value = reset_value; changed = true; }
 			PopID();
 		}
 		return changed;
@@ -339,14 +346,18 @@ namespace ImGui {
 	inline bool SliderInt4(const char* label, ci::ivec4& value, int value_minimum = 0, int value_maximum = 100, const char* display_format = "%.0f") {
 		return SliderInt4(label, reinterpret_cast<int*>(&value), value_minimum, value_maximum, display_format);
 	}
-	inline bool SliderUnsigned(const char* label, unsigned& value, unsigned short value_minimum = 0, unsigned short value_maximum = 100, const char* display_format = "%.0f", unsigned* reset_value = nullptr, const char* reset_label = "Reset") {
+	inline bool SliderUnsigned(const char* label, unsigned& value, unsigned short value_minimum = 0, unsigned short value_maximum = 100, const char* display_format = "%.0f") {
 		CI_ASSERT_MSG(value < INT_MAX - 63, "CinderImGui: unsigned integer slider value exceeded limit"); // assuming 32-bit int and IEEE-754 float
 		float slider_value = static_cast<float>(value);
 		bool changed = SliderFloat(label, &slider_value, static_cast<float>(value_minimum), static_cast<float>(value_maximum), display_format, 1.0f);
 		value = static_cast<unsigned>(slider_value);
-		if (reset_value && value != *reset_value) {
+		return changed;
+	}
+	inline bool SliderUnsigned(const char* label, unsigned& value, unsigned short value_minimum, unsigned short value_maximum, const char* display_format, unsigned reset_value, const char* reset_label = "Reset") {
+		bool changed = SliderUnsigned(label, value, value_minimum, value_maximum, display_format);
+		if (value != reset_value) {
 			PushID(label);
-			SameLine(); if (Button(reset_label)) { value = *reset_value; changed = true; }
+			SameLine(); if (Button(reset_label)) { value = reset_value; changed = true; }
 			PopID();
 		}
 		return changed;
