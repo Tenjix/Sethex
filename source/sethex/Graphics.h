@@ -21,3 +21,14 @@ namespace sethex {
 	using FrameBuffer = ci::gl::Fbo;
 
 }
+
+namespace cinder {
+
+	inline void assign(const Surface::Iter& iterator, const ColorA8u& color) {
+		iterator.r() = color.r;
+		iterator.g() = color.g;
+		iterator.b() = color.b;
+		iterator.a() = color.a;
+	}
+
+}

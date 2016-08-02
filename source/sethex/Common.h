@@ -28,4 +28,34 @@ namespace sethex {
 	using std::vector;
 	using std::unordered_map;
 
+	struct generic_zero {
+
+		template <class Type>
+		operator Type() {
+			return Type(0);
+		}
+
+		template <class Type>
+		bool operator==(Type value) {
+			return value == Type(0);
+		}
+
+		template <class Type>
+		bool operator!=(Type value) {
+			return value != Type(0);
+		}
+
+	};
+
+	template <class Type>
+	bool operator==(Type value, generic_zero) {
+		return value == Type(0);
+	}
+	template <class Type>
+	bool operator!=(Type value, generic_zero) {
+		return value != Type(0);
+	}
+
+	constexpr generic_zero zero;
+
 }

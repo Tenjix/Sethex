@@ -22,7 +22,9 @@ using namespace sethex::hexagonal;
 
 namespace sethex {
 
+	shared<Channel> elevation_channel;
 	shared<Texture> elevation_texture;
+	shared<Surface> terrain_surface;
 	shared<Texture> terrain_texture;
 
 	void Game::setup(CameraUi& camera_ui) {
@@ -123,6 +125,7 @@ namespace sethex {
 		{
 			static int seed = 0, seed_maximum = 1000000000;
 			static float2 shift;
+			static signed2 drag;
 			static float scale = 1.0f;
 			static Simplex::Options current_options;
 			static Simplex::Options saved_options;
@@ -136,12 +139,7 @@ namespace sethex {
 
 			ui::ScopedWindow ui_window("Noise Texture", ImGuiWindowFlags_HorizontalScrollbar);
 
-			auto assign = [](const Surface::Iter& iterator, const Color8u& color) {
-				iterator.r() = color.r;
-				iterator.g() = color.g;
-				iterator.b() = color.b;
-			};
-			auto assign_elevation = [&assign](const Surface::Iter& iterator, float elevation) {
+			auto assign_elevation = [](const Surface::Iter& iterator, float elevation) {
 				if (elevation > 0.33f * sealevel + thresholds.snowcap) { assign(iterator, { 255, 255, 255 }); return; } // snowcap
 				if (elevation > 0.5f * sealevel + thresholds.mountain) { assign(iterator, { 128, 128, 128 }); return; } // mountain
 				if (elevation > 0.66f * sealevel + thresholds.forrest) { assign(iterator, { 16, 160, 0 }); return; } // forrest
@@ -158,17 +156,32 @@ namespace sethex {
 				if (seed < 0 || seed > seed_maximum) seed = seed_maximum;
 				water_pixels = 0;
 				Simplex::seed(seed);
-				Channel channel(800, 450);
-				Surface surface(channel.getWidth(), channel.getHeight(), false, SurfaceChannelOrder::RGB);
-				float2 size = channel.getSize();
+				auto channel = Channel::create(800, 450);
+				auto surface = Surface::create(channel->getWidth(), channel->getHeight(), false, SurfaceChannelOrder::RGB);
+				float2 size = channel->getSize();
 				float2 center = size / 2.0f;
-				auto channel_iterator = channel.getIter();
-				auto surface_iterator = surface.getIter();
+				auto channel_iterator = channel->getIter();
+				auto surface_iterator = surface->getIter();
+				shift -= drag;
 				while (channel_iterator.line() and surface_iterator.line()) {
 					while (channel_iterator.pixel() and surface_iterator.pixel()) {
-						float2 position = float2(channel_iterator.getPos());
+						signed2 pixel = channel_iterator.getPos();
+						if (drag != zero) {
+							bool x_copyable = drag.x == 0 or drag.x > 0 and pixel.x >= drag.x or drag.x < 0 and pixel.x < size.x + drag.x;
+							bool y_copyable = drag.y == 0 or drag.y > 0 and pixel.y >= drag.y or drag.y < 0 and pixel.y < size.y + drag.y;
+							if (x_copyable and y_copyable) {
+								channel_iterator.v() = elevation_channel->getValue(pixel - drag);
+								auto color = terrain_surface->getPixel(pixel - drag);
+								surface_iterator.r() = color.r;
+								surface_iterator.g() = color.g;
+								surface_iterator.b() = color.b;
+								//assign_elevation(surface_iterator, channel_iterator.v() / 255.0f * 2 - 1);
+								continue;
+							}
+						}
+						float2 position = pixel;
 						position = (position - center) / scale + center;
-						position += shift * size;
+						position += shift;
 						float elevation = Simplex::noise(position * 0.01f, current_options);
 						if (use_continents) {
 							float continents = Simplex::noise(position * 0.01f * continent_frequency);
@@ -182,8 +195,12 @@ namespace sethex {
 						assign_elevation(surface_iterator, elevation);
 					}
 				}
-				elevation_texture = Texture::create(channel);
-				terrain_texture = Texture::create(surface);
+				elevation_channel = channel;
+				if (elevation_texture) elevation_texture->update(*elevation_channel);
+				else elevation_texture = Texture::create(*elevation_channel);
+				terrain_surface = surface;
+				if (terrain_texture) terrain_texture->update(*terrain_surface);
+				else terrain_texture = Texture::create(*terrain_surface);
 				update_noise = false;
 			}
 
@@ -218,7 +235,6 @@ namespace sethex {
 				continent_frequency = 0.25f;
 				current_options.octaves = 5;
 				sealevel = 0.2f;
-				thresholds = default_thresholds;
 				update_noise = true;
 			}
 			ui::SameLine();
@@ -231,7 +247,6 @@ namespace sethex {
 				continent_frequency = 0.5f;
 				current_options.octaves = 5;
 				sealevel = 0.2f;
-				thresholds = default_thresholds;
 				update_noise = true;
 			}
 			update_noise |= ui::DragInt("Seed", seed, 1.0f, 0, seed_maximum);
@@ -256,7 +271,10 @@ namespace sethex {
 
 			ui::BeginChild("world map", region_size);
 			ui::Image(terrain_texture, terrain_texture->getSize());
-			ui::GetMouseDragDelta();
+			if (ui::IsItemHoveredRect() and ui::IsMouseDragging()) {
+				drag = ui::GetIO().MouseDelta;
+				update_noise = drag != zero;
+			}
 			ui::EndChild();
 
 			ui::SameLine();
@@ -279,6 +297,7 @@ namespace sethex {
 			update_noise |= ui::SliderFloat("Beach", thresholds.beach, thresholds.coast, thresholds.prairie, "%.2f");
 			update_noise |= ui::SliderFloat("Coast", thresholds.coast, thresholds.ocean, thresholds.beach, "%.2f");
 			update_noise |= ui::SliderFloat("Ocean", thresholds.ocean, -1.0f, thresholds.coast, "%.2f");
+			ui::Text("dragged x=%i, y=%i", drag.x, drag.y);
 			ui::EndChild();
 		}
 	}

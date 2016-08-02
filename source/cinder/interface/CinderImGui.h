@@ -319,6 +319,15 @@ namespace ImGui {
 	inline bool SliderFloat2(const char* label, ci::vec2& value, float value_minimum = 0.0f, float value_maximum = 1.0f, const char* display_format = "%.3f", float power = 1.0f) {
 		return SliderFloat2(label, reinterpret_cast<float*>(&value), value_minimum, value_maximum, display_format, power);
 	}
+	inline bool SliderFloat2(const char* label, ci::vec2& value, float value_minimum, float value_maximum, const char* display_format, float power, const ci::vec2& reset_value, const char* reset_label = "Reset") {
+		bool changed = SliderFloat2(label, value, value_minimum, value_maximum, display_format, power);
+		if (value != reset_value) {
+			PushID(label);
+			SameLine(); if (Button(reset_label)) { value = reset_value; changed = true; }
+			PopID();
+		}
+		return changed;
+	}
 	inline bool SliderFloat3(const char* label, ci::vec3& value, float value_minimum = 0.0f, float value_maximum = 1.0f, const char* display_format = "%.3f", float power = 1.0f) {
 		return SliderFloat3(label, reinterpret_cast<float*>(&value), value_minimum, value_maximum, display_format, power);
 	}
