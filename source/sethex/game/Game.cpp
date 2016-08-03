@@ -126,7 +126,7 @@ namespace sethex {
 			static int seed = 0, seed_maximum = 1000000000;
 			static float2 shift;
 			static signed2 drag;
-			static float scale = 1.0f;
+			static float scale = 1.0f, roll = 0.0f;
 			static Simplex::Options current_options;
 			static Simplex::Options saved_options;
 			static float continent_frequency = 1.0f, sealevel = 0.0f;
@@ -162,7 +162,8 @@ namespace sethex {
 				float2 center = size / 2.0f;
 				auto channel_iterator = channel->getIter();
 				auto surface_iterator = surface->getIter();
-				shift -= drag;
+				scale = clamp(scale * (1.0f - roll), 0.1f, 10.0f);
+				shift -= float2(drag) / scale;
 				while (channel_iterator.line() and surface_iterator.line()) {
 					while (channel_iterator.pixel() and surface_iterator.pixel()) {
 						signed2 pixel = channel_iterator.getPos();
@@ -171,11 +172,7 @@ namespace sethex {
 							bool y_copyable = drag.y == 0 or drag.y > 0 and pixel.y >= drag.y or drag.y < 0 and pixel.y < size.y + drag.y;
 							if (x_copyable and y_copyable) {
 								channel_iterator.v() = elevation_channel->getValue(pixel - drag);
-								auto color = terrain_surface->getPixel(pixel - drag);
-								surface_iterator.r() = color.r;
-								surface_iterator.g() = color.g;
-								surface_iterator.b() = color.b;
-								//assign_elevation(surface_iterator, channel_iterator.v() / 255.0f * 2 - 1);
+								assign_elevation(surface_iterator, channel_iterator.v() / 255.0f * 2 - 1);
 								continue;
 							}
 						}
@@ -227,31 +224,27 @@ namespace sethex {
 			}
 			ui::SameLine();
 			if (ui::Button("Continents")) {
-				seed = 0;
-				scale = 1.0f;
-				shift = {};
 				current_options = {};
+				current_options.amplitude = 0.5f;
+				current_options.octaves = 5;
 				use_continents = true;
 				continent_frequency = 0.25f;
-				current_options.octaves = 5;
-				sealevel = 0.2f;
+				sealevel = 0.25f;
 				update_noise = true;
 			}
 			ui::SameLine();
 			if (ui::Button("Islands")) {
-				seed = 0;
-				scale = 1.0f;
-				shift = {};
 				current_options = {};
+				current_options.amplitude = 2.0f;
+				current_options.octaves = 5;
 				use_continents = true;
 				continent_frequency = 0.5f;
-				current_options.octaves = 5;
-				sealevel = 0.2f;
+				sealevel = 0.25f;
 				update_noise = true;
 			}
-			update_noise |= ui::DragInt("Seed", seed, 1.0f, 0, seed_maximum);
-			update_noise |= ui::SliderFloat("Scale", scale, 0.1f, 10.0f, "%.2f", 3.45f);
-			update_noise |= ui::SliderFloat2("Shift", shift, -1.0f, 1.0f, "%.2f");
+			update_noise |= ui::DragInt("Seed", seed, 1.0f, 0, seed_maximum, "%.0f", 0);
+			update_noise |= ui::SliderFloat("Scale", scale, 0.1f, 10.0f, "%.2f", 3.45f, 1.0f);
+			update_noise |= ui::DragFloat2("Shift", shift, 1.0f, 0.0f, 0.0f, "%.2f", 1.0f, zero);
 			update_noise |= ui::SliderUnsigned("Octaves", current_options.octaves, 1, 15, "%.0f", saved_options.octaves);
 			update_noise |= ui::SliderFloat("Amplitude", current_options.amplitude, 0.0f, 10.0f, "%.2f", 1.0f, saved_options.amplitude); ui::Hint("Ctrl+Click to enter an exact value");
 			update_noise |= ui::SliderFloat("Frequency", current_options.frequency, 0.0f, 10.0f, "%.2f", 1.0f, saved_options.frequency); ui::Hint("Ctrl+Click to enter an exact value");
@@ -271,9 +264,10 @@ namespace sethex {
 
 			ui::BeginChild("world map", region_size);
 			ui::Image(terrain_texture, terrain_texture->getSize());
-			if (ui::IsItemHoveredRect() and ui::IsMouseDragging()) {
-				drag = ui::GetIO().MouseDelta;
-				update_noise = drag != zero;
+			if (ui::IsItemHoveredRect()) {
+				roll = ui::GetIO().MouseWheel * 0.1f;
+				drag = ui::IsMouseDragging() ? signed2(ui::GetIO().MouseDelta) : zero;
+				update_noise = drag != zero or roll != zero;
 			}
 			ui::EndChild();
 

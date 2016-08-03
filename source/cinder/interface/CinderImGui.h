@@ -226,6 +226,21 @@ namespace ImGui {
 		ImGui::SameLine(); ImGui::TextDisabled(indicator); Tooltip(text);
 	}
 
+	// internal
+	namespace {
+
+		template <class Type>
+		bool ResetButton(bool changed, Type& value, const Type& reset_value, const char* label, const char* reset_label = "Reset") {
+			if (value != reset_value) {
+				PushID(label);
+				SameLine(); if (Button(reset_label)) { value = reset_value; changed = true; }
+				PopID();
+			}
+			return changed;
+		}
+
+	}
+
 	// reference overloads
 
 	inline bool Checkbox(const char* label, bool& value) {
@@ -240,8 +255,14 @@ namespace ImGui {
 	inline bool DragFloat(const char* label, float& value, float value_speed = 1.0f, float value_minimum = 0.0f, float value_maximum = 0.0f, const char* display_format = "%.3f", float power = 1.0f) {
 		return DragFloat(label, &value, value_speed, value_minimum, value_maximum, display_format, power);
 	}
+	inline bool DragFloat(const char* label, float& value, float value_speed, float value_minimum, float value_maximum, const char* display_format, float power, const float reset_value, const char* reset_label = "Reset") {
+		return ResetButton(DragFloat(label, &value, value_speed, value_minimum, value_maximum, display_format, power), value, reset_value, label, reset_label);
+	}
 	inline bool DragFloat2(const char* label, ci::vec2& value, float value_speed = 1.0f, float value_minimum = 0.0f, float value_maximum = 0.0f, const char* display_format = "%.3f", float power = 1.0f) {
 		return DragFloat2(label, reinterpret_cast<float*>(&value), value_speed, value_minimum, value_maximum, display_format, power);
+	}
+	inline bool DragFloat2(const char* label, ci::vec2& value, float value_speed, float value_minimum, float value_maximum, const char* display_format, float power, const ci::vec2& reset_value, const char* reset_label = "Reset") {
+		return ResetButton(DragFloat2(label, value, value_speed, value_minimum, value_maximum, display_format, power), value, reset_value, label, reset_label);
 	}
 	inline bool DragFloat3(const char* label, ci::vec3& value, float value_speed = 1.0f, float value_minimum = 0.0f, float value_maximum = 0.0f, const char* display_format = "%.3f", float power = 1.0f) {
 		return DragFloat3(label, reinterpret_cast<float*>(&value), value_speed, value_minimum, value_maximum, display_format, power);
@@ -252,8 +273,14 @@ namespace ImGui {
 	inline bool DragInt(const char* label, int& value, float value_speed = 1.0f, int value_minimum = 0, int value_maximum = 0, const char* display_format = "%.0f") {
 		return DragInt(label, &value, value_speed, value_minimum, value_maximum, display_format);
 	}
+	inline bool DragInt(const char* label, int& value, float value_speed, int value_minimum, int value_maximum, const char* display_format, const int reset_value, const char* reset_label = "Reset") {
+		return ResetButton(DragInt(label, &value, value_speed, value_minimum, value_maximum, display_format), value, reset_value, label, reset_label);
+	}
 	inline bool DragInt2(const char* label, ci::ivec2& value, float value_speed = 1.0f, int value_minimum = 0, int value_maximum = 0, const char* display_format = "%.0f") {
 		return DragInt2(label, reinterpret_cast<int*>(&value), value_speed, value_minimum, value_maximum, display_format);
+	}
+	inline bool DragInt2(const char* label, ci::ivec2& value, float value_speed, int value_minimum, int value_maximum, const char* display_format, const ci::ivec2& reset_value, const char* reset_label = "Reset") {
+		return ResetButton(DragInt2(label, value, value_speed, value_minimum, value_maximum, display_format), value, reset_value, label, reset_label);
 	}
 	inline bool DragInt3(const char* label, ci::ivec3& value, float value_speed = 1.0f, int value_minimum = 0, int value_maximum = 0, const char* display_format = "%.0f") {
 		return DragInt3(label, reinterpret_cast<int*>(&value), value_speed, value_minimum, value_maximum, display_format);
@@ -268,6 +295,9 @@ namespace ImGui {
 		value = static_cast<unsigned>(slider_value);
 		return changed;
 	}
+	inline bool DragUnsigned(const char* label, unsigned& value, float value_speed, unsigned short value_minimum, unsigned short value_maximum, const char* display_format, const unsigned reset_value, const char* reset_label = "Reset") {
+		return ResetButton(DragUnsigned(label, value, value_speed, value_minimum, value_maximum, display_format), value, reset_value, label, reset_label);
+	}
 	inline bool DragUnsigned2(const char* label, ci::uvec2& value, float value_speed = 1.0f, unsigned short value_minimum = 0, unsigned short value_maximum = 100, const char* display_format = "%.0f") {
 		constexpr unsigned n = 2;
 		float slider_value[n];
@@ -278,6 +308,9 @@ namespace ImGui {
 		bool changed = DragFloat2(label, slider_value, value_speed, static_cast<float>(value_minimum), static_cast<float>(value_maximum), display_format, 1.0f);
 		for (unsigned i = 0; i < n; i++) value[i] = static_cast<unsigned>(slider_value[i]);
 		return changed;
+	}
+	inline bool DragUnsigned2(const char* label, ci::uvec2& value, float value_speed, unsigned short value_minimum, unsigned short value_maximum, const char* display_format, const ci::uvec2& reset_value, const char* reset_label = "Reset") {
+		return ResetButton(DragUnsigned2(label, value, value_speed, value_minimum, value_maximum, display_format), value, reset_value, label, reset_label);
 	}
 	inline bool DragUnsigned3(const char* label, ci::uvec3& value, float value_speed = 1.0f, unsigned short value_minimum = 0, unsigned short value_maximum = 100, const char* display_format = "%.0f") {
 		constexpr unsigned n = 3;
@@ -304,29 +337,20 @@ namespace ImGui {
 	inline bool SliderAngle(const char* label, float& value_radians, float value_degrees_minimum = -360.0f, float value_degrees_maximum = +360.0f) {
 		return SliderAngle(label, &value_radians, value_degrees_minimum, value_degrees_maximum);
 	}
+	inline bool SliderAngle(const char* label, float& value_radians, float value_degrees_minimum, float value_degrees_maximum, const float reset_value_radians, const char* reset_label = "Reset") {
+		return ResetButton(SliderAngle(label, &value_radians, value_degrees_minimum, value_degrees_maximum), value_radians, reset_value_radians, label, reset_label);
+	}
 	inline bool SliderFloat(const char* label, float& value, float value_minimum = 0.0f, float value_maximum = 1.0f, const char* display_format = "%.3f", float power = 1.0f) {
 		return SliderFloat(label, &value, value_minimum, value_maximum, display_format, power);
 	}
-	inline bool SliderFloat(const char* label, float& value, float value_minimum, float value_maximum, const char* display_format, float power, float reset_value, const char* reset_label = "Reset") {
-		bool changed = SliderFloat(label, value, value_minimum, value_maximum, display_format, power);
-		if (value != reset_value) {
-			PushID(label);
-			SameLine(); if (Button(reset_label)) { value = reset_value; changed = true; }
-			PopID();
-		}
-		return changed;
+	inline bool SliderFloat(const char* label, float& value, float value_minimum, float value_maximum, const char* display_format, float power, const float reset_value, const char* reset_label = "Reset") {
+		return ResetButton(SliderFloat(label, value, value_minimum, value_maximum, display_format, power), value, reset_value, label, reset_label);
 	}
 	inline bool SliderFloat2(const char* label, ci::vec2& value, float value_minimum = 0.0f, float value_maximum = 1.0f, const char* display_format = "%.3f", float power = 1.0f) {
 		return SliderFloat2(label, reinterpret_cast<float*>(&value), value_minimum, value_maximum, display_format, power);
 	}
 	inline bool SliderFloat2(const char* label, ci::vec2& value, float value_minimum, float value_maximum, const char* display_format, float power, const ci::vec2& reset_value, const char* reset_label = "Reset") {
-		bool changed = SliderFloat2(label, value, value_minimum, value_maximum, display_format, power);
-		if (value != reset_value) {
-			PushID(label);
-			SameLine(); if (Button(reset_label)) { value = reset_value; changed = true; }
-			PopID();
-		}
-		return changed;
+		return ResetButton(SliderFloat2(label, value, value_minimum, value_maximum, display_format, power), value, reset_value, label, reset_label);
 	}
 	inline bool SliderFloat3(const char* label, ci::vec3& value, float value_minimum = 0.0f, float value_maximum = 1.0f, const char* display_format = "%.3f", float power = 1.0f) {
 		return SliderFloat3(label, reinterpret_cast<float*>(&value), value_minimum, value_maximum, display_format, power);
@@ -337,17 +361,14 @@ namespace ImGui {
 	inline bool SliderInt(const char* label, int& value, int value_minimum = 0, int value_maximum = 100, const char* display_format = "%.0f") {
 		return SliderInt(label, &value, value_minimum, value_maximum, display_format);
 	}
-	inline bool SliderInt(const char* label, int& value, int value_minimum, int value_maximum, const char* display_format, int reset_value, const char* reset_label = "Reset") {
-		bool changed = SliderInt(label, value, value_minimum, value_maximum, display_format);
-		if (value != reset_value) {
-			PushID(label);
-			SameLine(); if (Button(reset_label)) { value = reset_value; changed = true; }
-			PopID();
-		}
-		return changed;
+	inline bool SliderInt(const char* label, int& value, int value_minimum, int value_maximum, const char* display_format, const int reset_value, const char* reset_label = "Reset") {
+		return ResetButton(SliderInt(label, value, value_minimum, value_maximum, display_format), value, reset_value, label, reset_label);
 	}
 	inline bool SliderInt2(const char* label, ci::ivec2& value, int value_minimum = 0, int value_maximum = 100, const char* display_format = "%.0f") {
 		return SliderInt2(label, reinterpret_cast<int*>(&value), value_minimum, value_maximum, display_format);
+	}
+	inline bool SliderInt2(const char* label, ci::ivec2& value, int value_minimum, int value_maximum, const char* display_format, const ci::ivec2& reset_value, const char* reset_label = "Reset") {
+		return ResetButton(SliderInt2(label, reinterpret_cast<int*>(&value), value_minimum, value_maximum, display_format), value, reset_value, label, reset_label);
 	}
 	inline bool SliderInt3(const char* label, ci::ivec3& value, int value_minimum = 0, int value_maximum = 100, const char* display_format = "%.0f") {
 		return SliderInt3(label, reinterpret_cast<int*>(&value), value_minimum, value_maximum, display_format);
@@ -362,14 +383,8 @@ namespace ImGui {
 		value = static_cast<unsigned>(slider_value);
 		return changed;
 	}
-	inline bool SliderUnsigned(const char* label, unsigned& value, unsigned short value_minimum, unsigned short value_maximum, const char* display_format, unsigned reset_value, const char* reset_label = "Reset") {
-		bool changed = SliderUnsigned(label, value, value_minimum, value_maximum, display_format);
-		if (value != reset_value) {
-			PushID(label);
-			SameLine(); if (Button(reset_label)) { value = reset_value; changed = true; }
-			PopID();
-		}
-		return changed;
+	inline bool SliderUnsigned(const char* label, unsigned& value, unsigned short value_minimum, unsigned short value_maximum, const char* display_format, const unsigned reset_value, const char* reset_label = "Reset") {
+		return ResetButton(SliderUnsigned(label, value, value_minimum, value_maximum, display_format), value, reset_value, label, reset_label);
 	}
 	inline bool SliderUnsigned2(const char* label, ci::uvec2& value, int value_minimum = 0, int value_maximum = 100, const char* display_format = "%.0f") {
 		constexpr unsigned n = 2;
@@ -381,6 +396,9 @@ namespace ImGui {
 		bool changed = SliderFloat2(label, slider_value, static_cast<float>(value_minimum), static_cast<float>(value_maximum), display_format, 1.0f);
 		for (unsigned i = 0; i < n; i++) value[i] = static_cast<unsigned>(slider_value[i]);
 		return changed;
+	}
+	inline bool SliderUnsigned2(const char* label, ci::uvec2& value, unsigned short value_minimum, unsigned short value_maximum, const char* display_format, const ci::uvec2& reset_value, const char* reset_label = "Reset") {
+		return ResetButton(SliderUnsigned2(label, value, value_minimum, value_maximum, display_format), value, reset_value, label, reset_label);
 	}
 	inline bool SliderUnsigned3(const char* label, ci::uvec3& value, int value_minimum = 0, int value_maximum = 100, const char* display_format = "%.0f") {
 		constexpr unsigned n = 3;

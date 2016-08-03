@@ -31,17 +31,17 @@ namespace sethex {
 	struct generic_zero {
 
 		template <class Type>
-		operator Type() {
+		operator Type() const {
 			return Type(0);
 		}
 
 		template <class Type>
-		bool operator==(Type value) {
+		bool operator==(Type value) const {
 			return value == Type(0);
 		}
 
 		template <class Type>
-		bool operator!=(Type value) {
+		bool operator!=(Type value) const {
 			return value != Type(0);
 		}
 
