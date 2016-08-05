@@ -142,11 +142,11 @@ namespace sethex {
 			auto assign_elevation = [](const Surface::Iter& iterator, float elevation) {
 				if (elevation > 0.33f * sealevel + thresholds.snowcap) { assign(iterator, { 255, 255, 255 }); return; } // snowcap
 				if (elevation > 0.5f * sealevel + thresholds.mountain) { assign(iterator, { 128, 128, 128 }); return; } // mountain
-				if (elevation > 0.66f * sealevel + thresholds.forrest) { assign(iterator, { 16, 160, 0 }); return; } // forrest
-				if (elevation > sealevel + thresholds.prairie) { assign(iterator, { 50, 220, 20 }); return; } // prairie
-				if (elevation > sealevel + thresholds.beach) { assign(iterator, { 240, 240, 64 }); return; } // beach
+				if (elevation > 0.66f * sealevel + thresholds.forrest) { assign(iterator, { 0, 160, 0 }); return; } // forrest
+				if (elevation > sealevel + thresholds.prairie) { assign(iterator, { 32, 204, 32 }); return; } // prairie
+				if (elevation > sealevel + thresholds.beach) { assign(iterator, { 240, 240, 160 }); return; } // beach
 				water_pixels++;
-				if (elevation > sealevel + thresholds.coast) { assign(iterator, { 25, 25, 150 }); return; } // coast
+				if (elevation > sealevel + thresholds.coast) { assign(iterator, { 16, 16, 160 }); return; } // coast
 				if (elevation > sealevel + thresholds.ocean) { assign(iterator, { 0, 0, 128 }); return; } // ocean
 				assign(iterator, { 0, 0, 96 }); // deep ocean
 			};
