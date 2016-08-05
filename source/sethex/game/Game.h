@@ -1,5 +1,7 @@
 #pragma once
 
+#define GLM_SWIZZLE
+
 #include <cinder/Font.h>
 #include <cinder/CameraUi.h>
 

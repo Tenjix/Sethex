@@ -116,6 +116,13 @@ namespace sethex {
 		}
 	};
 
+	template <class Type>
+	float calculate_elevation(const Type& position, const Simplex::Options& options, bool continents = false, float continent_frequency = 0.5f) {
+		float elevation = Simplex::noise(position * 0.01f, options);
+		if (continents) elevation = (elevation + Simplex::noise(position * 0.01f * continent_frequency)) / (options.amplitude + 1.0f);
+		return elevation;
+	}
+
 	void Game::update(float elapsed_seconds, unsigned frames_per_second) {
 		this->frames_per_second = frames_per_second;
 		time_delta = elapsed_seconds;
@@ -127,9 +134,11 @@ namespace sethex {
 			static float2 shift;
 			static signed2 drag;
 			static float scale = 1.0f, roll = 0.0f;
+			static float2 repeat_scale = float2(1.0);
 			static Simplex::Options current_options;
 			static Simplex::Options saved_options;
-			static float continent_frequency = 1.0f, sealevel = 0.0f;
+			static float continent_frequency = 0.5f, sealevel = 0.0f;
+			static bool wrap_horizontally = false;
 			static bool use_continents = false;
 			static bool threshold = false;
 			static bool update_noise = true;
@@ -152,7 +161,6 @@ namespace sethex {
 			};
 
 			if (update_noise) {
-				//debug("update noise");
 				if (seed < 0 || seed > seed_maximum) seed = seed_maximum;
 				water_pixels = 0;
 				Simplex::seed(seed);
@@ -176,13 +184,20 @@ namespace sethex {
 								continue;
 							}
 						}
+						float elevation;
 						float2 position = pixel;
 						position = (position - center) / scale + center;
 						position += shift;
-						float elevation = Simplex::noise(position * 0.01f, current_options);
-						if (use_continents) {
-							float continents = Simplex::noise(position * 0.01f * continent_frequency);
-							elevation = (elevation + continents) / (current_options.amplitude + 1.0f);
+						if (wrap_horizontally) {
+							float3 cylindrical_position;
+							float radians = static_cast<float>(Tau * position.x / size.x);
+							cylindrical_position.x = static_cast<float>(sin(radians) / Tau) * size.x;
+							cylindrical_position.y = position.y;
+							cylindrical_position.z = static_cast<float>(cos(radians) / Tau) * size.x;
+							cylindrical_position = (cylindrical_position - center.xyx()) / repeat_scale.x + center.xyx();
+							elevation = calculate_elevation(cylindrical_position, current_options, use_continents, continent_frequency);
+						} else {
+							elevation = calculate_elevation(position, current_options, use_continents, continent_frequency);
 						}
 						if (threshold) {
 							channel_iterator.v() = elevation < 0.0f ? 0 : 255;
@@ -220,6 +235,8 @@ namespace sethex {
 				continent_frequency = 0.5f;
 				sealevel = 0.0f;
 				thresholds = default_thresholds;
+				wrap_horizontally = false;
+				repeat_scale = { 1.0f, 1.0f };
 				update_noise = true;
 			}
 			ui::SameLine();
@@ -235,11 +252,26 @@ namespace sethex {
 			ui::SameLine();
 			if (ui::Button("Islands")) {
 				current_options = {};
-				current_options.amplitude = 2.0f;
 				current_options.octaves = 5;
 				use_continents = true;
 				continent_frequency = 0.5f;
 				sealevel = 0.25f;
+				update_noise = true;
+			}
+			ui::SameLine();
+			if (ui::Button("World")) {
+				seed = 0;
+				scale = 1.0f;
+				shift = { -150, -5200 };
+				current_options = {};
+				current_options.amplitude = 0.5f;
+				current_options.octaves = 5;
+				use_continents = true;
+				continent_frequency = 0.25f;
+				sealevel = 0.25f;
+				thresholds = default_thresholds;
+				wrap_horizontally = true;
+				repeat_scale = { 1.0f, 1.0f };
 				update_noise = true;
 			}
 			update_noise |= ui::DragInt("Seed", seed, 1.0f, 0, seed_maximum, "%.0f", 0);
@@ -255,11 +287,11 @@ namespace sethex {
 			ui::SameLine();
 			update_noise |= ui::Checkbox("Threshold", threshold); ui::Tooltip("map positive values to white, negative ones to black");
 			ui::SameLine();
+			update_noise |= ui::Checkbox("Wrap Horizontally", wrap_horizontally);
+			ui::SameLine();
 			update_noise |= ui::Checkbox("Continents##use", use_continents);
-			update_noise |= ui::SliderFloat("Continent Frequency", continent_frequency, 0.0f, 2.0f, "%.2f", 1.0f, 0.5f);
-			unsigned pixels = terrain_texture->getWidth() * terrain_texture->getHeight();
-			float water_percentage = 100.0f * water_pixels / pixels;
-			ui::Text("%.1f%% Water, %.1f%% Land", water_percentage, 100.0f - water_percentage);
+			if (use_continents) update_noise |= ui::SliderFloat("Continent Frequency", continent_frequency, 0.0f, 2.0f, "%.2f", 1.0f, 0.5f);
+			if (wrap_horizontally) update_noise |= ui::SliderFloat2("Repeat-Scale", repeat_scale, 0.1f, 10.0f, "%.2f", 3.45f, float2(1.0));
 			ui::EndChild();
 
 			ui::BeginChild("world map", region_size);
@@ -274,6 +306,9 @@ namespace sethex {
 			ui::SameLine();
 
 			ui::BeginChild("world map properties", region_size);
+			unsigned pixels = terrain_texture->getWidth() * terrain_texture->getHeight();
+			float water_percentage = 100.0f * water_pixels / pixels;
+			ui::Text("%.1f%% Water, %.1f%% Land", water_percentage, 100.0f - water_percentage);
 			static float waterlevel = 0.0;
 			update_noise |= ui::SliderFloat("Sealevel", sealevel, -1.0f, 1.0f, "%.2f", 1.0f, 0.0);
 			ui::Text("Thresholds:");
