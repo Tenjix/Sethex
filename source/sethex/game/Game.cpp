@@ -269,7 +269,13 @@ namespace sethex {
 				use_continents = true;
 				continent_frequency = 0.25f;
 				sealevel = 0.25f;
-				thresholds = default_thresholds;
+				thresholds.ocean = -0.20f;
+				thresholds.coast = -0.02f;
+				thresholds.beach = 0.0f;
+				thresholds.prairie = 0.02f;
+				thresholds.forrest = 0.25f;
+				thresholds.mountain = 0.40f;
+				thresholds.snowcap = 0.55f;
 				wrap_horizontally = true;
 				repeat_scale = { 1.0f, 1.0f };
 				update_noise = true;
