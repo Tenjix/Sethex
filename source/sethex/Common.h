@@ -55,6 +55,22 @@ namespace sethex {
 	bool operator!=(Type value, generic_zero) {
 		return value != Type(0);
 	}
+	template <class Type>
+	bool operator<(Type value, generic_zero) {
+		return value < Type(0);
+	}
+	template <class Type>
+	bool operator>(Type value, generic_zero) {
+		return value > Type(0);
+	}
+	template <class Type>
+	bool operator<=(Type value, generic_zero) {
+		return value <= Type(0);
+	}
+	template <class Type>
+	bool operator>=(Type value, generic_zero) {
+		return value >= Type(0);
+	}
 
 	constexpr generic_zero zero;
 

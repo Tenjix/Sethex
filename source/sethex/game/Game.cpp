@@ -22,9 +22,8 @@ using namespace sethex::hexagonal;
 
 namespace sethex {
 
-	shared<Channel> elevation_channel;
+	shared<Channel> elevation_buffer;
 	shared<Texture> elevation_texture;
-	shared<Surface> terrain_surface;
 	shared<Texture> terrain_texture;
 
 	void Game::setup(CameraUi& camera_ui) {
@@ -138,6 +137,8 @@ namespace sethex {
 			static Simplex::Options current_options;
 			static Simplex::Options saved_options;
 			static float continent_frequency = 0.5f, sealevel = 0.0f;
+			static float equator_distance_factor = 0.0f;
+			static int equator_distance_power = 10;
 			static bool wrap_horizontally = false;
 			static bool use_continents = false;
 			static bool threshold = false;
@@ -179,7 +180,7 @@ namespace sethex {
 							bool x_copyable = drag.x == 0 or drag.x > 0 and pixel.x >= drag.x or drag.x < 0 and pixel.x < size.x + drag.x;
 							bool y_copyable = drag.y == 0 or drag.y > 0 and pixel.y >= drag.y or drag.y < 0 and pixel.y < size.y + drag.y;
 							if (x_copyable and y_copyable) {
-								channel_iterator.v() = elevation_channel->getValue(pixel - drag);
+								channel_iterator.v() = elevation_buffer->getValue(pixel - drag);
 								assign_elevation(surface_iterator, channel_iterator.v() / 255.0f * 2 - 1);
 								continue;
 							}
@@ -207,12 +208,27 @@ namespace sethex {
 						assign_elevation(surface_iterator, elevation);
 					}
 				}
-				elevation_channel = channel;
-				if (elevation_texture) elevation_texture->update(*elevation_channel);
-				else elevation_texture = Texture::create(*elevation_channel);
-				terrain_surface = surface;
-				if (terrain_texture) terrain_texture->update(*terrain_surface);
-				else terrain_texture = Texture::create(*terrain_surface);
+				elevation_buffer = Channel::create(*channel);
+				if (equator_distance_factor != zero) {
+					channel_iterator = channel->getIter();
+					surface_iterator = surface->getIter();
+					while (channel_iterator.line() and surface_iterator.line()) {
+						while (channel_iterator.pixel() and surface_iterator.pixel()) {
+							signed2 pixel = channel_iterator.getPos();
+							float elevation = channel_iterator.v() / 255.0f * 2 - 1;
+							float normalized_y = pixel.y / size.y;
+							float distance_to_equator = abs(2.0f * (normalized_y - 0.5f));
+							elevation += pow(distance_to_equator, equator_distance_power) * equator_distance_factor;
+							elevation = clamp(elevation, -1.0f, 1.0f);
+							channel_iterator.v() = static_cast<uint8>((elevation + 1) / 2 * 255);
+							assign_elevation(surface_iterator, elevation);
+						}
+					}
+				}
+				if (elevation_texture) elevation_texture->update(*channel);
+				else elevation_texture = Texture::create(*channel);
+				if (terrain_texture) terrain_texture->update(*surface);
+				else terrain_texture = Texture::create(*surface);
 				update_noise = false;
 			}
 
@@ -316,7 +332,9 @@ namespace sethex {
 			float water_percentage = 100.0f * water_pixels / pixels;
 			ui::Text("%.1f%% Water, %.1f%% Land", water_percentage, 100.0f - water_percentage);
 			static float waterlevel = 0.0;
-			update_noise |= ui::SliderFloat("Sealevel", sealevel, -1.0f, 1.0f, "%.2f", 1.0f, 0.0);
+			update_noise |= ui::SliderFloat("Sealevel", sealevel, -1.0f, 1.0f, "%.2f", 1.0f, 0.0f);
+			update_noise |= ui::SliderFloat("Equator Distance Factor", equator_distance_factor, -1.0f, 1.0f, "%.2f", 1.0f, 0.0f);
+			update_noise |= ui::SliderInt("Equator Distance Power", equator_distance_power, 1, 15, "%.0f", 10);
 			ui::Text("Thresholds:");
 			if (thresholds != default_thresholds) {
 				ui::SameLine();
