@@ -182,7 +182,7 @@ namespace ImGui {
 	// Cinder Helpers
 
 	void Image(const ci::gl::Texture2dRef &texture, const ImVec2& size, const ImVec2& uv0 = ImVec2(0, 1), const ImVec2& uv1 = ImVec2(1, 0), const ImVec4& tint_col = ImVec4(1, 1, 1, 1), const ImVec4& border_col = ImVec4(0, 0, 0, 0));
-	bool ImageButton(const ci::gl::Texture2dRef &texture, const ImVec2& size, const ImVec2& uv0 = ImVec2(0, 1), const ImVec2& uv1 = ImVec2(1, 0), int frame_padding = -1, const ImVec4& bg_col = ImVec4(0, 0, 0, 1), const ImVec4& tint_col = ImVec4(1, 1, 1, 1));
+	bool ImageButton(const ci::gl::Texture2dRef &texture, const ImVec2& size, int frame_padding = -1, const ImVec2& uv0 = ImVec2(0, 1), const ImVec2& uv1 = ImVec2(1, 0), const ImVec4& bg_col = ImVec4(0, 0, 0, 1), const ImVec4& tint_col = ImVec4(1, 1, 1, 1));
 	void PushFont(const std::string& name = "");
 
 	// Std Helpers
@@ -339,6 +339,15 @@ namespace ImGui {
 	}
 	inline bool SliderAngle(const char* label, float& value_radians, float value_degrees_minimum, float value_degrees_maximum, const float reset_value_radians, const char* reset_label = "Reset") {
 		return ResetButton(SliderAngle(label, &value_radians, value_degrees_minimum, value_degrees_maximum), value_radians, reset_value_radians, label, reset_label);
+	}
+	inline bool SliderPercentage(const char* label, float& value, float value_minimum = 0.0f, float value_maximum = 1.0f, const char* display_format = "%+.1f%%", float power = 1.0f) {
+		float percentage = value * 100.0f;
+		bool changed = SliderFloat(label, &percentage, value_minimum * 100.0f, value_maximum * 100.0f, display_format, power);
+		value = percentage / 100.0f;
+		return changed;
+	}
+	inline bool SliderPercentage(const char* label, float& value, float value_minimum, float value_maximum, const char* display_format, float power, const float reset_value, const char* reset_label = "Reset") {
+		return ResetButton(SliderPercentage(label, value, value_minimum, value_maximum, display_format, power), value, reset_value, label, reset_label);
 	}
 	inline bool SliderFloat(const char* label, float& value, float value_minimum = 0.0f, float value_maximum = 1.0f, const char* display_format = "%.3f", float power = 1.0f) {
 		return SliderFloat(label, &value, value_minimum, value_maximum, display_format, power);

@@ -142,7 +142,7 @@ namespace sethex {
 			static bool wrap_horizontally = false;
 			static bool use_continents = false;
 			static bool threshold = false;
-			static bool update_noise = true;
+			static bool update_noise = true, update_postprocessing = true;
 			static unsigned water_pixels;
 
 			static BiomeThresholds thresholds, default_thresholds;
@@ -161,75 +161,82 @@ namespace sethex {
 				assign(iterator, { 0, 0, 96 }); // deep ocean
 			};
 
-			if (update_noise) {
-				if (seed < 0 || seed > seed_maximum) seed = seed_maximum;
-				water_pixels = 0;
-				Simplex::seed(seed);
+			if (update_noise || update_postprocessing) {
 				auto channel = Channel::create(800, 450);
 				auto surface = Surface::create(channel->getWidth(), channel->getHeight(), false, SurfaceChannelOrder::RGB);
 				float2 size = channel->getSize();
 				float2 center = size / 2.0f;
-				auto channel_iterator = channel->getIter();
-				auto surface_iterator = surface->getIter();
-				scale = clamp(scale * (1.0f - roll), 0.1f, 10.0f);
-				shift -= float2(drag) / scale;
-				while (channel_iterator.line() and surface_iterator.line()) {
-					while (channel_iterator.pixel() and surface_iterator.pixel()) {
-						signed2 pixel = channel_iterator.getPos();
-						if (drag != zero) {
-							bool x_copyable = drag.x == 0 or drag.x > 0 and pixel.x >= drag.x or drag.x < 0 and pixel.x < size.x + drag.x;
-							bool y_copyable = drag.y == 0 or drag.y > 0 and pixel.y >= drag.y or drag.y < 0 and pixel.y < size.y + drag.y;
-							if (x_copyable and y_copyable) {
-								channel_iterator.v() = elevation_buffer->getValue(pixel - drag);
-								assign_elevation(surface_iterator, channel_iterator.v() / 255.0f * 2 - 1);
-								continue;
-							}
-						}
-						float elevation;
-						float2 position = pixel;
-						position = (position - center) / scale + center;
-						position += shift;
-						if (wrap_horizontally) {
-							float3 cylindrical_position;
-							float radians = static_cast<float>(Tau * position.x / size.x);
-							cylindrical_position.x = static_cast<float>(sin(radians) / Tau) * size.x;
-							cylindrical_position.y = position.y;
-							cylindrical_position.z = static_cast<float>(cos(radians) / Tau) * size.x;
-							cylindrical_position = (cylindrical_position - center.xyx()) / repeat_scale.x + center.xyx();
-							elevation = calculate_elevation(cylindrical_position, current_options, use_continents, continent_frequency);
-						} else {
-							elevation = calculate_elevation(position, current_options, use_continents, continent_frequency);
-						}
-						if (threshold) {
-							channel_iterator.v() = elevation < 0.0f ? 0 : 255;
-						} else {
-							channel_iterator.v() = static_cast<uint8>((elevation + 1) / 2 * 255);
-						}
-						assign_elevation(surface_iterator, elevation);
-					}
-				}
-				elevation_buffer = Channel::create(*channel);
-				if (equator_distance_factor != zero) {
-					channel_iterator = channel->getIter();
-					surface_iterator = surface->getIter();
+				if (update_noise) {
+					if (seed < 0 || seed > seed_maximum) seed = seed_maximum;
+					Simplex::seed(seed);
+					auto channel_iterator = channel->getIter();
+					auto surface_iterator = surface->getIter();
+					scale = clamp(scale * (1.0f - roll), 0.1f, 10.0f);
+					shift -= float2(drag) / scale;
+					water_pixels = 0;
 					while (channel_iterator.line() and surface_iterator.line()) {
 						while (channel_iterator.pixel() and surface_iterator.pixel()) {
 							signed2 pixel = channel_iterator.getPos();
-							float elevation = channel_iterator.v() / 255.0f * 2 - 1;
-							float normalized_y = pixel.y / size.y;
-							float distance_to_equator = abs(2.0f * (normalized_y - 0.5f));
-							elevation += pow(distance_to_equator, equator_distance_power) * equator_distance_factor;
-							elevation = clamp(elevation, -1.0f, 1.0f);
-							channel_iterator.v() = static_cast<uint8>((elevation + 1) / 2 * 255);
+							if (drag != zero) {
+								bool x_copyable = drag.x == 0 or drag.x > 0 and pixel.x >= drag.x or drag.x < 0 and pixel.x < size.x + drag.x;
+								bool y_copyable = drag.y == 0 or drag.y > 0 and pixel.y >= drag.y or drag.y < 0 and pixel.y < size.y + drag.y;
+								if (x_copyable and y_copyable) {
+									channel_iterator.v() = elevation_buffer->getValue(pixel - drag);
+									assign_elevation(surface_iterator, channel_iterator.v() / 255.0f * 2 - 1);
+									continue;
+								}
+							}
+							float elevation;
+							float2 position = pixel;
+							position = (position - center) / scale + center;
+							position += shift;
+							if (wrap_horizontally) {
+								float3 cylindrical_position;
+								float radians = static_cast<float>(Tau * position.x / size.x);
+								cylindrical_position.x = static_cast<float>(sin(radians) / Tau) * size.x;
+								cylindrical_position.y = position.y;
+								cylindrical_position.z = static_cast<float>(cos(radians) / Tau) * size.x;
+								cylindrical_position = (cylindrical_position - center.xyx()) / repeat_scale.x + center.xyx();
+								elevation = calculate_elevation(cylindrical_position, current_options, use_continents, continent_frequency);
+							} else {
+								elevation = calculate_elevation(position, current_options, use_continents, continent_frequency);
+							}
+							if (threshold) {
+								channel_iterator.v() = elevation < 0.0f ? 0 : 255;
+							} else {
+								channel_iterator.v() = static_cast<uint8>((elevation + 1) / 2 * 255);
+							}
 							assign_elevation(surface_iterator, elevation);
 						}
 					}
+					elevation_buffer = Channel::create(*channel);
+					update_noise = false;
+					update_postprocessing = true;
+				}
+				if (update_postprocessing) {
+					auto elevation_iterator = elevation_buffer->getIter();
+					auto channel_iterator = channel->getIter();
+					auto surface_iterator = surface->getIter();
+					water_pixels = 0;
+					while (elevation_iterator.line() and channel_iterator.line() and surface_iterator.line()) {
+						float normalized_y = channel_iterator.y() / size.y;
+						float distance_to_equator = abs(2.0f * (normalized_y - 0.5f));
+						float elevation_change = pow(distance_to_equator, equator_distance_power) * equator_distance_factor;
+						//uint8 elevation_change_value = static_cast<uint8>((elevation_change + 1) / 2 * 255);
+						while (elevation_iterator.pixel() and channel_iterator.pixel() and surface_iterator.pixel()) {
+							float elevation = elevation_iterator.v() / 255.0f * 2 - 1;
+							elevation = clamp(elevation + elevation_change, -1.0f, 1.0f);
+							channel_iterator.v() = static_cast<uint8>((elevation + 1) / 2 * 255);
+							assign_elevation(surface_iterator, elevation);
+							//channel_iterator.v() = clamp(channel_iterator.v() + elevation_change_value, 0, 255);
+						}
+					}
+					update_postprocessing = false;
 				}
 				if (elevation_texture) elevation_texture->update(*channel);
 				else elevation_texture = Texture::create(*channel);
 				if (terrain_texture) terrain_texture->update(*surface);
 				else terrain_texture = Texture::create(*surface);
-				update_noise = false;
 			}
 
 			auto region_size = elevation_texture->getSize() + 6;
@@ -317,8 +324,8 @@ namespace sethex {
 			ui::EndChild();
 
 			ui::BeginChild("world map", region_size);
-			ui::Image(terrain_texture, terrain_texture->getSize());
-			if (ui::IsItemHoveredRect()) {
+			ui::ImageButton(terrain_texture, terrain_texture->getSize(), 0);
+			if (ui::IsItemHovered()) {
 				roll = ui::GetIO().MouseWheel * 0.1f;
 				drag = ui::IsMouseDragging() ? signed2(ui::GetIO().MouseDelta) : zero;
 				update_noise = drag != zero or roll != zero;
@@ -332,24 +339,24 @@ namespace sethex {
 			float water_percentage = 100.0f * water_pixels / pixels;
 			ui::Text("%.1f%% Water, %.1f%% Land", water_percentage, 100.0f - water_percentage);
 			static float waterlevel = 0.0;
-			update_noise |= ui::SliderFloat("Sealevel", sealevel, -1.0f, 1.0f, "%.2f", 1.0f, 0.0f);
-			update_noise |= ui::SliderFloat("Equator Distance Factor", equator_distance_factor, -1.0f, 1.0f, "%.2f", 1.0f, 0.0f);
-			update_noise |= ui::SliderInt("Equator Distance Power", equator_distance_power, 1, 15, "%.0f", 10);
+			update_postprocessing |= ui::SliderPercentage("Sealevel", sealevel, -1.0f, 1.0f, "%+.0f%%", 1.0f, 0.0f);
+			update_postprocessing |= ui::SliderFloat("Equator Distance Factor", equator_distance_factor, -1.0f, 1.0f, "%.2f", 1.0f, 0.0f);
+			update_postprocessing |= ui::SliderInt("Equator Distance Power", equator_distance_power, 1, 15, "%.0f", 10);
 			ui::Text("Thresholds:");
 			if (thresholds != default_thresholds) {
 				ui::SameLine();
 				if (ui::SmallButton("Reset##thresholds")) {
 					thresholds = default_thresholds;
-					update_noise = true;
+					update_postprocessing = true;
 				}
 			}
-			update_noise |= ui::SliderFloat("Snowcap", thresholds.snowcap, thresholds.mountain, 1.0f, "%.2f");
-			update_noise |= ui::SliderFloat("Mountain", thresholds.mountain, thresholds.forrest, thresholds.snowcap, "%.2f");
-			update_noise |= ui::SliderFloat("Forrest", thresholds.forrest, thresholds.prairie, thresholds.mountain, "%.2f");
-			update_noise |= ui::SliderFloat("Prairie", thresholds.prairie, thresholds.beach, thresholds.forrest, "%.2f");
-			update_noise |= ui::SliderFloat("Beach", thresholds.beach, thresholds.coast, thresholds.prairie, "%.2f");
-			update_noise |= ui::SliderFloat("Coast", thresholds.coast, thresholds.ocean, thresholds.beach, "%.2f");
-			update_noise |= ui::SliderFloat("Ocean", thresholds.ocean, -1.0f, thresholds.coast, "%.2f");
+			update_postprocessing |= ui::SliderFloat("Snowcap", thresholds.snowcap, thresholds.mountain, 1.0f, "%.2f");
+			update_postprocessing |= ui::SliderFloat("Mountain", thresholds.mountain, thresholds.forrest, thresholds.snowcap, "%.2f");
+			update_postprocessing |= ui::SliderFloat("Forrest", thresholds.forrest, thresholds.prairie, thresholds.mountain, "%.2f");
+			update_postprocessing |= ui::SliderFloat("Prairie", thresholds.prairie, thresholds.beach, thresholds.forrest, "%.2f");
+			update_postprocessing |= ui::SliderFloat("Beach", thresholds.beach, thresholds.coast, thresholds.prairie, "%.2f");
+			update_postprocessing |= ui::SliderFloat("Coast", thresholds.coast, thresholds.ocean, thresholds.beach, "%.2f");
+			update_postprocessing |= ui::SliderFloat("Ocean", thresholds.ocean, -1.0f, thresholds.coast, "%.2f");
 			ui::Text("dragged x=%i, y=%i", drag.x, drag.y);
 			ui::EndChild();
 		}
