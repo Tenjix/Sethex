@@ -144,12 +144,15 @@ namespace sethex {
 			static bool threshold = false;
 			static bool update_noise = true, update_postprocessing = true;
 			static unsigned water_pixels;
+			static float elevation_minimum, elevation_maximum;
 
 			static BiomeThresholds thresholds, default_thresholds;
 
 			ui::ScopedWindow ui_window("Noise Texture", ImGuiWindowFlags_HorizontalScrollbar);
 
 			auto assign_elevation = [](const Surface::Iter& iterator, float elevation) {
+				if (elevation < elevation_minimum) elevation_minimum = elevation;
+				if (elevation > elevation_maximum) elevation_maximum = elevation;
 				if (elevation > 0.33f * sealevel + thresholds.snowcap) { assign(iterator, { 255, 255, 255 }); return; } // snowcap
 				if (elevation > 0.5f * sealevel + thresholds.mountain) { assign(iterator, { 128, 128, 128 }); return; } // mountain
 				if (elevation > 0.66f * sealevel + thresholds.forrest) { assign(iterator, { 0, 160, 0 }); return; } // forrest
@@ -167,6 +170,7 @@ namespace sethex {
 				float2 size = channel->getSize();
 				float2 center = size / 2.0f;
 				if (update_noise) {
+					elevation_minimum = elevation_maximum = zero;
 					if (seed < 0 || seed > seed_maximum) seed = seed_maximum;
 					Simplex::seed(seed);
 					auto channel_iterator = channel->getIter();
@@ -357,7 +361,7 @@ namespace sethex {
 			update_postprocessing |= ui::SliderFloat("Beach", thresholds.beach, thresholds.coast, thresholds.prairie, "%.2f");
 			update_postprocessing |= ui::SliderFloat("Coast", thresholds.coast, thresholds.ocean, thresholds.beach, "%.2f");
 			update_postprocessing |= ui::SliderFloat("Ocean", thresholds.ocean, -1.0f, thresholds.coast, "%.2f");
-			ui::Text("dragged x=%i, y=%i", drag.x, drag.y);
+			ui::Text("elevation range [%.5f, %.5f] (%s [-1, +1])", elevation_minimum, elevation_maximum, (elevation_minimum >= -1.0f and elevation_maximum <= 1.0f) ? "lies within" : "exceeds");
 			ui::EndChild();
 		}
 	}

@@ -445,10 +445,9 @@ namespace Simplex {
 		t1 *= t1;
 		n1 = t1 * t1 * details::grad(details::perm[i1 & 0xff], x1);
 		// The maximum value of this noise is 8*(3/4)^4 = 2.53125
-		// A factor of 0.395 would scale to fit exactly within [-1,1], but
-		// we want to match PRMan's 1D noise, so we scale it down some more.
-		return 0.25f * (n0 + n1);
-
+		// The result is scaled to return values in the interval [-1,1].
+		return 0.395f * (n0 + n1);
+		//return 0.25f * (n0 + n1); // to match PRMan's 1D noise
 	}
 
 	// 2D simplex noise
@@ -511,7 +510,7 @@ namespace Simplex {
 
 		// Add contributions from each corner to get the final noise value.
 		// The result is scaled to return values in the interval [-1,1].
-		return 40.0f * (n0 + n1 + n2); // TODO: The scale factor is preliminary!
+		return 45.0f * (n0 + n1 + n2);
 	}
 
 	// 3D simplex noise
@@ -604,7 +603,7 @@ namespace Simplex {
 
 		// Add contributions from each corner to get the final noise value.
 		// The result is scaled to stay just inside [-1,1]
-		return 32.0f * (n0 + n1 + n2 + n3); // TODO: The scale factor is preliminary!
+		return 32.7f * (n0 + n1 + n2 + n3);
 	}
 
 	namespace details {
