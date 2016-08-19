@@ -133,7 +133,6 @@ namespace sethex {
 			static float2 shift;
 			static signed2 drag;
 			static float scale = 1.0f, roll = 0.0f;
-			static float2 repeat_scale = float2(1.0);
 			static Simplex::Options current_options;
 			static Simplex::Options saved_options;
 			static float continent_frequency = 0.5f, sealevel = 0.0f;
@@ -196,11 +195,11 @@ namespace sethex {
 							position += shift;
 							if (wrap_horizontally) {
 								float3 cylindrical_position;
-								float radians = static_cast<float>(Tau * position.x / size.x);
-								cylindrical_position.x = static_cast<float>(sin(radians) / Tau) * size.x;
+								float repeat_interval = size.x / scale;
+								float radians = static_cast<float>(Tau * position.x / repeat_interval);
+								cylindrical_position.x = static_cast<float>(sin(radians) / Tau) * repeat_interval;
 								cylindrical_position.y = position.y;
-								cylindrical_position.z = static_cast<float>(cos(radians) / Tau) * size.x;
-								cylindrical_position = (cylindrical_position - center.xyx()) / repeat_scale.x + center.xyx();
+								cylindrical_position.z = static_cast<float>(cos(radians) / Tau) * repeat_interval;
 								elevation = calculate_elevation(cylindrical_position, current_options, use_continents, continent_frequency);
 							} else {
 								elevation = calculate_elevation(position, current_options, use_continents, continent_frequency);
@@ -262,8 +261,9 @@ namespace sethex {
 				continent_frequency = 0.5f;
 				sealevel = 0.0f;
 				thresholds = default_thresholds;
+				equator_distance_factor = 0.0f;
+				equator_distance_power = 10;
 				wrap_horizontally = false;
-				repeat_scale = { 1.0f, 1.0f };
 				update_noise = true;
 			}
 			ui::SameLine();
@@ -286,7 +286,7 @@ namespace sethex {
 				update_noise = true;
 			}
 			ui::SameLine();
-			if (ui::Button("World")) {
+			if (ui::Button("Alpha World")) {
 				seed = 0;
 				scale = 1.0f;
 				shift = { -150, -5200 };
@@ -303,8 +303,31 @@ namespace sethex {
 				thresholds.forrest = 0.25f;
 				thresholds.mountain = 0.40f;
 				thresholds.snowcap = 0.55f;
+				equator_distance_factor = 0.0f;
 				wrap_horizontally = true;
-				repeat_scale = { 1.0f, 1.0f };
+				update_noise = true;
+			}
+			ui::SameLine();
+			if (ui::Button("Beta World")) {
+				seed = 0;
+				scale = 0.66f;
+				shift = { -25, -4650 };
+				current_options = {};
+				current_options.amplitude = 0.5f;
+				current_options.octaves = 5;
+				use_continents = true;
+				continent_frequency = 0.25f;
+				sealevel = 0.25f;
+				thresholds.ocean = -0.20f;
+				thresholds.coast = -0.02f;
+				thresholds.beach = 0.0f;
+				thresholds.prairie = 0.02f;
+				thresholds.forrest = 0.25f;
+				thresholds.mountain = 0.40f;
+				thresholds.snowcap = 0.55f;
+				equator_distance_factor = -0.15f;
+				equator_distance_power = 15;
+				wrap_horizontally = true;
 				update_noise = true;
 			}
 			update_noise |= ui::DragInt("Seed", seed, 1.0f, 0, seed_maximum, "%.0f", 0);
@@ -324,11 +347,11 @@ namespace sethex {
 			ui::SameLine();
 			update_noise |= ui::Checkbox("Continents##use", use_continents);
 			if (use_continents) update_noise |= ui::SliderFloat("Continent Frequency", continent_frequency, 0.0f, 2.0f, "%.2f", 1.0f, 0.5f);
-			if (wrap_horizontally) update_noise |= ui::SliderFloat2("Repeat-Scale", repeat_scale, 0.1f, 10.0f, "%.2f", 3.45f, float2(1.0));
 			ui::EndChild();
 
 			ui::BeginChild("world map", region_size);
 			ui::ImageButton(terrain_texture, terrain_texture->getSize(), 0);
+			signed2 map_position = ui::GetItemRectMin();
 			if (ui::IsItemHovered()) {
 				roll = ui::GetIO().MouseWheel * 0.1f;
 				drag = ui::IsMouseDragging() ? signed2(ui::GetIO().MouseDelta) : zero;
@@ -362,6 +385,8 @@ namespace sethex {
 			update_postprocessing |= ui::SliderFloat("Coast", thresholds.coast, thresholds.ocean, thresholds.beach, "%.2f");
 			update_postprocessing |= ui::SliderFloat("Ocean", thresholds.ocean, -1.0f, thresholds.coast, "%.2f");
 			ui::Text("elevation range [%.5f, %.5f] (%s [-1, +1])", elevation_minimum, elevation_maximum, (elevation_minimum >= -1.0f and elevation_maximum <= 1.0f) ? "lies within" : "exceeds");
+			auto mouse_position = signed2(ui::GetIO().MousePos) - map_position;
+			ui::Text("mouse position (%i, %i)", mouse_position.x, mouse_position.y);
 			ui::EndChild();
 		}
 	}
