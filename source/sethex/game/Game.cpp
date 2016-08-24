@@ -22,7 +22,7 @@ using namespace sethex::hexagonal;
 
 namespace sethex {
 
-	shared<Channel> elevation_buffer;
+	shared<Channel32f> elevation_buffer;
 	shared<Texture> elevation_texture;
 	shared<Texture> terrain_texture;
 
@@ -164,7 +164,7 @@ namespace sethex {
 			};
 
 			if (update_noise || update_postprocessing) {
-				auto channel = Channel::create(800, 450);
+				auto channel = Channel32f::create(800, 450);
 				auto surface = Surface::create(channel->getWidth(), channel->getHeight(), false, SurfaceChannelOrder::RGB);
 				float2 size = channel->getSize();
 				float2 center = size / 2.0f;
@@ -173,19 +173,16 @@ namespace sethex {
 					if (seed < 0 || seed > seed_maximum) seed = seed_maximum;
 					Simplex::seed(seed);
 					auto channel_iterator = channel->getIter();
-					auto surface_iterator = surface->getIter();
 					scale = clamp(scale * (1.0f - roll), 0.1f, 10.0f);
 					shift -= float2(drag) / scale;
-					water_pixels = 0;
-					while (channel_iterator.line() and surface_iterator.line()) {
-						while (channel_iterator.pixel() and surface_iterator.pixel()) {
+					while (channel_iterator.line()) {
+						while (channel_iterator.pixel()) {
 							signed2 pixel = channel_iterator.getPos();
 							if (drag != zero) {
 								bool x_copyable = drag.x == 0 or drag.x > 0 and pixel.x >= drag.x or drag.x < 0 and pixel.x < size.x + drag.x;
 								bool y_copyable = drag.y == 0 or drag.y > 0 and pixel.y >= drag.y or drag.y < 0 and pixel.y < size.y + drag.y;
 								if (x_copyable and y_copyable) {
 									channel_iterator.v() = elevation_buffer->getValue(pixel - drag);
-									assign_elevation(surface_iterator, channel_iterator.v() / 255.0f * 2 - 1);
 									continue;
 								}
 							}
@@ -204,15 +201,10 @@ namespace sethex {
 							} else {
 								elevation = calculate_elevation(position, current_options, use_continents, continent_frequency);
 							}
-							if (threshold) {
-								channel_iterator.v() = elevation < 0.0f ? 0 : 255;
-							} else {
-								channel_iterator.v() = static_cast<uint8>((elevation + 1) / 2 * 255);
-							}
-							assign_elevation(surface_iterator, elevation);
+							channel_iterator.v() = elevation;
 						}
 					}
-					elevation_buffer = Channel::create(*channel);
+					elevation_buffer = Channel32f::create(*channel);
 					update_noise = false;
 					update_postprocessing = true;
 				}
@@ -221,17 +213,17 @@ namespace sethex {
 					auto channel_iterator = channel->getIter();
 					auto surface_iterator = surface->getIter();
 					water_pixels = 0;
-					while (elevation_iterator.line() and channel_iterator.line() and surface_iterator.line()) {
+					while (surface_iterator.line()) {
+						runtime_assert(elevation_iterator.line() and channel_iterator.line());
 						float normalized_y = channel_iterator.y() / size.y;
 						float distance_to_equator = abs(2.0f * (normalized_y - 0.5f));
 						float elevation_change = pow(distance_to_equator, equator_distance_power) * equator_distance_factor;
-						//uint8 elevation_change_value = static_cast<uint8>((elevation_change + 1) / 2 * 255);
-						while (elevation_iterator.pixel() and channel_iterator.pixel() and surface_iterator.pixel()) {
-							float elevation = elevation_iterator.v() / 255.0f * 2 - 1;
-							elevation = clamp(elevation + elevation_change, -1.0f, 1.0f);
-							channel_iterator.v() = static_cast<uint8>((elevation + 1) / 2 * 255);
+						while (surface_iterator.pixel()) {
+							runtime_assert(elevation_iterator.pixel() and channel_iterator.pixel());
+							float elevation = elevation_iterator.v();
+							elevation = clamp(elevation + elevation_change, -1.0f, 1.0f);;
+							channel_iterator.v() = elevation;
 							assign_elevation(surface_iterator, elevation);
-							//channel_iterator.v() = clamp(channel_iterator.v() + elevation_change_value, 0, 255);
 						}
 					}
 					update_postprocessing = false;
