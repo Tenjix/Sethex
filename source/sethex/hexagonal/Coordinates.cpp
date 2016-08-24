@@ -5,8 +5,8 @@ namespace sethex {
 	namespace hexagonal {
 
 		const Coordinates Coordinates::Origin = Coordinates();
-		const float2 Coordinates::Spacing = float2(Sqrt_3, 3.0 / 2.0);
-		const float2 Coordinates::Tilesize = float2(Sqrt_3, 2.0);
+		const float2 Coordinates::Spacing = float2(constf::Sqrt_3, 3.0f / 2.0f);
+		const float2 Coordinates::Tilesize = float2(constf::Sqrt_3, 2.0f);
 
 		static void insert_ring(vector<Coordinates>& vector, unsigned radius, const Coordinates& center) {
 			Coordinates coordinates = center + Direction::West * radius;

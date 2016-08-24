@@ -160,7 +160,7 @@ namespace sethex {
 
 			// Convertes these hexagonal coordinates to cartesian coordinates.
 			float2 to_cartesian() const {
-				return float2(static_cast<float>(Sqrt_3 * (_u + _v / 2.0)), static_cast<float>(3.0 / 2.0 * _v));
+				return float2(static_cast<float>(constd::Sqrt_3 * (_u + _v / 2.0)), static_cast<float>(3.0 / 2.0 * _v));
 			}
 
 			// Convertes these hexagonal coordinates to a world position in the y=0 plane.
@@ -171,7 +171,7 @@ namespace sethex {
 
 			// Calculates the hexagonal coordinates of the given cartesian coordinates.
 			static Coordinates of(float x, float y) {
-				return Coordinates(x * Sqrt_3 / 3.0 - y / 3.0, 2.0 / 3.0 * y);
+				return Coordinates(x * constd::Sqrt_3 / 3.0 - y / 3.0, 2.0 / 3.0 * y);
 			}
 
 			// Calculates the hexagonal coordinates of the given cartesian coordinates.

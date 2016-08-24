@@ -19,6 +19,7 @@ using namespace cinder::app;
 using namespace cinder::gl;
 using namespace std;
 using namespace sethex::hexagonal;
+using namespace float_constants;
 
 namespace sethex {
 
@@ -116,12 +117,12 @@ namespace sethex {
 	};
 
 	template <class Type>
-	float calculate_elevation(const Type& position, const Simplex::Options& options, bool continents = false, float continent_frequency = 0.5f) {
+	float calculate_elevation(const Type& position, const Simplex::Options& options, bool continents, float continent_frequency, float continent_amplitude) {
 		float elevation = Simplex::noise(position * 0.01f, options);
 		if (continents) {
 			float continental_elevation = Simplex::noise(position * 0.01f * continent_frequency);
 			if (options.positive) continental_elevation = Simplex::to_unsigned(continental_elevation);
-			elevation = (elevation + continental_elevation) / (options.amplitude + 1.0f);
+			elevation = (elevation + continent_amplitude * continental_elevation) / (options.amplitude + continent_amplitude);
 		}
 		return elevation;
 	}
@@ -139,7 +140,7 @@ namespace sethex {
 			static float scale = 1.0f, roll = 0.0f;
 			static Simplex::Options current_options;
 			static Simplex::Options saved_options;
-			static float continent_frequency = 0.5f, sealevel = 0.0f;
+			static float continent_frequency = 0.5f, continent_amplitude = 1.0f, sealevel = 0.0f;
 			static float equator_distance_factor = 0.0f;
 			static int equator_distance_power = 10;
 			static bool wrap_horizontally = false;
@@ -197,13 +198,14 @@ namespace sethex {
 							if (wrap_horizontally) {
 								float3 cylindrical_position;
 								float repeat_interval = size.x / scale;
-								float radians = static_cast<float>(Tau * position.x / repeat_interval);
-								cylindrical_position.x = static_cast<float>(sin(radians) / Tau) * repeat_interval;
+								position.x = position.x + (repeat_interval - size.x) / Tau_Half;
+								float radians = position.x / repeat_interval * Tau;
+								cylindrical_position.x = sin(radians) / Tau * repeat_interval;
 								cylindrical_position.y = position.y;
-								cylindrical_position.z = static_cast<float>(cos(radians) / Tau) * repeat_interval;
-								elevation = calculate_elevation(cylindrical_position, current_options, use_continents, continent_frequency);
+								cylindrical_position.z = cos(radians) / Tau * repeat_interval;
+								elevation = calculate_elevation(cylindrical_position, current_options, use_continents, continent_frequency, continent_amplitude);
 							} else {
-								elevation = calculate_elevation(position, current_options, use_continents, continent_frequency);
+								elevation = calculate_elevation(position, current_options, use_continents, continent_frequency, continent_amplitude);
 							}
 							channel_iterator.v() = elevation;
 						}
@@ -259,6 +261,7 @@ namespace sethex {
 				current_options = {};
 				use_continents = false;
 				continent_frequency = 0.5f;
+				continent_amplitude = 1.0f;
 				sealevel = 0.0f;
 				thresholds = default_thresholds;
 				equator_distance_factor = 0.0f;
@@ -273,6 +276,7 @@ namespace sethex {
 				current_options.octaves = 5;
 				use_continents = true;
 				continent_frequency = 0.25f;
+				continent_amplitude = 1.0f;
 				sealevel = 0.25f;
 				update_noise = true;
 			}
@@ -282,6 +286,7 @@ namespace sethex {
 				current_options.octaves = 5;
 				use_continents = true;
 				continent_frequency = 0.5f;
+				continent_amplitude = 1.0f;
 				sealevel = 0.25f;
 				update_noise = true;
 			}
@@ -295,6 +300,7 @@ namespace sethex {
 				current_options.octaves = 5;
 				use_continents = true;
 				continent_frequency = 0.25f;
+				continent_amplitude = 1.0f;
 				sealevel = 0.25f;
 				thresholds.ocean = -0.20f;
 				thresholds.coast = -0.02f;
@@ -311,12 +317,13 @@ namespace sethex {
 			if (ui::Button("Beta World")) {
 				seed = 0;
 				scale = 0.66f;
-				shift = { -25, -4650 };
+				shift = { -160, -4650 };
 				current_options = {};
 				current_options.amplitude = 0.5f;
 				current_options.octaves = 5;
 				use_continents = true;
 				continent_frequency = 0.25f;
+				continent_amplitude = 1.0f;
 				sealevel = 0.25f;
 				thresholds.ocean = -0.20f;
 				thresholds.coast = -0.02f;
@@ -346,7 +353,10 @@ namespace sethex {
 			update_noise |= ui::Checkbox("Wrap Horizontally", wrap_horizontally);
 			ui::SameLine();
 			update_noise |= ui::Checkbox("Continents##use", use_continents);
-			if (use_continents) update_noise |= ui::SliderFloat("Continent Frequency", continent_frequency, 0.0f, 2.0f, "%.2f", 1.0f, 0.5f);
+			if (use_continents) {
+				update_noise |= ui::SliderFloat("Continent Amplitude", continent_amplitude, 0.0f, 10.0f, "%.2f", 1.0f, 1.0f);
+				update_noise |= ui::SliderFloat("Continent Frequency", continent_frequency, 0.0f, 2.0f, "%.2f", 1.0f, 0.5f);
+			}
 			ui::EndChild();
 
 			ui::BeginChild("world map", region_size);

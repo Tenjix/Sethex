@@ -13,6 +13,7 @@ using namespace cinder;
 using namespace cinder::app;
 using namespace cinder::gl;
 using namespace sethex::hexagonal;
+using namespace constf;
 
 namespace sethex {
 
