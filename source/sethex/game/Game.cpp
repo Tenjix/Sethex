@@ -118,7 +118,11 @@ namespace sethex {
 	template <class Type>
 	float calculate_elevation(const Type& position, const Simplex::Options& options, bool continents = false, float continent_frequency = 0.5f) {
 		float elevation = Simplex::noise(position * 0.01f, options);
-		if (continents) elevation = (elevation + Simplex::noise(position * 0.01f * continent_frequency)) / (options.amplitude + 1.0f);
+		if (continents) {
+			float continental_elevation = Simplex::noise(position * 0.01f * continent_frequency);
+			if (options.positive) continental_elevation = Simplex::to_unsigned(continental_elevation);
+			elevation = (elevation + continental_elevation) / (options.amplitude + 1.0f);
+		}
 		return elevation;
 	}
 
@@ -221,8 +225,12 @@ namespace sethex {
 						while (surface_iterator.pixel()) {
 							runtime_assert(elevation_iterator.pixel() and channel_iterator.pixel());
 							float elevation = elevation_iterator.v();
-							elevation = clamp(elevation + elevation_change, -1.0f, 1.0f);;
-							channel_iterator.v() = elevation;
+							elevation = clamp(elevation + elevation_change, current_options.positive ? 0.0f : -1.0f, 1.0f);
+							if (current_options.positive) {
+								channel_iterator.v() = elevation;
+							} else {
+								channel_iterator.v() = (elevation + 1.0f) / 2.0f;
+							}
 							assign_elevation(surface_iterator, elevation);
 						}
 					}

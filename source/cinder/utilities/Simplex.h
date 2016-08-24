@@ -2098,6 +2098,16 @@ namespace Simplex {
 		bool positive = false;
 	};
 
+	// converts from unsigned [0,1] to signed [-1,+1] noise range
+	float to_signed(float unsigned_noise_value) {
+		return unsigned_noise_value * 2.0f - 1.0f;
+	}
+
+	// converts from signed [-1,+1] to unsigned [0,1] noise range
+	float to_unsigned(float signed_noise_value) {
+		return (signed_noise_value + 1.0f) / 2.0f;
+	}
+
 	template <class Type>
 	float noise(const Type& position, const Options& options) {
 		return noise(position, options.octaves, options.amplitude, options.frequency, options.lacunarity, options.persistence, options.power, options.positive);
@@ -2115,7 +2125,7 @@ namespace Simplex {
 			octave_amplitude *= persistence;
 		}
 		float value = sum / range;
-		if (positive) value = (value + 1.0f) / 2.0f;
+		if (positive) value = to_unsigned(value);
 		else if (value < 0.0f) return -glm::pow(-value, power) * amplitude;
 		return glm::pow(value, power) * amplitude;
 	}
