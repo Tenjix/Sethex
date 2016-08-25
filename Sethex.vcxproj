@@ -98,6 +98,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <DisableSpecificWarnings>4503</DisableSpecificWarnings>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)</ObjectFileName>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>
@@ -126,6 +127,7 @@
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <DisableSpecificWarnings>4503</DisableSpecificWarnings>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)</ObjectFileName>
     </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>
@@ -151,6 +153,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <DisableSpecificWarnings>4503</DisableSpecificWarnings>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)</ObjectFileName>
     </ClCompile>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -182,6 +185,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <DisableSpecificWarnings>4503</DisableSpecificWarnings>
+      <ObjectFileName>$(IntDir)/%(RelativeDir)</ObjectFileName>
     </ClCompile>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -211,10 +215,10 @@
     <ResourceCompile Include="Resources.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\cinder\interface\CinderImGui.cpp" />
-    <ClCompile Include="source\cinder\interface\imgui.cpp" />
-    <ClCompile Include="source\cinder\interface\imgui_demo.cpp" />
-    <ClCompile Include="source\cinder\interface\imgui_draw.cpp" />
+    <ClCompile Include="source\cinder\interface\Imgui.cpp" />
+    <ClCompile Include="source\cinder\interface\imgui\imgui.cpp" />
+    <ClCompile Include="source\cinder\interface\imgui\imgui_demo.cpp" />
+    <ClCompile Include="source\cinder\interface\imgui\imgui_draw.cpp" />
     <ClCompile Include="source\sethex\data\ModelLoader.cpp" />
     <ClCompile Include="source\sethex\data\ModelSource.cpp" />
     <ClCompile Include="source\sethex\game\Game.cpp" />
@@ -223,18 +227,19 @@
     <ClCompile Include="source\sethex\systems\RenderSystem.cpp" />
     <ClCompile Include="source\sethex\systems\TileSystem.cpp" />
     <ClCompile Include="source\cinder\utilities\Assets.cpp" />
+    <ClCompile Include="source\sethex\world\Generator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="assets\texts\Credits.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="source\cinder\interface\CinderImGui.h" />
-    <ClInclude Include="source\cinder\interface\imconfig.h" />
-    <ClInclude Include="source\cinder\interface\imgui.h" />
-    <ClInclude Include="source\cinder\interface\imgui_internal.h" />
-    <ClInclude Include="source\cinder\interface\stb_rect_pack.h" />
-    <ClInclude Include="source\cinder\interface\stb_textedit.h" />
-    <ClInclude Include="source\cinder\interface\stb_truetype.h" />
+    <ClInclude Include="source\cinder\interface\Imgui.h" />
+    <ClInclude Include="source\cinder\interface\imgui\imconfig.h" />
+    <ClInclude Include="source\cinder\interface\imgui\imgui.h" />
+    <ClInclude Include="source\cinder\interface\imgui\imgui_internal.h" />
+    <ClInclude Include="source\cinder\interface\imgui\stb_rect_pack.h" />
+    <ClInclude Include="source\cinder\interface\imgui\stb_textedit.h" />
+    <ClInclude Include="source\cinder\interface\imgui\stb_truetype.h" />
     <ClInclude Include="source\sethex\components\Display.h" />
     <ClInclude Include="source\sethex\components\Geometry.h" />
     <ClInclude Include="source\sethex\components\Material.h" />
@@ -256,6 +261,7 @@
     <ClInclude Include="source\cinder\utilities\Shaders.h" />
     <ClInclude Include="source\cinder\utilities\Simplex.h" />
     <ClInclude Include="source\cinder\utilities\Watchdog.h" />
+    <ClInclude Include="source\sethex\world\Generator.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

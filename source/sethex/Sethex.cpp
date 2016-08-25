@@ -2,7 +2,7 @@
 #include <cinder/app/App.h>
 #include <cinder/app/RendererGl.h>
 #include <cinder/utilities/OutputRedirection.h>
-#include <cinder/interface/CinderImGui.h>
+#include <cinder/interface/Imgui.h>
 
 #include <sethex/game/Game.h>
 

@@ -11,12 +11,14 @@
 #include <sethex/game/Input.h>
 #include <sethex/components/Display.h>
 #include <sethex/hexagonal/Map.h>
+#include <sethex/world/Generator.h>
 
 namespace sethex {
 
 	class Game {
 
 		World world;
+		Generator generator;
 
 		shared<TextureFont> font;
 		Color font_color;
