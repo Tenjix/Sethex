@@ -145,7 +145,7 @@ namespace sethex {
 			static int equator_distance_power = 10;
 			static bool wrap_horizontally = false;
 			static bool use_continents = false;
-			static bool threshold = false;
+			static bool landmass = false;
 			static bool update_noise = true, update_postprocessing = true;
 			static unsigned water_pixels;
 			static float elevation_minimum, elevation_maximum;
@@ -228,10 +228,10 @@ namespace sethex {
 							runtime_assert(elevation_iterator.pixel() and channel_iterator.pixel());
 							float elevation = elevation_iterator.v();
 							elevation = clamp(elevation + elevation_change, current_options.positive ? 0.0f : -1.0f, 1.0f);
-							if (current_options.positive) {
-								channel_iterator.v() = elevation;
+							if (landmass) {
+								channel_iterator.v() = max(elevation - sealevel, 0.0f) / (1.0f - sealevel);
 							} else {
-								channel_iterator.v() = (elevation + 1.0f) / 2.0f;
+								channel_iterator.v() = current_options.positive ? elevation : (elevation + 1.0f) / 2.0f;
 							}
 							assign_elevation(surface_iterator, elevation);
 						}
@@ -348,7 +348,7 @@ namespace sethex {
 			update_noise |= ui::SliderFloat("Power", current_options.power, 0.1f, 10.0f, "%.2f", 1.0f, saved_options.power); ui::Hint("Ctrl+Click to enter an exact value");
 			update_noise |= ui::Checkbox("Positive", current_options.positive); ui::Tooltip("sets noise range to [0,1] instead of [-1,1]");
 			ui::SameLine();
-			update_noise |= ui::Checkbox("Threshold", threshold); ui::Tooltip("map positive values to white, negative ones to black");
+			update_noise |= ui::Checkbox("Landmass", landmass); ui::Tooltip("display elevation above sea level");
 			ui::SameLine();
 			update_noise |= ui::Checkbox("Wrap Horizontally", wrap_horizontally);
 			ui::SameLine();
