@@ -24,7 +24,13 @@ namespace sethex {
 
 namespace cinder {
 
-	inline void assign(const Surface::Iter& iterator, const ColorA8u& color) {
+	inline void operator<<(const Surface::Iter& iterator, const Color8u& color) {
+		iterator.r() = color.r;
+		iterator.g() = color.g;
+		iterator.b() = color.b;
+	}
+
+	inline void operator<<(const Surface::Iter& iterator, const ColorA8u& color) {
 		iterator.r() = color.r;
 		iterator.g() = color.g;
 		iterator.b() = color.b;

@@ -41,6 +41,12 @@ namespace sethex {
 		}
 	};
 
+	struct HumidityCell {
+		vector<float> humidity;
+		unsigned start;
+		unsigned end;
+	};
+
 	template <class Type>
 	float calculate_elevation(const Type& position, const Simplex::Options& options, bool continents, float continent_frequency, float continent_amplitude) {
 		float elevation = Simplex::noise(position * 0.01f, options);
@@ -65,7 +71,7 @@ namespace sethex {
 		static bool wrap_horizontally = false;
 		static bool use_continents = false;
 		static bool landmass = false;
-		static bool update_noise = true, update_postprocessing = true;
+		static bool update_noise = true, update_world = true;
 		static unsigned water_pixels;
 		static float elevation_minimum, elevation_maximum;
 
@@ -76,37 +82,36 @@ namespace sethex {
 		auto assign_elevation = [](const Surface::Iter& iterator, float elevation) {
 			if (elevation < elevation_minimum) elevation_minimum = elevation;
 			if (elevation > elevation_maximum) elevation_maximum = elevation;
-			if (elevation > 0.33f * sealevel + thresholds.snowcap) { assign(iterator, { 255, 255, 255 }); return; } // snowcap
-			if (elevation > 0.5f * sealevel + thresholds.mountain) { assign(iterator, { 128, 128, 128 }); return; } // mountain
-			if (elevation > 0.66f * sealevel + thresholds.forrest) { assign(iterator, { 0, 160, 0 }); return; } // forrest
-			if (elevation > sealevel + thresholds.prairie) { assign(iterator, { 32, 204, 32 }); return; } // prairie
-			if (elevation > sealevel + thresholds.beach) { assign(iterator, { 240, 240, 160 }); return; } // beach
+			if (elevation > 0.33f * sealevel + thresholds.snowcap) { iterator << Color8u(255, 255, 255); return; } // snowcap
+			if (elevation > 0.5f * sealevel + thresholds.mountain) { iterator << Color8u(128, 128, 128); return; } // mountain
+			if (elevation > 0.66f * sealevel + thresholds.forrest) { iterator << Color8u(0, 160, 0); return; } // forrest
+			if (elevation > sealevel + thresholds.prairie) { iterator << Color8u(32, 204, 32); return; } // prairie
+			if (elevation > sealevel + thresholds.beach) { iterator << Color8u(240, 240, 160); return; } // beach
 			water_pixels++;
-			if (elevation > sealevel + thresholds.coast) { assign(iterator, { 16, 16, 160 }); return; } // coast
-			if (elevation > sealevel + thresholds.ocean) { assign(iterator, { 0, 0, 128 }); return; } // ocean
-			assign(iterator, { 0, 0, 96 }); // deep ocean
+			if (elevation > sealevel + thresholds.coast) { iterator << Color8u(16, 16, 160); return; } // coast
+			if (elevation > sealevel + thresholds.ocean) { iterator << Color8u(0, 0, 128); return; } // ocean
+			iterator << Color8u(0, 0, 96); // deep ocean
 		};
 
-		if (update_noise || update_postprocessing) {
-			auto channel = Channel32f::create(800, 450);
-			auto surface = Surface::create(channel->getWidth(), channel->getHeight(), false, SurfaceChannelOrder::RGB);
-			float2 size = channel->getSize();
+		if (update_noise || update_world) {
+			auto elevation_map = Channel32f::create(800, 450);
+			float2 size = elevation_map->getSize();
 			float2 center = size / 2.0f;
 			if (update_noise) {
 				elevation_minimum = elevation_maximum = zero;
 				if (seed < 0 || seed > seed_maximum) seed = seed_maximum;
 				Simplex::seed(seed);
-				auto channel_iterator = channel->getIter();
+				auto elevation_iterator = elevation_map->getIter();
 				scale = clamp(scale * (1.0f - roll), 0.1f, 10.0f);
 				shift -= float2(drag) / scale;
-				while (channel_iterator.line()) {
-					while (channel_iterator.pixel()) {
-						signed2 pixel = channel_iterator.getPos();
+				while (elevation_iterator.line()) {
+					while (elevation_iterator.pixel()) {
+						signed2 pixel = elevation_iterator.getPos();
 						if (drag != zero) {
 							bool x_copyable = drag.x == 0 or drag.x > 0 and pixel.x >= drag.x or drag.x < 0 and pixel.x < size.x + drag.x;
 							bool y_copyable = drag.y == 0 or drag.y > 0 and pixel.y >= drag.y or drag.y < 0 and pixel.y < size.y + drag.y;
 							if (x_copyable and y_copyable) {
-								channel_iterator.v() = elevation_buffer->getValue(pixel - drag);
+								elevation_iterator.v() = elevation_buffer->getValue(pixel - drag);
 								continue;
 							}
 						}
@@ -126,41 +131,45 @@ namespace sethex {
 						} else {
 							elevation = calculate_elevation(position, current_options, use_continents, continent_frequency, continent_amplitude);
 						}
-						channel_iterator.v() = elevation;
+						elevation_iterator.v() = elevation;
 					}
 				}
-				elevation_buffer = Channel32f::create(*channel);
+				elevation_buffer = Channel32f::create(*elevation_map);
 				update_noise = false;
-				update_postprocessing = true;
 			}
-			if (update_postprocessing) {
-				auto elevation_iterator = elevation_buffer->getIter();
-				auto channel_iterator = channel->getIter();
-				auto surface_iterator = surface->getIter();
-				water_pixels = 0;
-				while (surface_iterator.line()) {
-					runtime_assert(elevation_iterator.line() and channel_iterator.line());
-					float normalized_y = channel_iterator.y() / size.y;
-					float distance_to_equator = abs(2.0f * (normalized_y - 0.5f));
-					float elevation_change = pow(distance_to_equator, equator_distance_power) * equator_distance_factor;
-					while (surface_iterator.pixel()) {
-						runtime_assert(elevation_iterator.pixel() and channel_iterator.pixel());
-						float elevation = elevation_iterator.v();
-						elevation = clamp(elevation + elevation_change, current_options.positive ? 0.0f : -1.0f, 1.0f);
-						if (landmass) {
-							channel_iterator.v() = max(elevation - sealevel, 0.0f) / (1.0f - sealevel);
-						} else {
-							channel_iterator.v() = current_options.positive ? elevation : (elevation + 1.0f) / 2.0f;
-						}
-						assign_elevation(surface_iterator, elevation);
+
+			auto temperature_map = Channel::create(elevation_map->getWidth(), elevation_map->getHeight());
+			auto moisture_map = Channel::create(elevation_map->getWidth(), elevation_map->getHeight());
+			auto surface = Surface::create(elevation_map->getWidth(), elevation_map->getHeight(), false, SurfaceChannelOrder::RGB);
+			vector<vector<float>> humidity_map { 6, vector<float>(elevation_map->getWidth()) };
+
+			auto elevation_noise_iterator = elevation_buffer->getIter();
+			auto elevation_iterator = elevation_map->getIter();
+			auto surface_iterator = surface->getIter();
+			water_pixels = 0;
+			while (surface_iterator.line()) {
+				runtime_assert(elevation_noise_iterator.line() and elevation_iterator.line());
+				float normalized_y = elevation_iterator.y() / size.y;
+				float distance_to_equator = abs(2.0f * (normalized_y - 0.5f));
+				float elevation_change = pow(distance_to_equator, equator_distance_power) * equator_distance_factor;
+				while (surface_iterator.pixel()) {
+					runtime_assert(elevation_noise_iterator.pixel() and elevation_iterator.pixel());
+					float elevation = elevation_noise_iterator.v();
+					elevation = clamp(elevation + elevation_change, current_options.positive ? 0.0f : -1.0f, 1.0f);
+					if (landmass) {
+						elevation_iterator.v() = max(elevation - sealevel, 0.0f) / (1.0f - sealevel);
+					} else {
+						elevation_iterator.v() = current_options.positive ? elevation : (elevation + 1.0f) / 2.0f;
 					}
+					assign_elevation(surface_iterator, elevation);
 				}
-				update_postprocessing = false;
 			}
-			if (elevation_texture) elevation_texture->update(*channel);
-			else elevation_texture = Texture::create(*channel);
+
+			if (elevation_texture) elevation_texture->update(*elevation_map);
+			else elevation_texture = Texture::create(*elevation_map);
 			if (terrain_texture) terrain_texture->update(*surface);
 			else terrain_texture = Texture::create(*surface);
+			update_world = false;
 		}
 
 		auto region_size = elevation_texture->getSize() + 6;
@@ -295,24 +304,24 @@ namespace sethex {
 		float water_percentage = 100.0f * water_pixels / pixels;
 		ui::Text("%.1f%% Water, %.1f%% Land", water_percentage, 100.0f - water_percentage);
 		static float waterlevel = 0.0;
-		update_postprocessing |= ui::SliderPercentage("Sealevel", sealevel, -1.0f, 1.0f, "%+.0f%%", 1.0f, 0.0f);
-		update_postprocessing |= ui::SliderFloat("Equator Distance Factor", equator_distance_factor, -1.0f, 1.0f, "%.2f", 1.0f, 0.0f);
-		update_postprocessing |= ui::SliderInt("Equator Distance Power", equator_distance_power, 1, 15, "%.0f", 10);
+		update_world |= ui::SliderPercentage("Sealevel", sealevel, -1.0f, 1.0f, "%+.0f%%", 1.0f, 0.0f);
+		update_world |= ui::SliderFloat("Equator Distance Factor", equator_distance_factor, -1.0f, 1.0f, "%.2f", 1.0f, 0.0f);
+		update_world |= ui::SliderInt("Equator Distance Power", equator_distance_power, 1, 15, "%.0f", 10);
 		ui::Text("Thresholds:");
 		if (thresholds != default_thresholds) {
 			ui::SameLine();
 			if (ui::SmallButton("Reset##thresholds")) {
 				thresholds = default_thresholds;
-				update_postprocessing = true;
+				update_world = true;
 			}
 		}
-		update_postprocessing |= ui::SliderFloat("Snowcap", thresholds.snowcap, thresholds.mountain, 1.0f, "%.2f");
-		update_postprocessing |= ui::SliderFloat("Mountain", thresholds.mountain, thresholds.forrest, thresholds.snowcap, "%.2f");
-		update_postprocessing |= ui::SliderFloat("Forrest", thresholds.forrest, thresholds.prairie, thresholds.mountain, "%.2f");
-		update_postprocessing |= ui::SliderFloat("Prairie", thresholds.prairie, thresholds.beach, thresholds.forrest, "%.2f");
-		update_postprocessing |= ui::SliderFloat("Beach", thresholds.beach, thresholds.coast, thresholds.prairie, "%.2f");
-		update_postprocessing |= ui::SliderFloat("Coast", thresholds.coast, thresholds.ocean, thresholds.beach, "%.2f");
-		update_postprocessing |= ui::SliderFloat("Ocean", thresholds.ocean, -1.0f, thresholds.coast, "%.2f");
+		update_world |= ui::SliderFloat("Snowcap", thresholds.snowcap, thresholds.mountain, 1.0f, "%.2f");
+		update_world |= ui::SliderFloat("Mountain", thresholds.mountain, thresholds.forrest, thresholds.snowcap, "%.2f");
+		update_world |= ui::SliderFloat("Forrest", thresholds.forrest, thresholds.prairie, thresholds.mountain, "%.2f");
+		update_world |= ui::SliderFloat("Prairie", thresholds.prairie, thresholds.beach, thresholds.forrest, "%.2f");
+		update_world |= ui::SliderFloat("Beach", thresholds.beach, thresholds.coast, thresholds.prairie, "%.2f");
+		update_world |= ui::SliderFloat("Coast", thresholds.coast, thresholds.ocean, thresholds.beach, "%.2f");
+		update_world |= ui::SliderFloat("Ocean", thresholds.ocean, -1.0f, thresholds.coast, "%.2f");
 		ui::Text("elevation range [%.5f, %.5f] (%s [-1, +1])", elevation_minimum, elevation_maximum, (elevation_minimum >= -1.0f and elevation_maximum <= 1.0f) ? "lies within" : "exceeds");
 		auto mouse_position = signed2(ui::GetIO().MousePos) - map_position;
 		ui::Text("mouse position (%i, %i)", mouse_position.x, mouse_position.y);
