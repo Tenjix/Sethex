@@ -103,7 +103,7 @@ namespace sethex {
 				Simplex::seed(seed);
 				auto elevation_iterator = elevation_map->getIter();
 				scale = clamp(scale * (1.0f - roll), 0.1f, 10.0f);
-				shift -= float2(drag) / scale;
+				shift -= wrap_horizontally ? float2(drag.x, drag.y / scale) : float2(drag) / scale;
 				while (elevation_iterator.line()) {
 					while (elevation_iterator.pixel()) {
 						signed2 pixel = elevation_iterator.getPos();
@@ -117,18 +117,19 @@ namespace sethex {
 						}
 						float elevation;
 						float2 position = pixel;
-						position = (position - center) / scale + center;
-						position += shift;
 						if (wrap_horizontally) {
-							float3 cylindrical_position;
 							float repeat_interval = size.x / scale;
-							position.x = position.x + (repeat_interval - size.x) / Tau_Half;
-							float radians = position.x / repeat_interval * Tau;
+							position.y = (position.y - center.y) / scale + center.y;
+							position += shift;
+							float radians = position.x / size.x * Tau;
+							float3 cylindrical_position;
 							cylindrical_position.x = sin(radians) / Tau * repeat_interval;
 							cylindrical_position.y = position.y;
 							cylindrical_position.z = cos(radians) / Tau * repeat_interval;
 							elevation = calculate_elevation(cylindrical_position, current_options, use_continents, continent_frequency, continent_amplitude);
 						} else {
+							position = (position - center) / scale + center;
+							position += shift;
 							elevation = calculate_elevation(position, current_options, use_continents, continent_frequency, continent_amplitude);
 						}
 						elevation_iterator.v() = elevation;
