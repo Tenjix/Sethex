@@ -33,14 +33,14 @@ namespace sethex {
 
 		shared<Mesh> mesh = Mesh::create(geom::Plane() >> geom::Rotate(quaternion(float3())));
 
-		Entity terrain = world.create_entity();
-		terrain.add<Geometry>().mesh(mesh).position(float3(0.0, 0.01, 0.0));
-		auto& material = terrain.add<Material>()
+		Entity entity = world.create_entity("test-plane");
+		entity.add<Geometry>().mesh(mesh).position(float3(0.0, 0.01, 0.0));
+		auto& material = entity.add<Material>()
 			.add(Texture::create(loadImage(loadAsset("textures/test.diffuse.png"))))
 			.add(Texture::create(loadImage(loadAsset("textures/test.specular.png"))))
 			.add(Texture::create(loadImage(loadAsset("textures/test.emissive.png"))))
 			.add(Texture::create(loadImage(loadAsset("textures/test.normal.png"))));
-		terrain.deactivate();
+		entity.deactivate();
 
 		wd::watch("shaders/*", [this, &shader = material.shader](const fs::path& path) {
 			print("compiling shader ...");
@@ -100,14 +100,20 @@ namespace sethex {
 
 		static bool render_background = true;
 		static bool render_world = true;
+		static bool render_entity = false;
 		static bool render_overlay = true;
 		static bool render_interface = false;
-		static bool render_generator = false;
+		static bool render_generator = true;
 		static bool vertical_synchronization = true;
 		{
 			ui::ScopedWindow ui_window("", ImGuiWindowFlags_NoTitleBar);
 			ui::Checkbox("Background", &render_background);
 			ui::Checkbox("World", &render_world);
+			if (ui::Checkbox("Entity", &render_entity)) {
+				auto entity = world.find_entity("test-plane");
+				if (render_entity) entity.activate();
+				else entity.deactivate();
+			}
 			ui::Checkbox("Overlay", &render_overlay);
 			ui::Checkbox("Interface", &render_interface);
 			ui::Checkbox("Generator", &render_generator);

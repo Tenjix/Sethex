@@ -192,6 +192,10 @@ namespace ImGui {
 	bool InputTextMultiline(const char* label, std::string* buf, const ImVec2& size = ImVec2(0, 0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
 	bool Combo(const char* label, int* current_item, const std::vector<std::string>& items, int height_in_items = -1);
 
+	inline bool Combo(const char* label, int& current_item, const std::vector<std::string>& items, int height_in_items = -1) {
+		return Combo(label, &current_item, items, height_in_items);
+	}
+
 	// Getters/Setters Helpers
 
 	template<typename T>
