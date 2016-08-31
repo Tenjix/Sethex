@@ -12,7 +12,7 @@ namespace sethex {
 
 	using TextureFont = ci::gl::TextureFont;
 	using Texture = ci::gl::Texture;
-	using Textures = vector<shared<Texture>>;
+	using Textures = std::vector<ci::gl::TextureRef>;
 	using Shader = ci::gl::GlslProg;
 	using Mesh = ci::gl::VboMesh;
 	using Batch = ci::gl::Batch;
@@ -24,17 +24,28 @@ namespace sethex {
 
 namespace cinder {
 
+	// asignes r,g,b of "color" to "iterator"
 	inline void operator<<(const Surface::Iter& iterator, const Color8u& color) {
 		iterator.r() = color.r;
 		iterator.g() = color.g;
 		iterator.b() = color.b;
 	}
 
+	// asignes r,g,b,a of "color" to "iterator"
 	inline void operator<<(const Surface::Iter& iterator, const ColorA8u& color) {
 		iterator.r() = color.r;
 		iterator.g() = color.g;
 		iterator.b() = color.b;
 		iterator.a() = color.a;
 	}
+
+	// returns an iterator of "iterable" pointing to the first pixel
+	//template <typename Iterable>
+	//typename Iterable::Iter initialized_iterator(std::shared_ptr<Iterable>& iterable) {
+	//	auto iterator = iterable->getIter();
+	//	iterator.line();
+	//	iterator.pixel();
+	//	return iterator;
+	//}
 
 }
