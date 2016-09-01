@@ -39,6 +39,12 @@ namespace cinder {
 		iterator.a() = color.a;
 	}
 
+	inline void operator<<(const Surface::Iter& iterator, const Surface::Iter& other_iterator) {
+		iterator.r() = other_iterator.r();
+		iterator.g() = other_iterator.g();
+		iterator.b() = other_iterator.b();
+	}
+
 	// returns an iterator of "iterable" pointing to the first pixel
 	//template <typename Iterable>
 	//typename Iterable::Iter initialized_iterator(std::shared_ptr<Iterable>& iterable) {

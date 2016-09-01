@@ -253,8 +253,20 @@ namespace ImGui {
 	inline bool ColorEdit3(const char* label, ci::Color& color) {
 		return ColorEdit3(label, reinterpret_cast<float*>(&color));
 	}
+	inline bool ColorEdit3(const char* label, ci::Color8u& color) {
+		float float_color[] = { color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, 1.0f };
+		bool changed = ColorEdit4(label, float_color, false);
+		color = { static_cast<uint8_t>(float_color[0] * 255.0f), static_cast<uint8_t>(float_color[1] * 255.0f), static_cast<uint8_t>(float_color[2] * 255.0f) };
+		return changed;
+	}
 	inline bool ColorEdit4(const char* label, ci::ColorA& color, bool show_alpha = true) {
 		return ColorEdit4(label, reinterpret_cast<float*>(&color), show_alpha);
+	}
+	inline bool ColorEdit3(const char* label, ci::ColorA8u& color) {
+		float float_color[] = { color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.a / 255.0f };
+		bool changed = ColorEdit4(label, float_color);
+		color = { static_cast<uint8_t>(float_color[0] * 255.0f), static_cast<uint8_t>(float_color[1] * 255.0f), static_cast<uint8_t>(float_color[2] * 255.0f), static_cast<uint8_t>(float_color[3] * 255.0f) };
+		return changed;
 	}
 	inline bool DragFloat(const char* label, float& value, float value_speed = 1.0f, float value_minimum = 0.0f, float value_maximum = 0.0f, const char* display_format = "%.3f", float power = 1.0f) {
 		return DragFloat(label, &value, value_speed, value_minimum, value_maximum, display_format, power);

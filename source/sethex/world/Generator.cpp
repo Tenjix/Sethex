@@ -20,10 +20,14 @@ namespace sethex {
 	shared<Channel> temperature_map;
 	shared<Channel> precipitation_map;
 	shared<Surface> terrain_map;
+	shared<Surface> biome_map;
 	shared<Texture> map_texture;
 	shared<Texture> world_texture;
 
-	struct BiomeThresholds {
+	float lower_threshold = One_Third;
+	float upper_threshold = Two_Thirds;
+
+	struct TerrainThresholds {
 		float ocean = -0.5f;
 		float coast = -0.1f;
 		float beach = 0.0f;
@@ -32,7 +36,7 @@ namespace sethex {
 		float mountain = 0.5f;
 		float snowcap = 0.66f;
 
-		bool operator==(const BiomeThresholds& other) {
+		bool operator==(const TerrainThresholds& other) {
 			return ocean == other.ocean
 				and coast == other.coast
 				and beach == other.beach
@@ -41,10 +45,26 @@ namespace sethex {
 				and mountain == other.mountain
 				and snowcap == other.snowcap;
 		}
-		bool operator!=(const BiomeThresholds& other) {
+		bool operator!=(const TerrainThresholds& other) {
 			return not operator==(other);
 		}
 	};
+
+	struct BiomeColors {
+		Color8u ice = { 255, 255, 255 };
+		Color8u tundra = { 128, 128, 64 };
+		Color8u taiga = { 0, 160, 80 };
+		Color8u steppe = { 192, 192, 96 };
+		Color8u prairie = { 0, 160, 0 };
+		Color8u forest = { 0, 96, 0 };
+		Color8u desert = { 255, 255, 128 };
+		Color8u savanna = { 192, 240, 64 };
+		Color8u rainforest = { 0, 64, 0 };
+		Color8u rock = { 128, 128, 128 };
+		Color8u ocean = { 0, 0, 92 };
+	};
+
+	BiomeColors biome_colors;
 
 	struct HumidityCell {
 		vector<float> humidity;
@@ -63,6 +83,31 @@ namespace sethex {
 		return elevation;
 	}
 
+	Color8u determine_biome(float temperature, float precipitation) {
+		if (temperature < lower_threshold) {
+			// polar & dry -> ice
+			if (precipitation < lower_threshold) return biome_colors.ice;
+			// polar & nor -> tundra
+			if (precipitation < upper_threshold) return biome_colors.tundra;
+			// polar & wet -> taiga
+			return biome_colors.taiga;
+		}
+		if (temperature < upper_threshold) {
+			// temperate & dry -> steppe
+			if (precipitation < lower_threshold) return biome_colors.steppe;
+			// temperate & nor -> prairie
+			if (precipitation < upper_threshold) return biome_colors.prairie;
+			// temperate & wet -> forest
+			return biome_colors.forest;
+		}
+		// tropical & dry -> desert
+		if (precipitation < lower_threshold) return biome_colors.desert;
+		// tropical & nor -> savanna
+		if (precipitation < upper_threshold) return biome_colors.savanna;
+		// tropical & wet -> rainforest
+		return biome_colors.rainforest;
+	}
+
 	void Generator::display() {
 		static int seed = 0, seed_maximum = 1000000000;
 		static float2 shift;
@@ -72,18 +117,18 @@ namespace sethex {
 		static Simplex::Options saved_options;
 		static float continent_frequency = 0.5f, continent_amplitude = 1.0f, sealevel = 0.0f;
 		static float equator_distance_factor = 0.0f;
-		static int equator_distance_power = 10;
+		static int equator_distance_power = 10, lapse_power = 1;
 		static bool wrap_horizontally = false;
 		static bool use_continents = false;
 		static bool landmass = false;
-		static bool update_tectonic = true, update_topography, update_climate, update_display;
+		static bool update_tectonic = true, update_topography, update_climate, update_display, update_biomes;
 		static unsigned water_pixels;
-		static float elevation_minimum, elevation_maximum;
-		static float evaporation_factor = 1.0f, transpiration_factor = 0.15f, precipitation_factor = 1.0f, precipitation_decay = 0.05f, slope_scale = 0.05f;
-		static float humidity_saturation = 10.0;
+		static float elevation_minimum, elevation_maximum, lapse_rate = 10.0f;
+		static float evaporation_factor = 1.0f, transpiration_factor = 0.15f, precipitation_factor = 1.0f, precipitation_decay = 0.05f, slope_scale = 0.01f;
+		static float humidity_saturation = 25.0f;
 		static bool upper_precipitation = true;
 
-		static BiomeThresholds thresholds, default_thresholds;
+		static TerrainThresholds thresholds, default_thresholds;
 
 		ui::ScopedWindow ui_window("Noise Texture", ImGuiWindowFlags_HorizontalScrollbar);
 
@@ -102,7 +147,7 @@ namespace sethex {
 		};
 
 		unsigned2 map_resolution = { 800, 450 };
-		if (update_tectonic or update_topography or update_climate) {
+		if (update_tectonic or update_topography or update_climate or update_biomes) {
 
 			if (update_tectonic) {
 				if (not elevation_map) elevation_map = Channel32f::create(map_resolution.x, map_resolution.y);
@@ -154,18 +199,19 @@ namespace sethex {
 				if (not temperature_map) temperature_map = Channel::create(map_resolution.x, map_resolution.y);
 				if (not precipitation_map) precipitation_map = Channel::create(map_resolution.x, map_resolution.y);
 				if (not terrain_map) terrain_map = Surface::create(map_resolution.x, map_resolution.y, false, SurfaceChannelOrder::RGB);
+				if (not biome_map) biome_map = Surface::create(map_resolution.x, map_resolution.y, false, SurfaceChannelOrder::RGB);
 
 				auto buffer_iterator = elevation_buffer->getIter();
 				auto elevation_iterator = elevation_map->getIter();
 				auto temperature_iterator = temperature_map->getIter();
-				auto precipitation_iterator = precipitation_map->getIter();
 				auto terrain_iterator = terrain_map->getIter();
+				auto biome_iterator = biome_map->getIter();
 				water_pixels = 0;
-				while (buffer_iterator.line() and elevation_iterator.line() and temperature_iterator.line() and precipitation_iterator.line() and terrain_iterator.line()) {
+				while (buffer_iterator.line() and elevation_iterator.line() and temperature_iterator.line() and terrain_iterator.line() and biome_iterator.line()) {
 					float y = static_cast<float>(elevation_iterator.y()) / map_resolution.y; // y position [0.0, 1.0]
 					float distance_to_equator = abs(2.0f * (y - 0.5f)); // distance to equator [0.0, 1.0]
 					float elevation_change = pow(distance_to_equator, equator_distance_power) * equator_distance_factor;
-					while (buffer_iterator.pixel() and elevation_iterator.pixel() and temperature_iterator.pixel() and precipitation_iterator.pixel() and terrain_iterator.pixel()) {
+					while (buffer_iterator.pixel() and elevation_iterator.pixel() and temperature_iterator.pixel() and terrain_iterator.pixel() and biome_iterator.pixel()) {
 						float elevation = buffer_iterator.v();
 						elevation = clamp(elevation + elevation_change, current_options.positive ? 0.0f : -1.0f, 1.0f);
 						float elevation_above_sealevel = max(elevation - sealevel, 0.0f) / (1.0f - sealevel);
@@ -179,12 +225,19 @@ namespace sethex {
 						//float temperature_noise = Simplex::to_unsigned(Simplex::noise(elevation_iterator.getPos().x * 0.02f * continent_frequency));
 						float temperature_noise = Simplex::to_unsigned(Simplex::noise(position * 0.02f * continent_frequency));
 						temperature = mix(temperature, temperature_noise, 0.1f);
-						if (elevation > sealevel) temperature -= elevation_above_sealevel * elevation_above_sealevel;
-						else temperature -= 0.1f;
+						if (elevation > sealevel) {
+							if (lapse_power == 1) {
+								float elevation_above_sealevel_in_km = (elevation - sealevel) * 10.0f;
+								temperature -= lapse_rate * elevation_above_sealevel_in_km / 70.0f;
+							} else {
+								temperature -= elevation_above_sealevel * elevation_above_sealevel * lapse_rate / 20.0f;
+							}
+						} else temperature -= 0.1f;
 						temperature = clamp(temperature, 0.0f, 1.0f);
-						//temperature = ceil(max(temperature, 0.1f), 3);
 						temperature_iterator.v() = static_cast<uint8>(temperature * 255.0f + 0.5f);
+						unsigned water = water_pixels;
 						assign_elevation(terrain_iterator, elevation);
+						if (water_pixels > water) biome_iterator << terrain_iterator;
 					}
 				}
 				update_topography = false;
@@ -205,8 +258,8 @@ namespace sethex {
 					float humidity = humidity_map[belt][slot];
 					float slope = 0.0f;
 					bool land = elevation > sealevel;
-					evapotranspiration = temperature * temperature * (land ? transpiration_factor : evaporation_factor);
-					evapotranspiration = min(evapotranspiration, humidity_saturation - humidity);
+					evapotranspiration = temperature * (land ? transpiration_factor : evaporation_factor);
+					evapotranspiration = min(evapotranspiration, humidity_saturation * temperature - humidity);
 					humidity += evapotranspiration;
 					if (land) {
 						if (y > 0) {
@@ -216,8 +269,8 @@ namespace sethex {
 							}
 							slope = (elevation - previous_elevation) / slope_scale;
 						}
-						//precipitation = clamp(slope * elevation_above_sealevel, 0.01f, 1.0f) * precipitation_factor;
-						precipitation = elevation_above_sealevel * elevation_above_sealevel * precipitation_factor;
+						//precipitation = clamp(slope * elevation_above_sealevel * elevation_above_sealevel + 0.1f, 0.0f, 1.0f) * precipitation_factor;
+						precipitation = clamp(slope * elevation_above_sealevel * elevation_above_sealevel + humidity / (humidity_saturation * temperature), 0.0f, 1.0f) * precipitation_factor;
 						precipitation = min(precipitation, humidity);
 						humidity -= precipitation;
 					}
@@ -227,6 +280,7 @@ namespace sethex {
 					x = project(x + x_delta, 0, map_resolution.x - 1);
 				};
 
+				//srand(15);
 				auto calculate_precipitation = [&humidity_map, &map_resolution](unsigned belt, unsigned slot, unsigned& x, unsigned y, int x_delta) {
 					float elevation = *elevation_map->getData(x, y);
 					if (not current_options.positive) elevation = elevation * 2.0f - 1.0f;
@@ -242,6 +296,7 @@ namespace sethex {
 						mapped_precipitation = static_cast<uint8>(min(existing_precipitation + precipitation, 1.0f) * 255.0f + 0.5f);
 					}
 					humidity_map[belt][slot] = humidity;
+					//bool drift = (rand() % 100) < 10;
 					x = project(x + x_delta, 0, map_resolution.x - 1);
 				};
 
@@ -314,6 +369,21 @@ namespace sethex {
 					}
 				}
 				update_climate = false;
+				update_biomes = true;
+			}
+
+			if (update_biomes) {
+				auto elevation_iterator = elevation_map->getIter();
+				auto temperature_iterator = temperature_map->getIter();
+				auto precipitation_iterator = precipitation_map->getIter();
+				auto biome_iterator = biome_map->getIter();
+				while (elevation_iterator.line() and temperature_iterator.line() and precipitation_iterator.line() and biome_iterator.line()) {
+					while (elevation_iterator.pixel() and temperature_iterator.pixel() and precipitation_iterator.pixel() and biome_iterator.pixel()) {
+						float elevation = (not current_options.positive) ? elevation_iterator.v() * 2.0f - 1.0f : elevation_iterator.v();
+						if (elevation > sealevel) biome_iterator << determine_biome(temperature_iterator.v() / 255.0f, precipitation_iterator.v() / 255.0f);
+					}
+				}
+				update_biomes = false;
 				update_display = true;
 			}
 		}
@@ -321,18 +391,21 @@ namespace sethex {
 		ui::BeginChild("map display", float2(map_resolution.x, 0));
 		static int selected_map = 0;
 		ui::PushItemWidth(150);
-		if (ui::Combo("Map##selection", selected_map, { "Terrain", "Elevation", "Temperature", "Precipitation" }) or update_display) {
+		if (ui::Combo("Map##selection", selected_map, { "Biome", "Terrain", "Elevation", "Temperature", "Precipitation" }) or update_display) {
 			switch (selected_map) {
 				case 0:
-					map_texture = Texture::create(*terrain_map);
+					map_texture = Texture::create(*biome_map);
 					break;
 				case 1:
-					map_texture = Texture::create(*elevation_map);
+					map_texture = Texture::create(*terrain_map);
 					break;
 				case 2:
-					map_texture = Texture::create(*temperature_map);
+					map_texture = Texture::create(*elevation_map);
 					break;
 				case 3:
+					map_texture = Texture::create(*temperature_map);
+					break;
+				case 4:
 					map_texture = Texture::create(*precipitation_map);
 					break;
 				default: throw_runtime_exception("invalid map");
@@ -425,7 +498,7 @@ namespace sethex {
 		auto coordinates = (float2(mouse_position) / float2(map_resolution) * 2.0f - 1.0f) * float2(180, 90);
 		auto elevation = (elevation_map->getValue(mouse_position) * 2.0f - 1.0f - sealevel) * 10000.0f;
 		auto temperature = temperature_map->getValue(mouse_position) / 255.0f * 70.0f - 25.0f;
-		auto precipitation = precipitation_map->getValue(mouse_position) / 255.0f * 100.0f;
+		auto precipitation = precipitation_map->getValue(mouse_position) / 255.0f * 80.0f;
 
 		unsigned pixels = map_texture->getWidth() * map_texture->getHeight();
 		float water_percentage = 100.0f * water_pixels / pixels;
@@ -433,7 +506,7 @@ namespace sethex {
 		ui::Text("%.1f%% Water, %.1f%% Land", water_percentage, 100.0f - water_percentage);
 
 		if (map_hovered) {
-			ui::Text(u8"Position: %i, %i\nCoordinates: %+4.1f°, %+4.1f°\nElevation: %.1fm\nTemperature: %.1f°\nPrecipitation: %.1f%%",
+			ui::Text(u8"Position: %i, %i \nCoordinates: %+4.1f°, %+4.1f° \nElevation: %.1fm \nTemperature: %.1f°C \nPrecipitation: %.1fkg/m² ",
 					 mouse_position.x, mouse_position.y, coordinates.x, coordinates.y, elevation, temperature, precipitation);
 		} else {
 			ui::PushItemWidth(-250);
@@ -465,13 +538,30 @@ namespace sethex {
 			update_topography |= ui::SliderFloat("Equator Distance Factor", equator_distance_factor, -1.0f, 1.0f, "%.2f", 1.0f, 0.0f);
 			update_topography |= ui::SliderInt("Equator Distance Power", equator_distance_power, 1, 15, "%.0f", 10);
 
+			update_topography |= ui::SliderFloat("Lapse Rate", lapse_rate, 0.0f, 20.0f, u8"%.1f (°/km)", 1.0f, 10.0f);
+			update_topography |= ui::SliderInt("Lapse Power", lapse_power, 1, 2, "%.0f", 1);
+
 			update_climate |= ui::SliderFloat("Evaporation", evaporation_factor, 0.0f, 10.0f, "%.3f", 2.0f, 1.0f);
 			update_climate |= ui::SliderFloat("Transpiration", transpiration_factor, 0.0f, 10.0f, "%.3f", 2.0f, 0.15f);
 			update_climate |= ui::SliderFloat("Precipitation", precipitation_factor, 0.0f, 10.0f, "%.3f", 2.0f, 1.0f);
 			update_climate |= ui::SliderFloat("Precipitation Decay", precipitation_decay, 0.0f, 1.0f, "%.3f", 2.0f, 0.05f);
-			update_climate |= ui::SliderFloat("Slope Scale", slope_scale, 0.001f, 1.0f, "%.3f", 3.0f, 0.05f);
-			update_climate |= ui::SliderFloat("Humidity Saturation", humidity_saturation, 1.0f, 100.0f, "%.3f", 3.0f, 10.0f);
+			update_climate |= ui::SliderFloat("Slope Scale", slope_scale, 0.001f, 1.0f, "%.3f", 3.0f, 0.01f);
+			update_climate |= ui::SliderFloat("Humidity Saturation", humidity_saturation, 1.0f, 100.0f, "%.3f", 3.0f, 25.0f);
 			update_climate |= ui::Checkbox("Upper Precipitation", upper_precipitation);
+
+			update_biomes |= ui::SliderFloat("Lower Threshold", lower_threshold, 0.0f, upper_threshold, "%.2f", 1.0f, One_Third);
+			update_biomes |= ui::SliderFloat("Upper Threshold", upper_threshold, lower_threshold, 1.0f, "%.2f", 1.0f, Two_Thirds);
+
+			update_biomes |= ui::ColorEdit3("Ocean", biome_colors.ocean);
+			update_biomes |= ui::ColorEdit3("Ice", biome_colors.ice);
+			update_biomes |= ui::ColorEdit3("Tundra", biome_colors.tundra);
+			update_biomes |= ui::ColorEdit3("Taiga", biome_colors.taiga);
+			update_biomes |= ui::ColorEdit3("Steppe", biome_colors.steppe);
+			update_biomes |= ui::ColorEdit3("Prairie", biome_colors.prairie);
+			update_biomes |= ui::ColorEdit3("Forest", biome_colors.forest);
+			update_biomes |= ui::ColorEdit3("Desert", biome_colors.desert);
+			update_biomes |= ui::ColorEdit3("Savanna", biome_colors.savanna);
+			update_biomes |= ui::ColorEdit3("Rainforest", biome_colors.rainforest);
 
 			static bool show_thresholds = false;
 			if (ui::SmallButton("Thresholds:")) show_thresholds = not show_thresholds;
@@ -492,8 +582,6 @@ namespace sethex {
 				update_topography |= ui::SliderFloat("Ocean", thresholds.ocean, -1.0f, thresholds.coast, "%.2f");
 			}
 			ui::Text("elevation range [%.5f, %.5f] (%s [-1, +1])", elevation_minimum, elevation_maximum, (elevation_minimum >= -1.0f and elevation_maximum <= 1.0f) ? "lies within" : "exceeds");
-			//auto mouse_position = signed2(ui::GetIO().MousePos) - map_position;
-			//ui::Text("mouse position (%i, %i)", mouse_position.x, mouse_position.y);
 
 			ui::PopItemWidth();
 		}
