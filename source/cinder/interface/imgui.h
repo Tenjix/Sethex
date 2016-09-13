@@ -195,6 +195,9 @@ namespace ImGui {
 	inline bool Combo(const char* label, int& current_item, const std::vector<std::string>& items, int height_in_items = -1) {
 		return Combo(label, &current_item, items, height_in_items);
 	}
+	inline void Text(const std::string& format) {
+		Text(format.c_str());
+	}
 
 	// Getters/Setters Helpers
 

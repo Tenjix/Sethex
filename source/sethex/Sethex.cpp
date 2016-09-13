@@ -19,6 +19,8 @@ namespace sethex {
 		CameraUi camera_ui;
 		Game game;
 
+		String error;
+
 	public:
 
 		void setup() override;
@@ -38,10 +40,15 @@ namespace sethex {
 
 	void Sethex::setup() {
 		redirectOutputStreams(redirection_buffer);
-		ui::initialize(ui::Options().darkTheme().fonts({ { getAssetPath("fonts/Nunito.ttf"), 20.0f } }).fontGlyphRanges("Nunito", { 0x0020, 0x00FF, 0xe000, 0xe006, 0 }));
 		getWindow()->setTitle("Sethex");
 		print("Sethex by Tenjix (Thomas Würstle)");
 		debug("Cinder Version ", CINDER_VERSION_STR);
+		auto opengl_version = cinder::gl::getVersion();
+		bool opengl_version_supported = opengl_version.first > 3 or (opengl_version.first == 3 and opengl_version.second >= 2);
+		debug("OpenGL Version ", cinder::gl::getVersionString(), opengl_version_supported ? " (supported)" : " (unsupported)");
+		if (not opengl_version_supported) error = "Error: Unsupported opengl version. \nDetected: OpenGL " + cinder::gl::getVersionString() + "\nRequired: OpenGL 3.2 or higher";
+		ui::initialize(ui::Options().darkTheme().fonts({ { getAssetPath("fonts/Nunito.ttf"), 20.0f } }).fontGlyphRanges("Nunito", { 0x0020, 0x00FF, 0xe000, 0xe006, 0 }));
+		game.executable = opengl_version_supported;
 		game.setup(camera_ui);
 	}
 
@@ -55,7 +62,20 @@ namespace sethex {
 	}
 
 	void Sethex::draw() {
+		//{
+		//	ui::SetNextWindowPosCenter();
+		//	ui::ScopedWindow menu("Main Menu", ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
+		//	ImVec2 size = { 200, 0 };
+		//	ui::Button("Generate World", size);
+		//	ui::Button("Play the Game", size);
+		//	ui::Button("Customize Settings", size);
+		//}
 		game.render();
+		if (not game.executable and not error.empty()) {
+			ui::SetNextWindowPosCenter();
+			ui::ScopedWindow menu("Error", ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
+			ui::Text(error);
+		}
 	}
 
 	void Sethex::keyDown(KeyEvent event) {}

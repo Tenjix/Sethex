@@ -36,6 +36,7 @@ namespace sethex {
 
 		Input input;
 		String message;
+		bool executable = true;
 
 		void setup(ci::CameraUi& camera_ui);
 		void resize();

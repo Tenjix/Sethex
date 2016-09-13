@@ -207,8 +207,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Image Include="assets\images\Background.jpg" />
-    <Image Include="resources\Image.jpg" />
     <Image Include="resources\Sethex.ico" />
   </ItemGroup>
   <ItemGroup>

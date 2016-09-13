@@ -33,6 +33,8 @@ namespace sethex {
 
 		shared<Mesh> mesh = Mesh::create(geom::Plane() >> geom::Rotate(quaternion(float3())));
 
+		if (not executable) return;
+
 		Entity entity = world.create_entity("test-plane");
 		entity.add<Geometry>().mesh(mesh).position(float3(0.0, 0.01, 0.0));
 		auto& material = entity.add<Material>()
@@ -108,11 +110,19 @@ namespace sethex {
 		{
 			ui::ScopedWindow ui_window("", ImGuiWindowFlags_NoTitleBar);
 			ui::Checkbox("Background", &render_background);
-			ui::Checkbox("World", &render_world);
-			if (ui::Checkbox("Entity", &render_entity)) {
-				auto entity = world.find_entity("test-plane");
-				if (render_entity) entity.activate();
-				else entity.deactivate();
+			if (executable) {
+				if (ui::Checkbox("World", &render_world)) {
+					auto tiles = world.find_entities_beginning("Tile #");
+					for each (auto tile in tiles) {
+						if (render_world) tile.activate();
+						else tile.deactivate();
+					}
+				}
+				if (ui::Checkbox("Entity", &render_entity)) {
+					auto entity = world.find_entity("test-plane");
+					if (render_entity) entity.activate();
+					else entity.deactivate();
+				}
 			}
 			ui::Checkbox("Overlay", &render_overlay);
 			ui::Checkbox("Interface", &render_interface);
@@ -124,7 +134,7 @@ namespace sethex {
 		if (render_background) draw(background);
 		else clear();
 
-		if (render_world) world.get<RenderSystem>().render();
+		if (executable and (render_world or render_entity)) world.get<RenderSystem>().render();
 		if (render_interface) ui::ShowTestWindow();
 		if (render_generator) generator.display();
 

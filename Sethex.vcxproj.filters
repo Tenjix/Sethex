@@ -21,12 +21,6 @@
     <Image Include="resources\sethex.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="assets\images\Background.jpg">
-      <Filter>Ressourcen</Filter>
-    </Image>
-    <Image Include="resources\Image.jpg">
-      <Filter>Ressourcen</Filter>
-    </Image>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\sethex\game\Game.cpp">
