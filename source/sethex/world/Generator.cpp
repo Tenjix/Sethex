@@ -108,6 +108,21 @@ namespace sethex {
 		return biome_colors.rainforest;
 	}
 
+	String get_biome_name(Color8u biome_color) {
+		if (biome_color == biome_colors.desert) return "desert";
+		if (biome_color == biome_colors.forest) return "forest";
+		if (biome_color == biome_colors.ice) return "ice";
+		if (biome_color == biome_colors.ocean) return "ocean";
+		if (biome_color == biome_colors.prairie) return "prairie";
+		if (biome_color == biome_colors.rainforest) return "rainforest";
+		if (biome_color == biome_colors.rock) return "rock";
+		if (biome_color == biome_colors.savanna) return "savanna";
+		if (biome_color == biome_colors.steppe) return "steppe";
+		if (biome_color == biome_colors.taiga) return "taiga";
+		if (biome_color == biome_colors.tundra) return "tundra";
+		return "Unknown";
+	}
+
 	void Generator::display() {
 		static int seed = 0, seed_maximum = 1000000000;
 		static float2 shift;
@@ -499,6 +514,7 @@ namespace sethex {
 		auto elevation = (elevation_map->getValue(mouse_position) * 2.0f - 1.0f - sealevel) * 10000.0f;
 		auto temperature = temperature_map->getValue(mouse_position) / 255.0f * 70.0f - 25.0f;
 		auto precipitation = precipitation_map->getValue(mouse_position) / 255.0f * 80.0f;
+		auto biome = get_biome_name(biome_map->getPixel(mouse_position));
 
 		unsigned pixels = map_texture->getWidth() * map_texture->getHeight();
 		float water_percentage = 100.0f * water_pixels / pixels;
@@ -506,8 +522,8 @@ namespace sethex {
 		ui::Text("%.1f%% Water, %.1f%% Land", water_percentage, 100.0f - water_percentage);
 
 		if (map_hovered) {
-			ui::Text(u8"Position: %i, %i \nCoordinates: %+4.1f°, %+4.1f° \nElevation: %.1fm \nTemperature: %.1f°C \nPrecipitation: %.1fkg/m² ",
-					 mouse_position.x, mouse_position.y, coordinates.x, coordinates.y, elevation, temperature, precipitation);
+			ui::Text(u8"Position: %i, %i \nCoordinates: %+4.1f°, %+4.1f° \nElevation: %.1fm \nTemperature: %.1f°C \nPrecipitation: %.1fkg/m² \nBiome: %s",
+					 mouse_position.x, mouse_position.y, coordinates.x, coordinates.y, elevation, temperature, precipitation, biome);
 		} else {
 			ui::PushItemWidth(-250);
 
