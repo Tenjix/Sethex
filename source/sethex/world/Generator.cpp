@@ -1,7 +1,10 @@
 #include "Generator.h"
 
 #include <cinder/interface/Imgui.h>
+#include <cinder/utilities/Assets.h>
+#include <cinder/utilities/Shaders.h>
 #include <cinder/utilities/Simplex.h>
+#include <cinder/utilities/Watchdog.h>
 
 #include <sethex/Common.h>
 #include <sethex/Graphics.h>
@@ -23,6 +26,9 @@ namespace sethex {
 	shared<Surface> biome_map;
 	shared<Texture> map_texture;
 	shared<Texture> world_texture;
+
+	shared<Shader> simulation_shader;
+	shared<FrameBuffer> framebuffer;
 
 	float lower_threshold = One_Third;
 	float upper_threshold = Two_Thirds;
@@ -121,6 +127,22 @@ namespace sethex {
 		if (biome_color == biome_colors.taiga) return "taiga";
 		if (biome_color == biome_colors.tundra) return "tundra";
 		return "Unknown";
+	}
+
+	void simulate() {
+		print("simulating...");
+
+		auto temperature_map_texture = Texture::create(*temperature_map);
+
+		framebuffer->bindFramebuffer();
+		simulation_shader->bind();
+		temperature_map_texture->bind();
+		gl::pushViewport();
+		gl::viewport(framebuffer->getSize());
+		gl::drawArrays(GL_POINTS, 0, 1);
+		gl::popViewport();
+		temperature_map_texture->unbind();
+		framebuffer->unbindFramebuffer();
 	}
 
 	void Generator::display() {
@@ -403,10 +425,29 @@ namespace sethex {
 			}
 		}
 
+		if (framebuffer == nullptr) {
+			framebuffer = FrameBuffer::create(map_resolution.x, map_resolution.y);
+		}
+		if (simulation_shader == nullptr) {
+			wd::watch("shaders/*", [](const fs::path& path) {
+				print("compiling shader ...");
+				try {
+					String vertex_shader = loadString(app::loadAsset("shaders/Climate.simulation.vertex.shader"));
+					String fragment_shader = loadString(app::loadAsset("shaders/Climate.simulation.fragment.shader"));
+					String geometry_shader = loadString(app::loadAsset("shaders/Climate.simulation.geometry.shader"));
+					//shader::define(fragment_shader, "DIFFUSE_TEXTURE");
+					simulation_shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
+					update_display = true;
+				} catch (gl::GlslProgCompileExc exception) {
+					error(exception.what());
+				}
+			});
+		}
+
 		ui::BeginChild("map display", float2(map_resolution.x, 0));
 		static int selected_map = 0;
 		ui::PushItemWidth(150);
-		if (ui::Combo("Map##selection", selected_map, { "Biome", "Terrain", "Elevation", "Temperature", "Precipitation" }) or update_display) {
+		if (ui::Combo("Map##selection", selected_map, { "Biome", "Terrain", "Elevation", "Temperature", "Precipitation", "Simulated" }) or update_display) {
 			switch (selected_map) {
 				case 0:
 					map_texture = Texture::create(*biome_map);
@@ -422,6 +463,10 @@ namespace sethex {
 					break;
 				case 4:
 					map_texture = Texture::create(*precipitation_map);
+					break;
+				case 5:
+					simulate();
+					map_texture = framebuffer->getColorTexture();
 					break;
 				default: throw_runtime_exception("invalid map");
 			}

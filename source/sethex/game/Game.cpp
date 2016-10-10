@@ -44,8 +44,9 @@ namespace sethex {
 			.add(Texture::create(loadImage(loadAsset("textures/test.normal.png"))));
 		entity.deactivate();
 
-		wd::watch("shaders/*", [this, &shader = material.shader](const fs::path& path) {
-			print("compiling shader ...");
+		/*wd::watch("shaders/*", [this, &shader = material.shader](const fs::path& path)*/ {
+			auto& shader = material.shader;
+			//print("compiling shader ...");
 			try {
 				if (false) {
 					string vertex_shader = loadString(loadAsset("shaders/Wireframe.vertex.shader"));
@@ -75,7 +76,7 @@ namespace sethex {
 				message = exception.what();
 
 			}
-		});
+		}/*)*/;
 
 		world.add<RenderSystem>();
 		world.add<TileSystem>(input);
