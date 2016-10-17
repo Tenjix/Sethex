@@ -130,7 +130,7 @@ namespace sethex {
 	}
 
 	void simulate() {
-		print("simulating...");
+		debug("simulating...");
 
 		auto temperature_map_texture = Texture::create(*temperature_map);
 
@@ -187,6 +187,7 @@ namespace sethex {
 		if (update_tectonic or update_topography or update_climate or update_biomes) {
 
 			if (update_tectonic) {
+				debug("update_tectonic");
 				if (not elevation_map) elevation_map = Channel32f::create(map_resolution.x, map_resolution.y);
 				elevation_minimum = elevation_maximum = zero;
 				if (seed < 0 || seed > seed_maximum) seed = seed_maximum;
@@ -233,6 +234,7 @@ namespace sethex {
 			}
 
 			if (update_topography) {
+				debug("update_topography");
 				if (not temperature_map) temperature_map = Channel::create(map_resolution.x, map_resolution.y);
 				if (not precipitation_map) precipitation_map = Channel::create(map_resolution.x, map_resolution.y);
 				if (not terrain_map) terrain_map = Surface::create(map_resolution.x, map_resolution.y, false, SurfaceChannelOrder::RGB);
@@ -282,6 +284,7 @@ namespace sethex {
 			}
 
 			if (update_climate) {
+				debug("update_climate");
 				vector<vector<float>> humidity_map { 6, vector<float>(map_resolution.x) };
 				unsigned map_height_sixth = map_resolution.y / 6;
 
@@ -371,6 +374,7 @@ namespace sethex {
 					}
 				}
 				if (upper_precipitation) {
+					debug("upper_precipitation");
 					// humidity exchange of rising air
 					for (unsigned slot = 0; slot < map_resolution.x; slot++) {
 						humidity_map[0][slot] = humidity_map[1][slot] = (humidity_map[0][slot] + humidity_map[1][slot]) / 2.0f;
@@ -410,6 +414,7 @@ namespace sethex {
 			}
 
 			if (update_biomes) {
+				debug("update_biomes");
 				auto elevation_iterator = elevation_map->getIter();
 				auto temperature_iterator = temperature_map->getIter();
 				auto precipitation_iterator = precipitation_map->getIter();
@@ -430,7 +435,7 @@ namespace sethex {
 		}
 		if (simulation_shader == nullptr) {
 			wd::watch("shaders/*", [](const fs::path& path) {
-				print("compiling shader ...");
+				debug("compiling shader ...");
 				try {
 					String vertex_shader = loadString(app::loadAsset("shaders/Climate.simulation.vertex.shader"));
 					String fragment_shader = loadString(app::loadAsset("shaders/Climate.simulation.fragment.shader"));
