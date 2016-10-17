@@ -4,6 +4,7 @@
 #include <shaders/Mathematics.h>
 
 uniform sampler2D uTemperatureMap;
+// uniform usampler2D uUnsignedTemperatureMap;
 
 in vec2 vTexinates;
 
@@ -17,6 +18,10 @@ void debugSignedUnitRange(float value) {
 
 void debugUnsignedUnitRange(float value) {
 	oColor = vec4(smaller(value, -1.0), within(value, -1.0, 1.0) * (1.0 + value) * 0.5, greater(value, 1.0), 1.0);
+}
+
+void debugUnsignedUnitRangeDual(float value) {
+	oColor = vec4(max(smaller(value, -1.0), greater(value, 1.0)), within(value, -1.0, 0.0) * -value, within(value, 0.0, 1.0) * value, 1.0);
 }
 
 // limits and projects "texel" onto a horizontally wrapping map with "map_size"
@@ -62,17 +67,21 @@ vec4 calculate_density_delta(ivec2 texel, int distance = 1) {
 vec4 calculate_pressure(ivec2 texel, int octaves = 1, float decline = 0.5) {
 	vec4 pressure = vec4(0.0);
 	float intensity = 1.0;
+	float range = 0.0;
 	for (int octave = 0; octave < octaves; octave++) {
 		pressure += intensity * calculate_density_delta(texel, int(exp2(octave)));
+		range += intensity;
 		intensity *= decline;
 	}
-	return pressure;
+	return pressure / range;
 }
 
+// deflects air flow depending on hemisphere and flow spead
 vec2 apply_coriolis_effect(vec2 texel, vec2 flow) {
 	float verticality = float(texel.y) / map_size.y;
-	// float intensity = 1.0 - 2.0 * verticality;
-	return rotation(Pi_Half * sign(0.5 - verticality) * length(flow)) * flow;
+	float direction = -sign(0.5 - verticality);
+	// todo: maybe don't deflect horizontal flow?
+	return rotation(Pi_Half * direction * length(flow)) * flow;
 }
 
 // calculates air flow at the given texel based on air pressure
@@ -82,7 +91,10 @@ vec2 calculate_flow(ivec2 texel) {
 	vec2 northwest_southeast_direction = vec2(Sqrt_2_Inverse);
 	vec2 southwest_northeast_direction = vec2(Sqrt_2_Inverse, -Sqrt_2_Inverse);
 
-	vec4 pressure = calculate_pressure(texel, 3);
+	vec4 pressure = calculate_pressure(texel, 7);
+
+	// float pressure_coefficient = 1.5;
+	// pressure = clamp(pressure * pressure_coefficient, -1.0, 1.0);
 
 	vec2 flow = north_south_direction * pressure.x 
 		+ west_east_direction * pressure.y 
@@ -90,7 +102,7 @@ vec2 calculate_flow(ivec2 texel) {
 		+ southwest_northeast_direction * pressure.w;
 
 	flow = apply_coriolis_effect(texel, flow);
-	// debugUnsignedUnitRange(flow.x);
+	// debugUnsignedUnitRangeDual(flow.x);
 
 	return flow;
 }
