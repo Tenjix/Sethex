@@ -92,7 +92,7 @@ namespace sethex {
 
 }
 
-CINDER_APP(sethex::Sethex, RendererGl, [&](App::Settings* settings) {
+CINDER_APP(sethex::Sethex, RendererGl(RendererGl::Options().version(4, 5)), [&](App::Settings* settings) {
 	settings->setWindowSize(1000, 560);
 	settings->disableFrameRate();
 })

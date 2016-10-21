@@ -1,5 +1,6 @@
 #include "Generator.h"
 
+#include <cinder/gl/Ssbo.h>
 #include <cinder/interface/Imgui.h>
 #include <cinder/utilities/Assets.h>
 #include <cinder/utilities/Shaders.h>
@@ -15,6 +16,8 @@
 using namespace cinder;
 using namespace constf;
 using namespace std;
+
+using Shaderbuffer = gl::Ssbo;
 
 namespace sethex {
 
@@ -130,19 +133,77 @@ namespace sethex {
 	}
 
 	void simulate() {
+		const unsigned2 size = framebuffer->getSize();
+		const uint entries = size.x * size.y;
+
+		vector<uint32> sources(entries);
+		vector<uint32> targets(entries);
+
 		debug("simulating...");
 
 		auto temperature_map_texture = Texture::create(*temperature_map);
 
-		framebuffer->bindFramebuffer();
-		simulation_shader->bind();
-		temperature_map_texture->bind();
-		gl::pushViewport();
-		gl::viewport(framebuffer->getSize());
-		gl::drawArrays(GL_POINTS, 0, 1);
-		gl::popViewport();
-		temperature_map_texture->unbind();
-		framebuffer->unbindFramebuffer();
+		auto sources_buffer = Shaderbuffer::create(sizeof(uint32) * sources.size(), sources.data(), GL_STATIC_DRAW);
+		auto targets_buffer = Shaderbuffer::create(sizeof(uint32) * targets.size(), targets.data(), GL_STATIC_DRAW);
+
+		//auto surface = Surface::create(framebuffer->getColorTexture()->createSource());
+		//glBindImageTexture()
+
+		{
+			using namespace gl;
+			ScopedFramebuffer scoped_framebuffer(framebuffer);
+			ScopedViewport scoped_viewport(framebuffer->getSize());
+			ScopedGlslProg scoped_shader(simulation_shader);
+			ScopedBuffer scoped_sources_buffer(sources_buffer);
+			ScopedBuffer scoped_targets_buffer(targets_buffer);
+			ScopedTextureBind scoped_texture(temperature_map_texture);
+			sources_buffer->bindBase(0);
+			targets_buffer->bindBase(1);
+			drawArrays(GL_POINTS, 0, 1);
+		}
+
+		sources_buffer->getBufferSubData(0, sizeof(uint32) * sources.size(), sources.data());
+		uint multiple_sources = 0;
+		for (uint32 s : sources) {
+			if (s > 1) multiple_sources++;
+		}
+		print("occurences of multiple sources: ", multiple_sources);
+
+		targets_buffer->getBufferSubData(0, sizeof(uint32) * targets.size(), targets.data());
+		uint multiple_targets = 0;
+		for (uint32 t : targets) {
+			if (t > 1) multiple_targets++;
+		}
+		print("occurences of multiple targets: ", multiple_targets);
+
+		//for (size_t i = 0; i < 5; i++) {
+		//	print(i, ": ", data[i]);
+		//}
+
+		//framebuffer->bindFramebuffer();
+		//simulation_shader->bind();
+		//gl::context()->pushBufferBinding(shader_buffer->getTarget(), shader_buffer->getId());
+		//shader_buffer->bindBase(0);
+		//temperature_map_texture->bind();
+		//gl::pushViewport();
+		//gl::viewport(framebuffer->getSize());
+		//gl::drawArrays(GL_POINTS, 0, 1);
+		//gl::popViewport();
+		//temperature_map_texture->unbind();
+		//shader_buffer->unbindBase();
+		//gl::context()->popBufferBinding(shader_buffer->getTarget());
+		//framebuffer->unbindFramebuffer();
+
+		//uint n = data[0];
+		//uint n;
+		//shader_buffer->getBufferSubData(0, sizeof(uint) * 1, &n);
+		//debug(n);
+
+		//int i;
+		//glGetIntegerv(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, &i);
+		//debug(i); // = 2147483647
+
+		//debug(shader_data.data_array[0], " ", shader_data.data_array[1], " ", shader_data.data_array[2], " ", shader_data.data_array[3]);
 	}
 
 	void Generator::display() {

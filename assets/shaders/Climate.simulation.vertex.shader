@@ -1,5 +1,5 @@
 // shadertype=glsl
-#version 150
+#version 430
 
 // uniform mat4 ciModelViewProjection;
 // uniform mat4 ciModelView;

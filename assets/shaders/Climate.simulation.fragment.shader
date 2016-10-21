@@ -1,7 +1,15 @@
 // shadertype=glsl
-#version 150
+#version 430
 
 #include <shaders/Mathematics.h>
+
+layout (std430, binding = 0) buffer sources_storage { 
+	uint sources[];
+};
+
+layout (std430, binding = 1) buffer targets_storage { 
+	uint targets[];
+};
 
 uniform sampler2D uTemperatureMap;
 // uniform usampler2D uUnsignedTemperatureMap;
@@ -127,6 +135,24 @@ void main() {
 	
 	vec2 flow = calculate_flow(texel);
 	oColor = vec4(convert_flow_to_color(flow), 0.0, 1.0);
+
+	// backward advection
+	ivec2 source = limit(ivec2(round(texel - flow)), map_size);
+	atomicAdd(targets[source.x + source.y * map_size.x], 1);
+
+	// forward advection
+	ivec2 target = limit(ivec2(round(texel + flow)), map_size);
+	atomicAdd(sources[target.x + target.y * map_size.x], 1);
+
+	// atomicAdd(data[0], 1);
+
+	// oColor = vec4(data_array[0],data_array[1],data_array[2],data_array[3]);
+	// data[0] = 15;
+	// atomicAdd(data[0], 1);
+
+	// oColor = vec4(data_array);
+	// data_array = vec4(1.0, 0.0, 0.0, 1.0);
+
 	// oColor = vec4(convert_flow_to_color(flow), length(flow), 1.0);
 	// oColor = vec4(convert_flow_to_color(flow), length(flow) > 1.0? 1.0 : 0.0, 1.0);
 
