@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 
 #define GLM_SWIZZLE
 #include <glm/glm.hpp>
@@ -27,6 +28,7 @@ namespace sethex {
 	using std::pair;
 	using std::vector;
 	using std::unordered_map;
+	using std::unordered_set;
 
 	struct generic_zero {
 

@@ -162,19 +162,19 @@ namespace sethex {
 			drawArrays(GL_POINTS, 0, 1);
 		}
 
-		sources_buffer->getBufferSubData(0, sizeof(uint32) * sources.size(), sources.data());
-		uint multiple_sources = 0;
-		for (uint32 s : sources) {
-			if (s > 1) multiple_sources++;
-		}
-		print("occurences of multiple sources: ", multiple_sources);
+		//sources_buffer->getBufferSubData(0, sizeof(uint32) * sources.size(), sources.data());
+		//uint multiple_sources = 0;
+		//for (uint32 s : sources) {
+		//	if (s > 1) multiple_sources++;
+		//}
+		//print("occurences of multiple sources: ", multiple_sources);
 
-		targets_buffer->getBufferSubData(0, sizeof(uint32) * targets.size(), targets.data());
-		uint multiple_targets = 0;
-		for (uint32 t : targets) {
-			if (t > 1) multiple_targets++;
-		}
-		print("occurences of multiple targets: ", multiple_targets);
+		//targets_buffer->getBufferSubData(0, sizeof(uint32) * targets.size(), targets.data());
+		//uint multiple_targets = 0;
+		//for (uint32 t : targets) {
+		//	if (t > 1) multiple_targets++;
+		//}
+		//print("occurences of multiple targets: ", multiple_targets);
 
 		//for (size_t i = 0; i < 5; i++) {
 		//	print(i, ": ", data[i]);

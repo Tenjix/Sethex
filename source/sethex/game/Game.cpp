@@ -31,9 +31,15 @@ namespace sethex {
 		background = Texture::create(loadImage(loadAsset("images/Background.jpg")));
 		display.camera.lookAt(float3(0, 2.5, 2.5), float3(0));
 
-		shared<Mesh> mesh = Mesh::create(geom::Plane() >> geom::Rotate(quaternion(float3())));
-
 		if (not executable) return;
+
+		shared<Mesh> mesh = Mesh::create(geom::Plane() >> geom::Rotate(quaternion(float3())));
+		shared<Mesh> cube = Mesh::create(geom::Cube());
+
+		string vertex_shader = loadString(loadAsset("shaders/Wireframe.vertex.shader"));
+		string fragment_shader = loadString(loadAsset("shaders/Wireframe.fragment.shader"));
+		string geometry_shader = loadString(loadAsset("shaders/Wireframe.geometry.shader"));
+		shared<Shader> wireframe_shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
 
 		Entity entity = world.create_entity("test-plane");
 		entity.add<Geometry>().mesh(mesh).position(float3(0.0, 0.01, 0.0));
@@ -44,39 +50,43 @@ namespace sethex {
 			.add(Texture::create(loadImage(loadAsset("textures/test.normal.png"))));
 		entity.deactivate();
 
-		/*wd::watch("shaders/*", [this, &shader = material.shader](const fs::path& path)*/ {
-			auto& shader = material.shader;
+		Entity player = world.create_entity().tag("Player");
+		player.add<Geometry>().mesh(cube).scaling(float3(0.25f));
+		player.add<Material>().shader(wireframe_shader);
+
+		//wd::watch("shaders/*", [this, &shader = material.shader](const fs::path& path) {
 			//print("compiling shader ...");
-			try {
-				if (false) {
-					string vertex_shader = loadString(loadAsset("shaders/Wireframe.vertex.shader"));
-					string fragment_shader = loadString(loadAsset("shaders/Wireframe.fragment.shader"));
-					string geometry_shader = loadString(loadAsset("shaders/Wireframe.geometry.shader"));
-					shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
-				} else {
-					string vertex_shader = loadString(loadAsset("shaders/Material.vertex.shader"));
-					//shader::define(vertex_shader, "HEIGHT_MAP");
-					string fragment_shader = loadString(loadAsset("shaders/Material.fragment.shader"));
-					shader::define(fragment_shader, "DIFFUSE_TEXTURE", "SPECULAR_TEXTURE", "EMISSIVE_TEXTURE", "NORMAL_MAP");
-					shader = Shader::create(vertex_shader, fragment_shader);
-					shader->uniform("uDiffuseTexture", 0);
-					shader->uniform("uSpecularTexture", 1);
-					shader->uniform("uEmissiveTexture", 2);
-					shader->uniform("uNormalMap", 3);
-					//shader->uniform("uOverlayTexture", 3);
-					//shader->uniform("uHeightMap", 4);
-					shader->uniform("uSpecularity", 1.0f);
-					shader->uniform("uLuminosity", 1.0f);
-
-				}
-				message = "shader compiled successfully";
-
-			} catch (GlslProgCompileExc exception) {
-				error(exception.what());
-				message = exception.what();
+		try {
+			auto& shader = material.shader;
+			if (false) {
+				string vertex_shader = loadString(loadAsset("shaders/Wireframe.vertex.shader"));
+				string fragment_shader = loadString(loadAsset("shaders/Wireframe.fragment.shader"));
+				string geometry_shader = loadString(loadAsset("shaders/Wireframe.geometry.shader"));
+				shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
+			} else {
+				string vertex_shader = loadString(loadAsset("shaders/Material.vertex.shader"));
+				//shader::define(vertex_shader, "HEIGHT_MAP");
+				string fragment_shader = loadString(loadAsset("shaders/Material.fragment.shader"));
+				shader::define(fragment_shader, "DIFFUSE_TEXTURE", "SPECULAR_TEXTURE", "EMISSIVE_TEXTURE", "NORMAL_MAP");
+				shader = Shader::create(vertex_shader, fragment_shader);
+				shader->uniform("uDiffuseTexture", 0);
+				shader->uniform("uSpecularTexture", 1);
+				shader->uniform("uEmissiveTexture", 2);
+				shader->uniform("uNormalMap", 3);
+				//shader->uniform("uOverlayTexture", 3);
+				//shader->uniform("uHeightMap", 4);
+				shader->uniform("uSpecularity", 1.0f);
+				shader->uniform("uLuminosity", 1.0f);
 
 			}
-		}/*)*/;
+			message = "shader compiled successfully";
+
+		} catch (GlslProgCompileExc exception) {
+			error(exception.what());
+			message = exception.what();
+
+		}
+		//});
 
 		world.add<RenderSystem>();
 		world.add<TileSystem>(input);

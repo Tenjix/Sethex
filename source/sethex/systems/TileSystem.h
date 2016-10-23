@@ -20,6 +20,8 @@ namespace sethex {
 		Range<float> focus_range;
 		hexagonal::Coordinates focus_coordinates;
 
+		shared<VertexBuffer> instance_positions;
+
 	public:
 
 		TileSystem(const Input& input) : System(1), input(input) {

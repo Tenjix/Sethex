@@ -240,6 +240,7 @@
     <ClInclude Include="source\cinder\interface\imgui\stb_truetype.h" />
     <ClInclude Include="source\sethex\components\Display.h" />
     <ClInclude Include="source\sethex\components\Geometry.h" />
+    <ClInclude Include="source\sethex\components\Instantiable.h" />
     <ClInclude Include="source\sethex\components\Material.h" />
     <ClInclude Include="source\sethex\components\Tile.h" />
     <ClInclude Include="source\sethex\data\Model.h" />

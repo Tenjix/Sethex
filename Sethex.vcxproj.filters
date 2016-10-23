@@ -161,5 +161,8 @@
     <ClInclude Include="source\cinder\interface\Imgui.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="source\sethex\components\Instantiable.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

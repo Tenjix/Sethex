@@ -34,28 +34,28 @@ namespace sethex {
 			return *this;
 		}
 
-		virtual void bind() {
+		virtual void bind() const {
 			shader->bind();
 			bind_textures();
 		}
 
-		virtual void unbind() {
+		virtual void unbind() const {
 			unbind_textures();
 		}
 
-		virtual void bind_textures() {
+		virtual void bind_textures() const {
 			for (uint8 i = 0; i < number_of_textures(); i++) {
 				textures[i]->bind(i);
 			}
 		}
 
-		virtual void unbind_textures() {
+		virtual void unbind_textures() const {
 			for (uint8 i = 0; i < number_of_textures(); i++) {
 				textures[i]->unbind(i);
 			}
 		}
 
-		uint8 number_of_textures() {
+		uint8 number_of_textures() const {
 			uint n = textures.size();
 			if (n > 32) throw_runtime_exception("too many textures");
 			return static_cast<uint8>(n);
