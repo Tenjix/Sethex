@@ -513,32 +513,42 @@ namespace sethex {
 		ui::BeginChild("map display", float2(map_resolution.x, 0));
 		static int selected_map = 0;
 		ui::PushItemWidth(150);
-		if (ui::Combo("Map##selection", selected_map, { "Biome", "Terrain", "Elevation", "Temperature", "Precipitation", "Simulated" }) or update_display) {
+		vector<string> map_names { "Biome", "Terrain", "Elevation", "Temperature", "Precipitation", "Simulated" };
+		static shared<ImageSource> image_source;
+		if (ui::Combo("Map##selection", selected_map, map_names) or update_display) {
 			switch (selected_map) {
 				case 0:
-					map_texture = Texture::create(*biome_map);
+					image_source = *biome_map;
 					break;
 				case 1:
-					map_texture = Texture::create(*terrain_map);
+					image_source = *terrain_map;
 					break;
 				case 2:
-					map_texture = Texture::create(*elevation_map);
+					image_source = *elevation_map;
 					break;
 				case 3:
-					map_texture = Texture::create(*temperature_map);
+					image_source = *temperature_map;
 					break;
 				case 4:
-					map_texture = Texture::create(*precipitation_map);
+					image_source = *precipitation_map;
 					break;
 				case 5:
 					simulate();
-					map_texture = framebuffer->getColorTexture();
+					image_source = framebuffer->getColorTexture()->createSource();
 					break;
 				default: throw_runtime_exception("invalid map");
 			}
+			if (selected_map < 5) {
+				map_texture = Texture::create(image_source);
+			} else {
+				map_texture = framebuffer->getColorTexture();
+			}
 			world_texture = Texture::create(*terrain_map);
 			update_display = false;
+
 		}
+		ui::SameLine();
+		if (ui::Button("Save")) writeImage("exported/" + map_names[selected_map] + "_Map.jpg", image_source);
 		ui::PopItemWidth();
 		ui::ImageButton(map_texture, map_texture->getSize(), 0);
 		bool map_hovered = ui::IsItemHoveredRect() and ui::IsWindowHovered();

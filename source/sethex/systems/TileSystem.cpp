@@ -87,6 +87,7 @@ namespace sethex {
 
 	void TileSystem::update(float delta_time) {
 		static Display& display = world->find_entity("Main Display").get<Display>();
+		if (display.size.x == 0 or display.size.y == 0) return;
 		focus_position = display.camera.getPivotPoint();
 		focus_position.z = 0;
 		focus_coordinates = Coordinates::of(focus_position);
