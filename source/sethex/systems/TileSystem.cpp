@@ -113,15 +113,13 @@ namespace sethex {
 	};
 
 	void TileSystem::update(Entity& entity, float delta_time) {
-		uint max_index = instance_positions->getSize() / sizeof(float3*);
-		auto& geometry = entity.get<Geometry>();
+		auto& geometry = entity.has<Geometry>();
+		if (not geometry) return;
 		auto& tile = entity.get<Tile>();
-		auto& position = geometry.position();
+		auto& position = geometry->position();
 		if (not focus_range.contains(position.x)) {
 			position.x += map.width * Coordinates::Spacing.x * signum(focus_position.x - position.x);
-			uint index = map.index(tile.coordinates);
-			assert(index <= max_index);
-			mapped_instance_positions[index] = position;
+			mapped_instance_positions[map.index(tile.coordinates)] = position;
 		}
 		//auto area = Coordinates::rectangle(map.width, map.height, focus_coordinates);
 		//for (auto coordinates : area) {
