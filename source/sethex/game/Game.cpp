@@ -50,7 +50,7 @@ namespace sethex {
 			.add(Texture::create(loadImage(loadAsset("textures/test.normal.png"))));
 		entity.deactivate();
 
-		Entity player = world.create_entity().tag("Player");
+		Entity player = world.create_entity("cube").tag("Player");
 		player.add<Geometry>().mesh(cube).scaling(float3(0.25f));
 		player.add<Material>().shader(wireframe_shader);
 
@@ -145,7 +145,7 @@ namespace sethex {
 		if (render_background) draw(background);
 		else clear();
 
-		if (executable and (render_world or render_entity)) world.get<RenderSystem>().render();
+		if (executable and (render_world or render_entity) and world.has<RenderSystem>()) world.get<RenderSystem>().render();
 		if (render_interface) ui::ShowTestWindow();
 		if (render_generator) generator.display();
 

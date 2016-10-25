@@ -1,5 +1,7 @@
 #include "TileSystem.h"
 
+#include <chrono>
+
 #include <cinder/utilities/Assets.h>
 #include <cinder/utilities/Shaders.h>
 
@@ -19,12 +21,12 @@ using namespace constf;
 namespace sethex {
 
 	void TileSystem::initialize() {
-		using namespace glm;
 		Font font = Font(Assets::get("fonts/Nunito.ttf"), 100.0f);
 
 		// build map coordinates
 
-		map = Map(16, 9);
+		unsigned n = 1;
+		map = Map(16 * n, 9 * n);
 
 		// create material and mesh
 
@@ -34,7 +36,7 @@ namespace sethex {
 		shared<Shader> shader = Shader::create(vertex_shader, fragment_shader);
 		shader->setLabel("Tile Shader");
 		shader->uniform("uDiffuseTexture", 0);
-		shader->uniform("uTextureRotation", mat2x2(0.0, 1.0, -1.0, 0.0));
+		shader->uniform("uTextureRotation", glm::mat2x2(0.0, 1.0, -1.0, 0.0));
 		shared<Texture> hexagon_texure = Texture::create(loadImage(loadAsset("textures/pointy.png")), Texture::Format().mipmap());
 		auto material = Material::create(shader);
 		material->name("Shared Tile Material");
@@ -66,20 +68,25 @@ namespace sethex {
 
 		// create entities
 
-		auto iterator = map.coordinates().begin();
 		print("generate tiles");
-		world->create_entities(map.coordinates().size(), "Tile #", [&iterator, &mesh, &shader, &font, &hexagon_texure, &material, &instantiable](Entity entity) {
-			const Coordinates& coordinates = *iterator++;
-			entity.add<Geometry>().mesh(mesh).position(coordinates.to_position());
-			entity.add<Tile>().coordinates = coordinates;
+		auto start = chrono::system_clock::now();
+
+		auto coordinate_iterator = map.coordinates().begin();
+		auto position_iterator = positions.begin();
+		world->create_entities(map.coordinates().size(), "Tile #", [&coordinate_iterator, &position_iterator, &mesh, &material, &instantiable](Entity entity) {
+			entity.add<Tile>().coordinates = *coordinate_iterator++;
+			entity.add<Geometry>().mesh(mesh).position(*position_iterator++);
 			entity.add(material);
 			entity.add(instantiable);
 		});
+
+		auto end = chrono::system_clock::now();
 		print("tiles generated");
+		auto duration = end - start;
+		print("in ", chrono::duration_cast<chrono::milliseconds>(duration).count(), " milliseconds");
 
 		focus_expansion = (map.width / 2 + 1) * Coordinates::Tilesize.x;
 		print(map.width, "x", map.height);
-
 
 	}
 
@@ -121,13 +128,6 @@ namespace sethex {
 			position.x += map.width * Coordinates::Spacing.x * signum(focus_position.x - position.x);
 			mapped_instance_positions[map.index(tile.coordinates)] = position;
 		}
-		//auto area = Coordinates::rectangle(map.width, map.height, focus_coordinates);
-		//for (auto coordinates : area) {
-		//	auto reprojected_coordinates = map.reproject(coordinates);
-		//	auto index = map.index(reprojected_coordinates);
-		//	map.coordinates()[index];
-		//}
-		//map.index(focus)
 	};
 
 }
