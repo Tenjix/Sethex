@@ -10,6 +10,8 @@ namespace sethex {
 	using Color = ci::ColorA;
 	using Font = ci::Font;
 
+	using ci::ImageSource;
+
 	using TextureFont = ci::gl::TextureFont;
 	using Texture = ci::gl::Texture;
 	using Textures = std::vector<ci::gl::TextureRef>;

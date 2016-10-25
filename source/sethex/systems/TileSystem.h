@@ -21,6 +21,7 @@ namespace sethex {
 		hexagonal::Coordinates focus_coordinates;
 
 		shared<VertexBuffer> instance_positions;
+		shared<VertexBuffer> instance_colors;
 
 	public:
 
@@ -28,9 +29,11 @@ namespace sethex {
 			filter.required_types.insert<Tile>();
 		}
 
-		void TileSystem::initialize() override;
-		void TileSystem::update(float delta_time) override;
-		void TileSystem::update(Entity& entity, float delta_time) override;
+		void initialize() override;
+		void update(float delta_time) override;
+		void update(Entity& entity, float delta_time) override;
+
+		void update(shared<ImageSource> world_map);
 
 	};
 

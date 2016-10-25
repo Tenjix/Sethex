@@ -7,9 +7,6 @@
 #include <cinder/utilities/Simplex.h>
 #include <cinder/utilities/Watchdog.h>
 
-#include <sethex/Common.h>
-#include <sethex/Graphics.h>
-
 #include <utilities/Exceptions.h>
 #include <utilities/Mathematics.h>
 
@@ -544,6 +541,7 @@ namespace sethex {
 				map_texture = framebuffer->getColorTexture();
 			}
 			world_texture = Texture::create(*terrain_map);
+			output = image_source;
 			update_display = false;
 
 		}

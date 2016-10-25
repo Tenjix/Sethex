@@ -25,22 +25,22 @@ namespace sethex {
 
 		// build map coordinates
 
-		unsigned n = 1;
+		unsigned n = 10;
 		map = Map(16 * n, 9 * n);
 
 		// create material and mesh
 
 		String vertex_shader = loadString(loadAsset("shaders/Tile.vertex.shader"));
 		String fragment_shader = loadString(loadAsset("shaders/Tile.fragment.shader"));
-		shader::define(fragment_shader, "DIFFUSE_TEXTURE");
+		//shader::define(fragment_shader, "DIFFUSE_TEXTURE");
 		shared<Shader> shader = Shader::create(vertex_shader, fragment_shader);
 		shader->setLabel("Tile Shader");
-		shader->uniform("uDiffuseTexture", 0);
-		shader->uniform("uTextureRotation", glm::mat2x2(0.0, 1.0, -1.0, 0.0));
-		shared<Texture> hexagon_texure = Texture::create(loadImage(loadAsset("textures/pointy.png")), Texture::Format().mipmap());
+		//shader->uniform("uDiffuseTexture", 0);
+		//shader->uniform("uTextureRotation", glm::mat2x2(0.0, 1.0, -1.0, 0.0));
+		//shared<Texture> hexagon_texure = Texture::create(loadImage(loadAsset("textures/pointy.png")), Texture::Format().mipmap());
 		auto material = Material::create(shader);
 		material->name("Shared Tile Material");
-		material->add(hexagon_texure);
+		//material->add(hexagon_texure);
 
 		shared<Mesh> mesh = Mesh::create(geom::Circle() >> geom::Rotate(quaternion(float3(-Pi_Half, Pi_Half, 0.0f))));
 
@@ -55,7 +55,7 @@ namespace sethex {
 			colors.push_back(glm::mix(float3(1.0), coordinates.to_floats(), 0.25));
 		}
 		instance_positions = VertexBuffer::create(GL_ARRAY_BUFFER, positions, GL_DYNAMIC_DRAW);
-		auto instance_colors = VertexBuffer::create(GL_ARRAY_BUFFER, colors, GL_STATIC_DRAW);
+		instance_colors = VertexBuffer::create(GL_ARRAY_BUFFER, colors, GL_DYNAMIC_DRAW);
 
 		mesh->appendVbo(geom::BufferLayout({ { geom::Attrib::CUSTOM_0, 3, 0, 0, 1 } }), instance_positions);
 		mesh->appendVbo(geom::BufferLayout({ { geom::Attrib::CUSTOM_1, 3, 0, 0, 1 } }), instance_colors);
@@ -117,7 +117,7 @@ namespace sethex {
 				player.get<Geometry>().position = intersection_coordinates.to_position();
 			}
 		}
-	};
+	}
 
 	void TileSystem::update(Entity& entity, float delta_time) {
 		auto& geometry = entity.has<Geometry>();
@@ -128,6 +128,23 @@ namespace sethex {
 			position.x += map.width * Coordinates::Spacing.x * signum(focus_position.x - position.x);
 			mapped_instance_positions[map.index(tile.coordinates)] = position;
 		}
-	};
+	}
+
+	float3* mapped_instance_colors;
+
+	void TileSystem::update(shared<ImageSource> world_map) {
+		Surface32f surface(world_map);
+		float2 surface_size = surface.getSize();
+
+		mapped_instance_colors = static_cast<float3*>(instance_colors->mapReplace());
+		float2 map_size = float2(map.width * Coordinates::Spacing.x, map.height * Coordinates::Spacing.y);
+		for (auto& coordinates : map.coordinates()) {
+			auto texinates = coordinates.to_cartesian() / map_size + 0.5f;
+			auto pixel = surface.getPixel(surface_size * texinates);
+			float3 color(pixel.r, pixel.g, pixel.b);
+			mapped_instance_colors[map.index(coordinates)] = color;
+		}
+		instance_colors->unmap();
+	}
 
 }

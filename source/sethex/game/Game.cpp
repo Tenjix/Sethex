@@ -33,7 +33,6 @@ namespace sethex {
 
 		if (not executable) return;
 
-		shared<Mesh> mesh = Mesh::create(geom::Plane() >> geom::Rotate(quaternion(float3())));
 		shared<Mesh> cube = Mesh::create(geom::Cube());
 
 		string vertex_shader = loadString(loadAsset("shaders/Wireframe.vertex.shader"));
@@ -41,23 +40,26 @@ namespace sethex {
 		string geometry_shader = loadString(loadAsset("shaders/Wireframe.geometry.shader"));
 		shared<Shader> wireframe_shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
 
-		Entity entity = world.create_entity("test-plane");
-		entity.add<Geometry>().mesh(mesh).position(float3(0.0, 0.01, 0.0));
-		auto& material = entity.add<Material>()
-			.add(Texture::create(loadImage(loadAsset("textures/test.diffuse.png"))))
-			.add(Texture::create(loadImage(loadAsset("textures/test.specular.png"))))
-			.add(Texture::create(loadImage(loadAsset("textures/test.emissive.png"))))
-			.add(Texture::create(loadImage(loadAsset("textures/test.normal.png"))));
-		entity.deactivate();
+		Entity plane = world.create_entity("test-plane", [](Entity entity) {
+			entity.add<Geometry>()
+				.mesh(Mesh::create(geom::Plane() >> geom::Rotate(quaternion(float3()))))
+				.position(float3(0.0, 0.01, 0.0));
+			entity.add<Material>()
+				.add(Texture::create(loadImage(loadAsset("textures/test.diffuse.png"))))
+				.add(Texture::create(loadImage(loadAsset("textures/test.specular.png"))))
+				.add(Texture::create(loadImage(loadAsset("textures/test.emissive.png"))))
+				.add(Texture::create(loadImage(loadAsset("textures/test.normal.png"))));
+			entity.deactivate();
+		});
 
-		Entity player = world.create_entity("cube").tag("Player");
+		Entity player = world.create_entity("entity").tag("Player").deactivate();
 		player.add<Geometry>().mesh(cube).scaling(float3(0.25f));
 		player.add<Material>().shader(wireframe_shader);
 
 		//wd::watch("shaders/*", [this, &shader = material.shader](const fs::path& path) {
 			//print("compiling shader ...");
 		try {
-			auto& shader = material.shader;
+			auto& shader = plane.get<Material>().shader;
 			if (false) {
 				string vertex_shader = loadString(loadAsset("shaders/Wireframe.vertex.shader"));
 				string fragment_shader = loadString(loadAsset("shaders/Wireframe.fragment.shader"));
@@ -89,7 +91,7 @@ namespace sethex {
 		//});
 
 		world.add<RenderSystem>();
-		world.add<TileSystem>(input);
+		world.add<TileSystem>(input).deactivate();
 	}
 
 	void Game::resize() {
@@ -114,9 +116,11 @@ namespace sethex {
 		static bool render_background = true;
 		static bool render_world = true;
 		static bool render_entity = false;
+		static bool render_plane = false;
 		static bool render_overlay = true;
 		static bool render_interface = false;
-		static bool render_generator = true;
+		static bool render_generator = false;
+		static bool enable_tile_system = false;
 		static bool vertical_synchronization = true;
 		{
 			ui::ScopedWindow ui_window("", ImGuiWindowFlags_NoTitleBar);
@@ -130,14 +134,25 @@ namespace sethex {
 					}
 				}
 				if (ui::Checkbox("Entity", &render_entity)) {
-					auto entity = world.find_entity("test-plane");
+					auto entity = world.find_entity("entity");
 					if (render_entity) entity.activate();
+					else entity.deactivate();
+				}
+				if (ui::Checkbox("Plane", &render_plane)) {
+					auto entity = world.find_entity("test-plane");
+					if (render_plane) entity.activate();
 					else entity.deactivate();
 				}
 			}
 			ui::Checkbox("Overlay", &render_overlay);
 			ui::Checkbox("Interface", &render_interface);
-			ui::Checkbox("Generator", &render_generator);
+			if (ui::Checkbox("Generator", &render_generator)) {
+				if (not render_generator) world.get<TileSystem>().update(generator.output);
+			}
+			if (ui::Checkbox("Tile System", &enable_tile_system)) {
+				if (enable_tile_system)	world.get<TileSystem>().activate();
+				else world.get<TileSystem>().deactivate();
+			}
 			if (ui::Checkbox("V-Sync", &vertical_synchronization)) enableVerticalSync(vertical_synchronization);
 		}
 
