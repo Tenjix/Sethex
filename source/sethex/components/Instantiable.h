@@ -10,9 +10,12 @@ namespace sethex {
 
 	public:
 
+		Property<bool, Instantiable> active;
 		SharedProperty<Batch, Instantiable> batch;
 
-		Instantiable(const shared<Batch>& batch = nullptr) : batch(batch) {
+		Instantiable(const shared<Batch>& batch = nullptr) : active(true), batch(batch) {
+			this->active.owner = this;
+			//this->active.attach([this]() { notify(); });
 			this->batch.owner = this;
 			this->batch.attach([this]() { notify(); });
 		}

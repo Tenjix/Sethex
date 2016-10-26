@@ -128,10 +128,7 @@ namespace sethex {
 			if (executable) {
 				if (ui::Checkbox("World", &render_world)) {
 					auto tiles = world.find_entities_beginning("Tile #");
-					for each (auto tile in tiles) {
-						if (render_world) tile.activate();
-						else tile.deactivate();
-					}
+					tiles.begin()->get<Instantiable>().active = render_world;
 				}
 				if (ui::Checkbox("Entity", &render_entity)) {
 					auto entity = world.find_entity("entity");
@@ -160,7 +157,7 @@ namespace sethex {
 		if (render_background) draw(background);
 		else clear();
 
-		if (executable and (render_world or render_entity) and world.has<RenderSystem>()) world.get<RenderSystem>().render();
+		if (executable and world.has<RenderSystem>()) world.get<RenderSystem>().render();
 		if (render_interface) ui::ShowTestWindow();
 		if (render_generator) generator.display();
 

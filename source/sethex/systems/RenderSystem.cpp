@@ -43,6 +43,7 @@ namespace sethex {
 		}
 		for (auto& instantiable_entry : instantiables) {
 			auto& instantiable = *instantiable_entry.first;
+			if (not instantiable.active) continue;
 			auto& entities = instantiable_entry.second;
 			auto entity = *entities.begin();
 			auto& material = entity.get<Material>();
