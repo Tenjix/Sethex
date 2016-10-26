@@ -95,6 +95,7 @@ namespace sethex {
 	void TileSystem::update(float delta_time) {
 		static Display& display = world->find_entity("Main Display").get<Display>();
 		if (display.size.x == 0 or display.size.y == 0) return;
+		auto pivot_point = display.camera.getPivotPoint();
 		focus_position = display.camera.getPivotPoint();
 		focus_position.z = 0;
 		focus_coordinates = Coordinates::of(focus_position);
@@ -132,19 +133,34 @@ namespace sethex {
 
 	float3* mapped_instance_colors;
 
-	void TileSystem::update(shared<ImageSource> world_map) {
-		Surface32f surface(world_map);
-		float2 surface_size = surface.getSize();
-
-		mapped_instance_colors = static_cast<float3*>(instance_colors->mapReplace());
+	void TileSystem::update(shared<Surface32f> biome_map, shared<Channel32f> elevation_map) {
 		float2 map_size = float2(map.width * Coordinates::Spacing.x, map.height * Coordinates::Spacing.y);
-		for (auto& coordinates : map.coordinates()) {
-			auto texinates = coordinates.to_cartesian() / map_size + 0.5f;
-			auto pixel = surface.getPixel(surface_size * texinates);
-			float3 color(pixel.r, pixel.g, pixel.b);
-			mapped_instance_colors[map.index(coordinates)] = color;
+		float2 biome_map_size, elevation_map_size;
+		if (elevation_map) {
+			mapped_instance_positions = static_cast<float3*>(instance_positions->mapReplace());
+			elevation_map_size = elevation_map->getSize();
 		}
-		instance_colors->unmap();
+		if (biome_map) {
+			mapped_instance_colors = static_cast<float3*>(instance_colors->mapReplace());
+			biome_map_size = biome_map->getSize();
+		}
+		if (elevation_map or biome_map) for (auto& entity : get_entities()) {
+			auto& coordinates = entity.get<Tile>().coordinates;
+			auto& position = entity.get<Geometry>().position();
+			auto texinates = coordinates.to_cartesian() / map_size + 0.5f;
+			if (elevation_map) {
+				auto elevation = *elevation_map->getData(elevation_map_size * texinates);
+				position.y = elevation * glm::length(map_size) * 0.1f;
+				mapped_instance_positions[map.index(coordinates)] = position;
+			}
+			if (biome_map) {
+				auto biome = biome_map->getPixel(biome_map_size * texinates);
+				float3 color(biome.r, biome.g, biome.b);
+				mapped_instance_colors[map.index(coordinates)] = color;
+			}
+		}
+		if (elevation_map) instance_positions->unmap();
+		if (biome_map) instance_colors->unmap();
 	}
 
 }

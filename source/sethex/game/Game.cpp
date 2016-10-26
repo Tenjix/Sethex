@@ -30,6 +30,7 @@ namespace sethex {
 		font_color = Color::white();
 		background = Texture::create(loadImage(loadAsset("images/Background.jpg")));
 		display.camera.lookAt(float3(0, 2.5, 2.5), float3(0));
+		display.camera.setFarClip(1000.0f);
 
 		if (not executable) return;
 
@@ -113,7 +114,7 @@ namespace sethex {
 		static Display& display = world.find_entity("Main Display").get<Display>();
 		if (display.size.x == 0 or display.size.y == 0) return;
 
-		static bool render_background = true;
+		static bool render_background = false;
 		static bool render_world = true;
 		static bool render_entity = false;
 		static bool render_plane = false;
@@ -144,7 +145,7 @@ namespace sethex {
 			ui::Checkbox("Overlay", &render_overlay);
 			ui::Checkbox("Interface", &render_interface);
 			if (ui::Checkbox("Generator", &render_generator)) {
-				if (not render_generator) world.get<TileSystem>().update(generator.output);
+				if (not render_generator) world.get<TileSystem>().update(generator.biomes, generator.elevation);
 			}
 			if (ui::Checkbox("Tile System", &enable_tile_system)) {
 				if (enable_tile_system)	world.get<TileSystem>().activate();
@@ -167,6 +168,8 @@ namespace sethex {
 		drawString(message, float2(5, display.size.y - 50), font_color, font->getFont());
 		drawString(to_string(frames_per_second) + " FPS", float2(5, display.size.y - 15));
 		drawStringRight(u8"Thomas Würstle", float2(display.size.x - 5, display.size.y - 15));
+		drawStringRight(stringify("Focus Position ", display.camera.getPivotPoint()), float2(display.size.x - 5, 5));
+		drawStringRight(stringify("Eye Position ", display.camera.getEyePoint()), float2(display.size.x - 5, 20));
 	}
 
 }

@@ -1,13 +1,9 @@
 // shadertype=glsl
 #version 150
 
-// #undef DIFFUSE_TEXTURE
-// #undef SPECULAR_TEXTURE
-// #undef EMISSIVE_TEXTURE
-// #undef NORMAL_MAP
+#define UNLIT
 
-#define Pi_Half = 1.57079632679489661923;
-
+#include <shaders/Mathematics.h>
 #include <shaders/Normals.h>
 #include <shaders/Texinates.h>
 
@@ -89,18 +85,23 @@ void main() {
 		normal_direction = calculate_normal(normal_direction, direction_to_camera, mapped_normal, texinates, uNormalIntensity);
 	#endif
 
-	vec3 reflection_direction = normalize(reflect(-direction_to_light, normal_direction));
+	#ifdef UNLIT
+		oColor.rgb = diffuse_color;
+		oColor.a = alpha;
+	#else
+		vec3 reflection_direction = normalize(reflect(-direction_to_light, normal_direction));
 
-	float diffuse_intensity = light_intensity * max(dot(normal_direction, direction_to_light), 0.0);
-	float specular_intensity = light_intensity * pow(max(dot(reflection_direction, direction_to_camera), 0.0), 1.0 / roughness);
-	float emissive_intensity = 1.0 + max(dot(normal_direction, direction_to_camera), 0.0);
+		float diffuse_intensity = light_intensity * max(dot(normal_direction, direction_to_light), 0.0);
+		float specular_intensity = light_intensity * pow(max(dot(reflection_direction, direction_to_camera), 0.0), 1.0 / roughness);
+		float emissive_intensity = 1.0 + max(dot(normal_direction, direction_to_camera), 0.0);
 
-	vec3 diffuse = diffuse_color * max(diffuse_intensity, ambience);
-	vec3 specular = specular_color * specular_intensity * specularity;
-	vec3 emissive = emissive_color * emissive_intensity * luminosity;
+		vec3 diffuse = diffuse_color * max(diffuse_intensity, 0.0);
+		vec3 specular = specular_color * specular_intensity * specularity;
+		vec3 emissive = emissive_color * emissive_intensity * luminosity;
 
-	oColor.rgb = diffuse + specular + emissive;
-	oColor.a = alpha;
+		oColor.rgb = diffuse + specular + emissive;
+		oColor.a = alpha;
+	#endif
 
 	#ifdef OVERLAY_TEXTURE
 		vec2 overlay_texinates = transform_texinates(vTexCoord0, uOverlayScale, uOverlayShift, uOverlayRotation);

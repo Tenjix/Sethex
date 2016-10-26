@@ -10,7 +10,8 @@ namespace sethex {
 
 	public:
 
-		shared<ImageSource> output;
+		shared<ImageSource> biomes;
+		shared<ImageSource> elevation;
 
 		void display();
 

@@ -11,6 +11,12 @@ namespace sethex {
 	using Font = ci::Font;
 
 	using ci::ImageSource;
+	using ci::Surface;
+	using ci::Surface8u;
+	using ci::Surface32f;
+	using ci::Channel;
+	using ci::Channel8u;
+	using ci::Channel32f;
 
 	using TextureFont = ci::gl::TextureFont;
 	using Texture = ci::gl::Texture;

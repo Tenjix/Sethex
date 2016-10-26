@@ -84,9 +84,13 @@ namespace sethex {
 		if (event.getCode() == KeyEvent::KEY_F11) {
 			getWindow()->setFullScreen(!getWindow()->isFullScreen());
 		}
-		if (event.getCode() == KeyEvent::KEY_SPACE) {
+		if (event.getCode() == KeyEvent::KEY_HOME) {
 			auto& camera = const_cast<CameraPersp&>(camera_ui.getCamera());
 			camera.lookAt(vec3(0, 2.5, 2.5), vec3(0));
+		}
+		if (event.getCode() == KeyEvent::KEY_SPACE) {
+			auto& camera = const_cast<CameraPersp&>(camera_ui.getCamera());
+			camera.lookAt(vec3(0, 250, 0.001), vec3(0));
 		}
 	}
 

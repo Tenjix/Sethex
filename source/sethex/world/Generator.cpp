@@ -541,7 +541,8 @@ namespace sethex {
 				map_texture = framebuffer->getColorTexture();
 			}
 			world_texture = Texture::create(*terrain_map);
-			output = image_source;
+			biomes = image_source;
+			elevation = *elevation_map;
 			update_display = false;
 
 		}
@@ -642,7 +643,7 @@ namespace sethex {
 
 		if (map_hovered) {
 			ui::Text(u8"Position: %i, %i \nCoordinates: %+4.1f°, %+4.1f° \nElevation: %.1fm \nTemperature: %.1f°C \nPrecipitation: %.1fkg/m² \nBiome: %s",
-					 mouse_position.x, mouse_position.y, coordinates.x, coordinates.y, elevation, temperature, precipitation, biome);
+					 mouse_position.x, mouse_position.y, coordinates.x, coordinates.y, elevation, temperature, precipitation, biome.c_str());
 		} else {
 			ui::PushItemWidth(-250);
 
