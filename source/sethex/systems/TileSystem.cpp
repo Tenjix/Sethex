@@ -33,7 +33,13 @@ namespace sethex {
 		String vertex_shader = loadString(loadAsset("shaders/Tile.vertex.shader"));
 		String fragment_shader = loadString(loadAsset("shaders/Tile.fragment.shader"));
 		//shader::define(fragment_shader, "DIFFUSE_TEXTURE");
-		shared<Shader> shader = Shader::create(vertex_shader, fragment_shader);
+		shared<Shader> shader;
+		try {
+			shader = Shader::create(vertex_shader, fragment_shader);
+		} catch (GlslProgCompileExc exception) {
+			error(exception.what());
+			return;
+		}
 		shader->setLabel("Tile Shader");
 		//shader->uniform("uDiffuseTexture", 0);
 		//shader->uniform("uTextureRotation", glm::mat2x2(0.0, 1.0, -1.0, 0.0));
@@ -42,7 +48,20 @@ namespace sethex {
 		material->name("Shared Tile Material");
 		//material->add(hexagon_texure);
 
-		shared<Mesh> mesh = Mesh::create(geom::Circle() >> geom::Rotate(quaternion(float3(-Pi_Half, Pi_Half, 0.0f))));
+		Shape2d shape;
+		{
+			// hexagon side length
+			float side = 1.0;
+			// height of the six equilateral triangles of the hexagon
+			float tirangle = Sqrt_3 / 2 * side;
+			shape.moveTo(0, +side);
+			shape.lineTo(-tirangle, +side / 2);
+			shape.lineTo(-tirangle, -side / 2);
+			shape.lineTo(0, -side);
+			shape.lineTo(+tirangle, -side / 2);
+			shape.lineTo(+tirangle, +side / 2);
+		}
+		shared<Mesh> mesh = Mesh::create(geom::Extrude(shape, 5.0f) >> geom::Rotate(quaternion(float3(-Pi_Half, 0.0f, 0.0f))));
 
 		// make tiles instantiable
 
@@ -61,8 +80,8 @@ namespace sethex {
 		mesh->appendVbo(geom::BufferLayout({ { geom::Attrib::CUSTOM_1, 3, 0, 0, 1 } }), instance_colors);
 
 		Batch::AttributeMapping attributes;
-		attributes.emplace(geom::Attrib::CUSTOM_0, "instancePosition");
-		attributes.emplace(geom::Attrib::CUSTOM_1, "instanceColor");
+		attributes.emplace(geom::Attrib::CUSTOM_0, "instance_position");
+		attributes.emplace(geom::Attrib::CUSTOM_1, "instance_color");
 		auto batch = Batch::create(mesh, material->shader, attributes);
 		auto instantiable = Instantiable::create(batch);
 
@@ -95,15 +114,18 @@ namespace sethex {
 	void TileSystem::update(float delta_time) {
 		static Display& display = world->find_entity("Main Display").get<Display>();
 		if (display.size.x == 0 or display.size.y == 0) return;
-		auto pivot_point = display.camera.getPivotPoint();
 		focus_position = display.camera.getPivotPoint();
 		focus_position.z = 0;
 		focus_coordinates = Coordinates::of(focus_position);
 		focus_range = { focus_position.x - focus_expansion, focus_position.x + focus_expansion };
 
-		mapped_instance_positions = static_cast<float3*>(instance_positions->mapWriteOnly());
-		System::update(delta_time);
-		instance_positions->unmap();
+		static Coordinates previous_focus_coordinates;
+		if (focus_coordinates != previous_focus_coordinates) {
+			mapped_instance_positions = static_cast<float3*>(instance_positions->mapWriteOnly());
+			System::update(delta_time);
+			instance_positions->unmap();
+		}
+		previous_focus_coordinates = focus_coordinates;
 
 		static Entity& player = world->find_entity_tagged("Player");
 		if (player.is_active) {
@@ -150,7 +172,7 @@ namespace sethex {
 			auto texinates = coordinates.to_cartesian() / map_size + 0.5f;
 			if (elevation_map) {
 				auto elevation = *elevation_map->getData(elevation_map_size * texinates);
-				position.y = elevation * glm::length(map_size) * 0.1f;
+				position.y = elevation * glm::length(map_size) * 0.05f;
 				mapped_instance_positions[map.index(coordinates)] = position;
 			}
 			if (biome_map) {

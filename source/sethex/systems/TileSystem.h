@@ -12,13 +12,13 @@ namespace sethex {
 
 		const Input& input;
 
-		hexagonal::Map map;
+		hex::Map map;
 
 		bool active;
 		float3 focus_position;
 		float focus_expansion;
 		Range<float> focus_range;
-		hexagonal::Coordinates focus_coordinates;
+		hex::Coordinates focus_coordinates;
 
 		shared<VertexBuffer> instance_positions;
 		shared<VertexBuffer> instance_colors;

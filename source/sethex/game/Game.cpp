@@ -87,7 +87,6 @@ namespace sethex {
 		} catch (GlslProgCompileExc exception) {
 			error(exception.what());
 			message = exception.what();
-
 		}
 		//});
 

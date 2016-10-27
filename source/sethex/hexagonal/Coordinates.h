@@ -211,6 +211,10 @@ namespace sethex {
 
 	}
 
+	#ifndef HEXAGONAL_NO_NAMESPACE_ALIAS
+	namespace hex = hexagonal;
+	#endif
+
 }
 
 namespace std {
