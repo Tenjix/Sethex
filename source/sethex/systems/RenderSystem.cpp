@@ -153,8 +153,6 @@ namespace sethex {
 		// insert new mapping, old one will be removed by validate
 		auto& material = entity.get<Material>();
 		auto& geometry = entity.get<Geometry>();
-		material.detach(this, entity);
-		geometry.detach(this, entity);
 		map(material.shader, material, geometry.mesh, entity);
 	}
 

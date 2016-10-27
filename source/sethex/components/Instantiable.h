@@ -17,7 +17,7 @@ namespace sethex {
 			this->active.owner = this;
 			//this->active.attach([this]() { notify(); });
 			this->batch.owner = this;
-			this->batch.attach([this]() { notify(); });
+			//this->batch.attach([this]() { notify(); });
 		}
 
 		static shared<Instantiable> create(const shared<Batch>& batch = nullptr) {

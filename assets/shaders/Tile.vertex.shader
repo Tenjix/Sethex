@@ -9,9 +9,10 @@ uniform float uHeightScale = 1.0;
 
 uniform mat4 ciModelViewProjection;
 uniform mat4 ciModelView;
+uniform mat4 ciViewMatrix;
 uniform mat3 ciNormalMatrix;
 
-uniform vec3 uLightPosition = vec3(0, 1, 0);
+uniform vec3 uLightPosition = vec3(0, 100, 0);
 
 uniform float uLightIntensity = 1.0;
 uniform float uNormalIntensity = 1.0;
@@ -40,61 +41,67 @@ in vec3 ciNormal;
 in vec3 ciColor;
 in vec2 ciTexCoord0;
 
-in vec3 instance_position;
-in vec3 instance_color;
+#ifdef INSTANTIATION
+	in vec3 InstancePosition;
+	in vec3 InstanceColor;
+#endif
 
-flat out vec3 diffuse_color;
-flat out vec3 specular_color;
-flat out vec3 emissive_color;
-flat out vec3 overlay_color;
-flat out vec3 light_position;
+flat out vec3 DiffuseColor;
+flat out vec3 SpecularColor;
+flat out vec3 EmissiveColor;
+flat out vec3 OverlayColor;
+flat out vec3 LightPosition;
 
-flat out float light_intensity;
-flat out float normal_intensity;
+flat out float LightIntensity;
+flat out float NormalIntensity;
 
-flat out float ambience;
-flat out float specularity;
-flat out float luminosity;
-flat out float roughness;
-flat out float transparency;
-flat out float alpha;
+flat out float Ambience;
+flat out float Specularity;
+flat out float Luminosity;
+flat out float Roughness;
+flat out float Transparency;
+flat out float Alpha;
 
-out vec3 position;
-out vec3 normal;
-out vec3 color;
-out vec2 texinates;
-out vec2 overlay_texinates;
+out vec3 Position;
+out vec3 Normal;
+out vec3 Color;
+out vec2 Texinates;
+out vec2 OverlayTexinates;
 
 void main() {
-	vec4 vertex_position = ciPosition + vec4(instance_position, 0);
+	vec4 position = ciPosition;
 
-	light_position = uLightPosition;
+	LightIntensity = uLightIntensity;
+	NormalIntensity = uNormalIntensity;
 
-	light_intensity = uLightIntensity;
-	normal_intensity = uNormalIntensity;
+	DiffuseColor = clamp(uDiffuseColor, 0.0, 1.0);
+	SpecularColor = uSpecularColor;
+	EmissiveColor = uEmissiveColor;
+	OverlayColor = uOverlayColor;
 
-	diffuse_color = uDiffuseColor * instance_color;
-	specular_color = uSpecularColor;
-	emissive_color = uEmissiveColor;
-	overlay_color = uOverlayColor;
+	Ambience = clamp(uAmbience, 0.0, 1.0);
+	Specularity = uSpecularity;
+	Luminosity = uLuminosity;
+	Roughness = clamp(uRoughness, 0.0001, 1.0);
+	Transparency = clamp(uTransparency, 0.0, 1.0);
+	Alpha = 1.0 - Transparency;
 
-	ambience = clamp(uAmbience, 0.0, 1.0);
-	specularity = uSpecularity;
-	luminosity = uLuminosity;
-	roughness = clamp(uRoughness, 0.0001, 1.0);
-	transparency = clamp(uTransparency, 0.0, 1.0);
-	alpha = 1.0 - transparency;
+	#ifdef INSTANTIATION
+		position += vec4(InstancePosition, 0);
+		DiffuseColor = clamp(DiffuseColor * InstanceColor, 0.0, 1.0);
+	#endif
 
-	position = (ciModelView * vertex_position).xyz;
-	normal = normalize(ciNormalMatrix * ciNormal);
-	color = ciColor;
-	texinates = transform_texinates(ciTexCoord0, uTextureScale, uTextureShift, uTextureRotation);
-	overlay_texinates = transform_texinates(ciTexCoord0, uOverlayScale, uOverlayShift, uOverlayRotation);
+	LightPosition = (ciViewMatrix * vec4(uLightPosition, 0)).xyz;
+	Position = (ciModelView * position).xyz;
+	Normal = normalize(ciNormalMatrix * ciNormal);
+	Color = ciColor;
+	Texinates = transform_texinates(ciTexCoord0, uTextureScale, uTextureShift, uTextureRotation);
+	OverlayTexinates = transform_texinates(ciTexCoord0, uOverlayScale, uOverlayShift, uOverlayRotation);
 
 	#ifdef HEIGHT_MAP
 		float height = texture(uHeightMap, ciTexCoord0).r;
-		vertex_position.xyz += ciNormal * height * uHeightScale;
+		position.xyz += ciNormal * height * uHeightScale;
 	#endif
 
-	gl_Position = ciModelViewProjection * vertex_position;
+	gl_Position = ciModelViewProjection * position;
 }

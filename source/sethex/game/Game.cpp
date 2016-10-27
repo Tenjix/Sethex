@@ -29,7 +29,7 @@ namespace sethex {
 		font = TextureFont::create(Font(font_type, 20.0f), TextureFont::Format(), TextureFont::defaultChars() + u8"äöüß\ue000\ue001\ue002\ue003\ue004\ue005\ue006");
 		font_color = Color::white();
 		background = Texture::create(loadImage(loadAsset("images/Background.jpg")));
-		display.camera.lookAt(float3(0, 2.5, 2.5), float3(0));
+		display.camera.lookAt(float3(0, 250, 0.001), float3(0));
 		display.camera.setFarClip(1000.0f);
 
 		if (not executable) return;
@@ -41,54 +41,54 @@ namespace sethex {
 		string geometry_shader = loadString(loadAsset("shaders/Wireframe.geometry.shader"));
 		shared<Shader> wireframe_shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
 
-		Entity plane = world.create_entity("test-plane", [](Entity entity) {
+		Entity test_object = world.create_entity("test-object", [](Entity entity) {
 			entity.add<Geometry>()
-				.mesh(Mesh::create(geom::Plane() >> geom::Rotate(quaternion(float3()))))
+				//.mesh(Mesh::create(geom::Plane() >> geom::Rotate(quaternion(float3()))))
+				.mesh(Mesh::create(geom::Cube()))
 				.position(float3(0.0, 0.01, 0.0));
 			entity.add<Material>()
 				.add(Texture::create(loadImage(loadAsset("textures/test.diffuse.png"))))
 				.add(Texture::create(loadImage(loadAsset("textures/test.specular.png"))))
 				.add(Texture::create(loadImage(loadAsset("textures/test.emissive.png"))))
 				.add(Texture::create(loadImage(loadAsset("textures/test.normal.png"))));
-			entity.deactivate();
+			//entity.deactivate();
 		});
 
 		Entity player = world.create_entity("entity").tag("Player").deactivate();
 		player.add<Geometry>().mesh(cube).scaling(float3(0.25f));
 		player.add<Material>().shader(wireframe_shader);
 
-		//wd::watch("shaders/*", [this, &shader = material.shader](const fs::path& path) {
+		wd::watch("shaders/*", [this, test_object](const fs::path& path) {
 			//print("compiling shader ...");
-		try {
-			auto& shader = plane.get<Material>().shader;
-			if (false) {
-				string vertex_shader = loadString(loadAsset("shaders/Wireframe.vertex.shader"));
-				string fragment_shader = loadString(loadAsset("shaders/Wireframe.fragment.shader"));
-				string geometry_shader = loadString(loadAsset("shaders/Wireframe.geometry.shader"));
-				shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
-			} else {
-				string vertex_shader = loadString(loadAsset("shaders/Material.vertex.shader"));
-				//shader::define(vertex_shader, "HEIGHT_MAP");
-				string fragment_shader = loadString(loadAsset("shaders/Material.fragment.shader"));
-				shader::define(fragment_shader, "DIFFUSE_TEXTURE", "SPECULAR_TEXTURE", "EMISSIVE_TEXTURE", "NORMAL_MAP");
-				shader = Shader::create(vertex_shader, fragment_shader);
-				shader->uniform("uDiffuseTexture", 0);
-				shader->uniform("uSpecularTexture", 1);
-				shader->uniform("uEmissiveTexture", 2);
-				shader->uniform("uNormalMap", 3);
-				//shader->uniform("uOverlayTexture", 3);
-				//shader->uniform("uHeightMap", 4);
-				shader->uniform("uSpecularity", 1.0f);
-				shader->uniform("uLuminosity", 1.0f);
-
+			try {
+				shared<Shader> shader;
+				if (false) {
+					string vertex_shader = loadString(loadAsset("shaders/Wireframe.vertex.shader"));
+					string fragment_shader = loadString(loadAsset("shaders/Wireframe.fragment.shader"));
+					string geometry_shader = loadString(loadAsset("shaders/Wireframe.geometry.shader"));
+					shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
+				} else {
+					string vertex_shader = loadString(loadAsset("shaders/Material.vertex.shader"));
+					//shader::define(vertex_shader, "HEIGHT_MAP");
+					string fragment_shader = loadString(loadAsset("shaders/Material.fragment.shader"));
+					shader::define(fragment_shader, "DIFFUSE_TEXTURE", "SPECULAR_TEXTURE", "EMISSIVE_TEXTURE", "NORMAL_MAP");
+					shader = Shader::create(vertex_shader, fragment_shader);
+					shader->uniform("uDiffuseTexture", 0);
+					shader->uniform("uSpecularTexture", 1);
+					shader->uniform("uEmissiveTexture", 2);
+					shader->uniform("uNormalMap", 3);
+					//shader->uniform("uOverlayTexture", 3);
+					//shader->uniform("uHeightMap", 4);
+					shader->uniform("uSpecularity", 1.0f);
+					shader->uniform("uLuminosity", 1.0f);
+				}
+				message = "shader compiled successfully";
+				test_object.get<Material>().shader = shader;
+			} catch (GlslProgCompileExc exception) {
+				error(exception.what());
+				message = exception.what();
 			}
-			message = "shader compiled successfully";
-
-		} catch (GlslProgCompileExc exception) {
-			error(exception.what());
-			message = exception.what();
-		}
-		//});
+		});
 
 		world.add<RenderSystem>();
 		world.add<TileSystem>(input).deactivate();
@@ -116,7 +116,7 @@ namespace sethex {
 		static bool render_background = false;
 		static bool render_world = true;
 		static bool render_entity = false;
-		static bool render_plane = false;
+		static bool render_test_object = false;
 		static bool render_overlay = true;
 		static bool render_interface = false;
 		static bool render_generator = false;
@@ -135,9 +135,9 @@ namespace sethex {
 					if (render_entity) entity.activate();
 					else entity.deactivate();
 				}
-				if (ui::Checkbox("Plane", &render_plane)) {
-					auto entity = world.find_entity("test-plane");
-					if (render_plane) entity.activate();
+				if (ui::Checkbox("Cube", &render_test_object)) {
+					auto entity = world.find_entity("test-object");
+					if (render_test_object) entity.activate();
 					else entity.deactivate();
 				}
 			}

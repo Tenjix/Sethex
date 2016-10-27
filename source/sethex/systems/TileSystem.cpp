@@ -4,6 +4,7 @@
 
 #include <cinder/utilities/Assets.h>
 #include <cinder/utilities/Shaders.h>
+#include <cinder/utilities/Watchdog.h>
 
 #include <sethex/components/Display.h>
 #include <sethex/components/Geometry.h>
@@ -14,6 +15,7 @@
 using namespace std;
 using namespace cinder;
 using namespace cinder::app;
+using namespace cinder::geom;
 using namespace cinder::gl;
 using namespace sethex::hexagonal;
 using namespace constf;
@@ -30,21 +32,21 @@ namespace sethex {
 
 		// create material and mesh
 
-		String vertex_shader = loadString(loadAsset("shaders/Tile.vertex.shader"));
-		String fragment_shader = loadString(loadAsset("shaders/Tile.fragment.shader"));
+		//String vertex_shader = loadString(loadAsset("shaders/Tile.vertex.shader"));
+		//String fragment_shader = loadString(loadAsset("shaders/Tile.fragment.shader"));
 		//shader::define(fragment_shader, "DIFFUSE_TEXTURE");
-		shared<Shader> shader;
-		try {
-			shader = Shader::create(vertex_shader, fragment_shader);
-		} catch (GlslProgCompileExc exception) {
-			error(exception.what());
-			return;
-		}
-		shader->setLabel("Tile Shader");
+		//shared<Shader> shader;
+		//try {
+		//	shader = Shader::create(vertex_shader, fragment_shader);
+		//} catch (GlslProgCompileExc exception) {
+		//	error(exception.what());
+		//	return;
+		//}
+		//shader->setLabel("Tile Shader");
 		//shader->uniform("uDiffuseTexture", 0);
 		//shader->uniform("uTextureRotation", glm::mat2x2(0.0, 1.0, -1.0, 0.0));
 		//shared<Texture> hexagon_texure = Texture::create(loadImage(loadAsset("textures/pointy.png")), Texture::Format().mipmap());
-		auto material = Material::create(shader);
+		auto material = Material::create();
 		material->name("Shared Tile Material");
 		//material->add(hexagon_texure);
 
@@ -60,8 +62,9 @@ namespace sethex {
 			shape.lineTo(0, -side);
 			shape.lineTo(+tirangle, -side / 2);
 			shape.lineTo(+tirangle, +side / 2);
+			shape.close();
 		}
-		shared<Mesh> mesh = Mesh::create(geom::Extrude(shape, 5.0f) >> geom::Rotate(quaternion(float3(-Pi_Half, 0.0f, 0.0f))));
+		shared<Mesh> mesh = Mesh::create(Extrude(shape, 5.0f) >> Rotate(quaternion(float3(-Pi_Half, 0.0f, 0.0f))));
 
 		// make tiles instantiable
 
@@ -76,14 +79,27 @@ namespace sethex {
 		instance_positions = VertexBuffer::create(GL_ARRAY_BUFFER, positions, GL_DYNAMIC_DRAW);
 		instance_colors = VertexBuffer::create(GL_ARRAY_BUFFER, colors, GL_DYNAMIC_DRAW);
 
-		mesh->appendVbo(geom::BufferLayout({ { geom::Attrib::CUSTOM_0, 3, 0, 0, 1 } }), instance_positions);
-		mesh->appendVbo(geom::BufferLayout({ { geom::Attrib::CUSTOM_1, 3, 0, 0, 1 } }), instance_colors);
+		mesh->appendVbo(BufferLayout({ { Attrib::CUSTOM_0, 3, 0, 0, 1 } }), instance_positions);
+		mesh->appendVbo(BufferLayout({ { Attrib::CUSTOM_1, 3, 0, 0, 1 } }), instance_colors);
 
-		Batch::AttributeMapping attributes;
-		attributes.emplace(geom::Attrib::CUSTOM_0, "instance_position");
-		attributes.emplace(geom::Attrib::CUSTOM_1, "instance_color");
-		auto batch = Batch::create(mesh, material->shader, attributes);
-		auto instantiable = Instantiable::create(batch);
+		auto instantiable = Instantiable::create();
+
+		wd::watch("shaders/Tile.*", [instantiable, mesh, material](const fs::path& path) {
+			String vertex_shader = loadString(loadAsset("shaders/Tile.vertex.shader"));
+			shader::define(vertex_shader, "INSTANTIATION");
+			String fragment_shader = loadString(loadAsset("shaders/Tile.fragment.shader"));
+			try {
+				material->shader = Shader::create(vertex_shader, fragment_shader);
+			} catch (GlslProgCompileExc exception) {
+				error(exception.what());
+				return;
+			}
+			material->shader->setLabel("Tile Shader");
+			Batch::AttributeMapping attributes;
+			attributes.emplace(Attrib::CUSTOM_0, "InstancePosition");
+			attributes.emplace(Attrib::CUSTOM_1, "InstanceColor");
+			instantiable->batch = Batch::create(mesh, material->shader, attributes);
+		});
 
 		// create entities
 
