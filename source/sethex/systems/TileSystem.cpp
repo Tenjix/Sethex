@@ -27,7 +27,7 @@ namespace sethex {
 
 		// build map coordinates
 
-		unsigned n = 10;
+		unsigned n = 1;
 		map = Map(16 * n, 9 * n);
 
 		// create material and mesh
