@@ -28,7 +28,7 @@ vec3 calculate_normal(vec3 vertex_normal, vec3 direction_to_camera, vec3 mapped_
 	#endif
 
 	#ifdef NORMALMAP_2CHANNEL
-		mapped_normal.z = sqrt(1. - dot(mapped_normal.xy, mapped_normal.xy));
+		mapped_normal.z = sqrt(1.0 - dot(mapped_normal.xy, mapped_normal.xy));
 	#endif
 
 	#ifdef NORMALMAP_GREEN_UP
@@ -40,7 +40,8 @@ vec3 calculate_normal(vec3 vertex_normal, vec3 direction_to_camera, vec3 mapped_
 	#endif
 
 	#ifndef NORMALMAP_IGNORE_INTENSITY
-		mapped_normal.z /= clamp(intensity, 0.01, 100.0);
+		mapped_normal.y *= sign(intensity);
+		mapped_normal.z /= clamp(abs(intensity), 0.01, 100.0);
 	#endif
 
 	mat3 tangent_matrix = calculate_tangent_matrix(vertex_normal, -direction_to_camera, texture_coordinates);
