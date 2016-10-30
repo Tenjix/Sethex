@@ -13,7 +13,9 @@ flat in vec3 DiffuseColor;
 flat in vec3 SpecularColor;
 flat in vec3 EmissiveColor;
 flat in vec3 OverlayColor;
+
 flat in vec3 LightPosition;
+flat in vec3 LightDirection;
 
 flat in float LightIntensity;
 flat in float NormalIntensity;
@@ -39,7 +41,6 @@ void main() {
 	vec3 specular_color = SpecularColor;
 	vec3 emissive_color = EmissiveColor;
 	vec3 overlay_color = OverlayColor;
-	vec3 light_position = LightPosition;
 
 	float light_intensity = LightIntensity;
 	float normal_intensity = NormalIntensity;
@@ -52,10 +53,14 @@ void main() {
 	float alpha = Alpha;
 
 	vec3 position = Position;
-	vec3 normal = Normal;
 	vec3 color = Color;
 	vec2 texinates = Texinates;
 	vec2 overlay_texinates = OverlayTexinates;
+
+	vec3 light_position = LightPosition;
+	vec3 light_direction = normalize(Position - LightPosition);
+	vec3 camera_direction = normalize(Position);
+	vec3 normal_direction = normalize(Normal);
 
 	#ifdef DIFFUSE_TEXTURE
 		vec4 mapped_diffuse = texture(uDiffuseTexture, texinates);
@@ -72,24 +77,20 @@ void main() {
 		emissive_color *= texture(uEmissiveTexture, texinates).rgb;
 	#endif
 
-	vec3 direction_to_light = normalize(light_position - position);
-	vec3 direction_to_camera = normalize(-position);
-	vec3 normal_direction = normalize(normal);
-
 	#ifdef NORMAL_MAP
 		vec3 mapped_normal = texture(uNormalMap, texinates).rgb;
-		normal_direction = calculate_normal(normal_direction, direction_to_camera, mapped_normal, texinates, normal_intensity);
+		normal_direction = calculate_normal(normal_direction, -camera_direction, mapped_normal, texinates, normal_intensity);
 	#endif
 
 	#ifdef UNLIT
 		Output.rgb = diffuse_color;
 		Output.a = alpha;
 	#else
-		vec3 reflection_direction = normalize(reflect(-direction_to_light, normal_direction));
+		vec3 reflection_direction = normalize(reflect(light_direction, normal_direction));
 
-		float diffuse_intensity = light_intensity * max(dot(normal_direction, direction_to_light), 0.0);
-		float specular_intensity = light_intensity * pow(max(dot(reflection_direction, direction_to_camera), 0.0), 1.0 / roughness);
-		float emissive_intensity = 1.0 + max(dot(normal_direction, direction_to_camera), 0.0);
+		float diffuse_intensity = light_intensity * max(dot(normal_direction, -light_direction), 0.0);
+		float specular_intensity = light_intensity * pow(max(dot(reflection_direction, -camera_direction), 0.0), 1.0 / roughness);
+		float emissive_intensity = 1.0 + max(dot(normal_direction, -camera_direction), 0.0);
 
 		vec3 diffuse = diffuse_color * max(diffuse_intensity, ambience);
 		vec3 specular = specular_color * specular_intensity * specularity;
@@ -105,7 +106,4 @@ void main() {
 		Output.a = max(Output.a, overlay_color.a);
 	#endif
 
-	// normal_direction = vec3(0.0, 1.0, 0.0);
-	// direction_to_light = vec3(0.0, 1.0, 0.0);
-	// Output.rgb = vec3(1.0) * max(dot(normal_direction, direction_to_light), 0.0);
 }

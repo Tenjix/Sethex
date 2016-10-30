@@ -51,7 +51,7 @@ namespace sethex {
 				.add(Texture::create(loadImage(loadAsset("textures/test.specular.png"))))
 				.add(Texture::create(loadImage(loadAsset("textures/test.emissive.png"))))
 				.add(Texture::create(loadImage(loadAsset("textures/test.normal.png"))));
-			//entity.deactivate();
+			entity.deactivate();
 		});
 
 		Entity player = world.create_entity("entity").tag("Player").deactivate();
@@ -68,9 +68,9 @@ namespace sethex {
 					string geometry_shader = loadString(loadAsset("shaders/Wireframe.geometry.shader"));
 					shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
 				} else {
-					string vertex_shader = loadString(loadAsset("shaders/Material.vertex.shader"));
+					string vertex_shader = loadString(loadAsset("shaders/Tile.vertex.shader"));
 					//shader::define(vertex_shader, "HEIGHT_MAP");
-					string fragment_shader = loadString(loadAsset("shaders/Material.fragment.shader"));
+					string fragment_shader = loadString(loadAsset("shaders/Tile.fragment.shader"));
 					shader::define(fragment_shader, "DIFFUSE_TEXTURE", "SPECULAR_TEXTURE", "EMISSIVE_TEXTURE", "NORMAL_MAP");
 					shader = Shader::create(vertex_shader, fragment_shader);
 					shader->uniform("uDiffuseTexture", 0);

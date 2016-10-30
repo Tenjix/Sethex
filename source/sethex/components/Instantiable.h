@@ -25,7 +25,11 @@ namespace sethex {
 		}
 
 		void instantiate(uint number_of_instances = 1) {
-			runtime_assert(batch, "instantiable requires a batch object");
+			if (not batch) {
+				error("instantiable requires a batch object");
+				active = false;
+				return;
+			}
 			runtime_assert(number_of_instances < INT_MAX, "number of instances may not exceed 32 bit integer range");
 			batch->drawInstanced(static_cast<unsigned>(number_of_instances));
 		}

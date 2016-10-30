@@ -1,6 +1,8 @@
 // shadertype=glsl
 #version 150
 
+#define DIRECTIONAL_LIGHT
+
 #include <shaders/Texinates.h>
 
 uniform sampler2D uHeightMap;
@@ -13,6 +15,7 @@ uniform mat4 ciViewMatrix;
 uniform mat3 ciNormalMatrix;
 
 uniform vec3 uLightPosition = vec3(0, 100, 0);
+uniform vec3 uLightDirection = vec3(0, 1, 0);
 
 uniform float uLightIntensity = 1.0;
 uniform float uNormalIntensity = 1.0;
@@ -23,7 +26,7 @@ uniform vec3 uEmissiveColor = vec3(1.0);
 uniform vec3 uOverlayColor = vec3(1.0);
 
 uniform float uAmbience = 0.1;
-uniform float uSpecularity = 0.0;
+uniform float uSpecularity = 0.1;
 uniform float uLuminosity = 0.0;
 uniform float uRoughness = 0.1;
 uniform float uTransparency = 0.0;
@@ -50,6 +53,7 @@ flat out vec3 DiffuseColor;
 flat out vec3 SpecularColor;
 flat out vec3 EmissiveColor;
 flat out vec3 OverlayColor;
+
 flat out vec3 LightPosition;
 
 flat out float LightIntensity;
@@ -71,27 +75,28 @@ out vec2 OverlayTexinates;
 void main() {
 	vec4 position = ciPosition;
 
-	LightIntensity = uLightIntensity;
+	LightIntensity = clamp(uLightIntensity, 0.0, 1.0);
 	NormalIntensity = uNormalIntensity;
 
 	DiffuseColor = clamp(uDiffuseColor, 0.0, 1.0);
-	SpecularColor = uSpecularColor;
-	EmissiveColor = uEmissiveColor;
-	OverlayColor = uOverlayColor;
+	SpecularColor = clamp(uSpecularColor, 0.0, 1.0);
+	EmissiveColor = clamp(uEmissiveColor, 0.0, 1.0);
+	OverlayColor = clamp(uOverlayColor, 0.0, 1.0);
 
 	Ambience = clamp(uAmbience, 0.0, 1.0);
-	Specularity = uSpecularity;
-	Luminosity = uLuminosity;
+	Specularity = clamp(uSpecularity, 0.0, 1.0);
+	Luminosity = clamp(uLuminosity, 0.0, 1.0);
 	Roughness = clamp(uRoughness, 0.0001, 1.0);
 	Transparency = clamp(uTransparency, 0.0, 1.0);
 	Alpha = 1.0 - Transparency;
 
 	#ifdef INSTANTIATION
 		position += vec4(InstancePosition, 0);
-		DiffuseColor = clamp(DiffuseColor * InstanceColor, 0.0, 1.0);
+		vec3 instance_color = clamp(InstanceColor, 0.0, 1.0);
+		DiffuseColor = DiffuseColor * instance_color;
 	#endif
 
-	LightPosition = (ciViewMatrix * vec4(uLightPosition, 0)).xyz;
+	LightPosition = (ciViewMatrix * vec4(uLightPosition, 1)).xyz;
 	Position = (ciModelView * position).xyz;
 	Normal = normalize(ciNormalMatrix * ciNormal);
 	Color = ciColor;
