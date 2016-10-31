@@ -31,8 +31,10 @@ namespace sethex {
 
 		// build map coordinates
 
-		unsigned n = 1;
+		unsigned n = 10;
 		map = Map(16 * n, 9 * n);
+
+		//display.window->getSignalMouseMove().connect([&](MouseEvent event) {});
 
 		display.window->getSignalMouseDown().connect([&](MouseEvent event) {
 			mouse_down_position = event.getPos();
@@ -50,10 +52,12 @@ namespace sethex {
 				if (hit) {
 					auto intersection_position = ray.calcPosition(distance);
 					auto intersection_coordinates = Coordinates::of(intersection_position);
-					if (this->map.contains(intersection_coordinates)) {
+					if (this->map.contains_vertically(intersection_coordinates)) {
 						auto index = this->map.index(intersection_coordinates);
 						auto entity = world->find_entity(stringify("Tile #", index));
-						player.get<Geometry>().position = entity.get<Geometry>().position() + float3(0, 2.7, 0);
+						target_focus_position = entity.get<Geometry>().position() + float3(0, 2.7, 0);
+						focusing = true;
+						player.get<Geometry>().position = target_focus_position;
 					} else {
 						player.get<Geometry>().position = intersection_coordinates.to_position() + float3(0, 2.7, 0);
 					}
@@ -61,6 +65,18 @@ namespace sethex {
 			}
 
 		});
+
+		display.window->getSignalKeyUp().connect([&](KeyEvent event) {
+			switch (event.getCode()) {
+				case KeyEvent::KEY_SPACE:
+					target_focus_position = float3(0);
+					focusing = true;
+					break;
+				default:
+					break;
+			}
+		});
+
 
 		// create material and mesh
 
@@ -163,7 +179,18 @@ namespace sethex {
 		Display& display = world->find_entity("Main Display").get<Display>();
 		if (display.minimized()) return;
 
-		focus_position = display.camera.getPivotPoint();
+		auto pivot_point = display.camera.getPivotPoint();
+		if (focusing) {
+			auto delta = target_focus_position - pivot_point;
+			if (length(delta) > 0.1f) {
+				pivot_point = pivot_point + delta * 0.1f;
+			} else {
+				pivot_point = target_focus_position;
+				focusing = false;
+			}
+			display.camera.lookAt(pivot_point);
+		}
+		focus_position = pivot_point;
 		focus_position.z = 0;
 		focus_coordinates = Coordinates::of(focus_position);
 		focus_range = { focus_position.x - focus_expansion, focus_position.x + focus_expansion };

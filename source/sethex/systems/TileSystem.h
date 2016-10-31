@@ -11,6 +11,9 @@ namespace sethex {
 
 		hex::Map map;
 
+		bool focusing = false;
+		float3 target_focus_position;
+
 		float3 focus_position;
 		float focus_expansion;
 		Range<float> focus_range;

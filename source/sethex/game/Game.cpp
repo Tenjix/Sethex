@@ -206,9 +206,6 @@ namespace sethex {
 			case KeyEvent::KEY_HOME:
 				display.camera.lookAt(vec3(0, 2.5, 2.5), vec3(0));
 				break;
-			case KeyEvent::KEY_SPACE:
-				display.camera.lookAt(vec3(0, 250, 0.001), vec3(0));
-				break;
 			default:
 				break;
 		}

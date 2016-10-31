@@ -22,11 +22,11 @@ namespace sethex {
 				return v / 2 - (v < 0 and odd(v));
 			}
 
-			bool within_horizontal_limits(int u, int offset) const {
+			bool contains_horizontally(int u, int offset) const {
 				return u >= u_begin - offset and u <= u_end - offset;
 			}
 
-			bool within_vertical_limits(int v) const {
+			bool contains_vertically(int v) const {
 				return v >= v_begin and v <= v_end;
 			}
 
@@ -69,21 +69,24 @@ namespace sethex {
 				}
 			}
 
-			bool within_horizontal_limits(Coordinates coordinates) const {
-				return within_horizontal_limits(coordinates.u, u_offset(coordinates.v));
+			// determines whether "coordinates" lie within the horizontal limits of the map
+			bool contains_horizontally(Coordinates coordinates) const {
+				return contains_horizontally(coordinates.u, u_offset(coordinates.v));
 			}
 
-			bool within_vertical_limits(Coordinates coordinates) const {
-				return within_vertical_limits(coordinates.v);
+			// determines whether "coordinates" lie within the vertical limits of the map
+			bool contains_vertically(Coordinates coordinates) const {
+				return contains_vertically(coordinates.v);
 			}
 
+			// determines whether "coordinates" lie within the horizontal and vertical limits of the map
 			bool contains(Coordinates coordinates) const {
-				return within_vertical_limits(coordinates) and within_horizontal_limits(coordinates);
+				return contains_vertically(coordinates) and contains_horizontally(coordinates);
 			}
 
 			Potential<Coordinates> neighbor(const Coordinates& coordinates, Direction direction) const {
 				Coordinates neighbor_coordinates = coordinates.neighbor(direction);
-				if (not within_vertical_limits(neighbor_coordinates)) return nullptr;
+				if (not contains_vertically(neighbor_coordinates)) return nullptr;
 				return reproject(neighbor_coordinates);
 			}
 
@@ -92,10 +95,10 @@ namespace sethex {
 				int u = coordinates.u;
 				int v = coordinates.v;
 				int offset = u_offset(v);
-				if (not within_horizontal_limits(u, offset)) {
+				if (not contains_horizontally(u, offset)) {
 					u = project(u, u_begin - offset, u_end - offset);
 				}
-				if (not within_vertical_limits(v)) {
+				if (not contains_vertically(v)) {
 					v = project(v, v_begin, v_end);
 					u -= u_offset(v) - offset;
 				}
