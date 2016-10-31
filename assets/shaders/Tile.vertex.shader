@@ -12,9 +12,9 @@ uniform float uHeightScale = 1.0;
 uniform mat4 ciModelViewProjection;
 uniform mat4 ciModelView;
 uniform mat4 ciViewMatrix;
-uniform mat3 ciNormalMatrix;
+uniform mat3 ciNormalMatrix; 
 
-uniform vec3 uLightPosition = vec3(0, 100, 0);
+uniform vec3 uLightPosition = vec3(0, 1000, 0);
 uniform vec3 uLightDirection = vec3(0, 1, 0);
 
 uniform float uLightIntensity = 1.0;
