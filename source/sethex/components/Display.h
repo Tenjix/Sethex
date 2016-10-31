@@ -10,9 +10,14 @@ namespace sethex {
 
 	public:
 
+		shared<Window> window;
 		PerspectiveCamera camera;
 		unsigned2 size;
 		shared<FrameBuffer> framebuffer;
+
+		bool minimized() {
+			return size.x == 0 or size.y == 0;
+		}
 
 	};
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cinder/gl/gl.h>
+#include <cinder/app/AppBase.h>
 
 namespace sethex {
 
@@ -17,6 +18,18 @@ namespace sethex {
 	using ci::Channel;
 	using ci::Channel8u;
 	using ci::Channel32f;
+
+	using ci::app::Window;
+	using ci::app::FileDropEvent;
+	using ci::app::KeyEvent;
+	using ci::app::MouseEvent;
+	using ci::app::TouchEvent;
+	using ci::app::EventSignalFileDrop;
+	using ci::app::EventSignalKey;
+	using ci::app::EventSignalMouse;
+	using ci::app::EventSignalShouldQuit;
+	using ci::app::EventSignalTouch;
+	using ci::app::EventSignalWindow;
 
 	using TextureFont = ci::gl::TextureFont;
 	using Texture = ci::gl::Texture;

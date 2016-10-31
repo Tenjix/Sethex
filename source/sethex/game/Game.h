@@ -8,7 +8,6 @@
 #include <sethex/Common.h>
 #include <sethex/EntitySystem.h>
 #include <sethex/Graphics.h>
-#include <sethex/game/Input.h>
 #include <sethex/components/Display.h>
 #include <sethex/hexagonal/Map.h>
 #include <sethex/world/Generator.h>
@@ -19,6 +18,7 @@ namespace sethex {
 
 		World world;
 		Generator generator;
+		ci::CameraUi camera_ui;
 
 		shared<TextureFont> font;
 		Color font_color;
@@ -32,16 +32,22 @@ namespace sethex {
 		hexagonal::Map map;
 		vector<shared<Texture>> labels;
 
+		String message;
+
 	public:
 
-		Input input;
-		String message;
-		bool executable = true;
-
-		void setup(ci::CameraUi& camera_ui);
+		void setup(const shared<Window>& window);
 		void resize();
 		void update(float elapsed_seconds, unsigned frames_per_second);
 		void render();
+
+		void mouseMove(MouseEvent event);
+		void mouseDrag(MouseEvent event);
+		void mouseDown(MouseEvent event);
+		void mouseUp(MouseEvent event);
+		void mouseWheel(MouseEvent event);
+		void keyDown(KeyEvent event);
+		void keyUp(KeyEvent event);
 
 	};
 

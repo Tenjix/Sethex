@@ -22,13 +22,45 @@ using namespace constf;
 
 namespace sethex {
 
+	signed2 mouse_down_position;
+
 	void TileSystem::initialize() {
 		Font font = Font(Assets::get("fonts/Nunito.ttf"), 100.0f);
+
+		Display& display = world->find_entity("Main Display").get<Display>();
 
 		// build map coordinates
 
 		unsigned n = 1;
 		map = Map(16 * n, 9 * n);
+
+		display.window->getSignalMouseDown().connect([&](MouseEvent event) {
+			mouse_down_position = event.getPos();
+		});
+
+		display.window->getSignalMouseUp().connect([&](MouseEvent event) {
+			auto mouse_position = event.getPos();
+			if (mouse_position != mouse_down_position) return;
+
+			static Entity& player = world->find_entity_tagged("Player");
+			if (player.is_active) {
+				Ray ray = display.camera.generateRay(mouse_position, display.size);
+				float distance;
+				bool hit = ray.calcPlaneIntersection(float3(), float3(0, 1, 0), &distance);
+				if (hit) {
+					auto intersection_position = ray.calcPosition(distance);
+					auto intersection_coordinates = Coordinates::of(intersection_position);
+					if (this->map.contains(intersection_coordinates)) {
+						auto index = this->map.index(intersection_coordinates);
+						auto entity = world->find_entity(stringify("Tile #", index));
+						player.get<Geometry>().position = entity.get<Geometry>().position() + float3(0, 2.7, 0);
+					} else {
+						player.get<Geometry>().position = intersection_coordinates.to_position() + float3(0, 2.7, 0);
+					}
+				}
+			}
+
+		});
 
 		// create material and mesh
 
@@ -128,8 +160,9 @@ namespace sethex {
 	float3* mapped_instance_positions;
 
 	void TileSystem::update(float delta_time) {
-		static Display& display = world->find_entity("Main Display").get<Display>();
-		if (display.size.x == 0 or display.size.y == 0) return;
+		Display& display = world->find_entity("Main Display").get<Display>();
+		if (display.minimized()) return;
+
 		focus_position = display.camera.getPivotPoint();
 		focus_position.z = 0;
 		focus_coordinates = Coordinates::of(focus_position);
@@ -143,19 +176,19 @@ namespace sethex {
 		}
 		previous_focus_coordinates = focus_coordinates;
 
-		static Entity& player = world->find_entity_tagged("Player");
-		if (player.is_active) {
-			Ray ray = display.camera.generateRay(input.mouse.position, display.size);
-			float distance;
-			bool hit = ray.calcPlaneIntersection(float3(), float3(0, 1, 0), &distance);
-			float3 intersection_position;
-			Coordinates intersection_coordinates;
-			if (hit) {
-				intersection_position = ray.calcPosition(distance);
-				intersection_coordinates = Coordinates::of(intersection_position);
-				player.get<Geometry>().position = intersection_coordinates.to_position();
-			}
-		}
+		//static Entity& player = world->find_entity_tagged("Player");
+		//if (player.is_active) {
+		//	Ray ray = display.camera.generateRay(input.mouse.position, display.size);
+		//	float distance;
+		//	bool hit = ray.calcPlaneIntersection(float3(), float3(0, 1, 0), &distance);
+		//	float3 intersection_position;
+		//	Coordinates intersection_coordinates;
+		//	if (hit) {
+		//		intersection_position = ray.calcPosition(distance);
+		//		intersection_coordinates = Coordinates::of(intersection_position);
+		//		player.get<Geometry>().position = intersection_coordinates.to_position();
+		//	}
+		//}
 	}
 
 	void TileSystem::update(Entity& entity, float delta_time) {

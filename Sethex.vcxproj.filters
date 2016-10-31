@@ -116,9 +116,6 @@
     <ClInclude Include="source\sethex\components\Display.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="source\sethex\game\Input.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
     <ClInclude Include="source\sethex\systems\TileSystem.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>

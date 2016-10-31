@@ -21,8 +21,17 @@ using namespace sethex::hexagonal;
 
 namespace sethex {
 
-	void Game::setup(CameraUi& camera_ui) {
+	void Game::setup(const shared<Window>& window) {
 		Display& display = world.create_entity("Main Display").add<Display>();
+		display.window = window;
+
+		window->getSignalMouseMove().connect(bind(&Game::mouseMove, this, placeholders::_1));
+		window->getSignalMouseDrag().connect(bind(&Game::mouseDrag, this, placeholders::_1));
+		window->getSignalMouseDown().connect(bind(&Game::mouseDown, this, placeholders::_1));
+		window->getSignalMouseUp().connect(bind(&Game::mouseUp, this, placeholders::_1));
+		window->getSignalMouseWheel().connect(bind(&Game::mouseWheel, this, placeholders::_1));
+		window->getSignalKeyDown().connect(bind(&Game::keyDown, this, placeholders::_1));
+		window->getSignalKeyUp().connect(bind(&Game::keyUp, this, placeholders::_1));
 
 		camera_ui.setCamera(&display.camera);
 		auto font_type = loadAsset("fonts/Nunito.ttf");
@@ -31,8 +40,6 @@ namespace sethex {
 		background = Texture::create(loadImage(loadAsset("images/Background.jpg")));
 		display.camera.lookAt(float3(0, 250, 0.001), float3(0));
 		display.camera.setFarClip(1000.0f);
-
-		if (not executable) return;
 
 		shared<Mesh> cube = Mesh::create(geom::Cube());
 
@@ -91,13 +98,14 @@ namespace sethex {
 		});
 
 		world.add<RenderSystem>();
-		world.add<TileSystem>(input).deactivate();
+		world.add<TileSystem>();
 	}
 
 	void Game::resize() {
-		static Display& display = world.find_entity("Main Display").get<Display>();
+		Display& display = world.find_entity("Main Display").get<Display>();
 		display.size = getWindowSize();
-		if (display.size.x == 0 or display.size.y == 0) return;
+		if (display.minimized()) return;
+		camera_ui.setWindowSize(getWindowSize());
 		display.camera.setAspectRatio(getWindowAspectRatio());
 		display.framebuffer = FrameBuffer::create(display.size.x, display.size.y, FrameBuffer::Format().samples(16).coverageSamples(16));
 	}
@@ -110,7 +118,7 @@ namespace sethex {
 	}
 
 	void Game::render() {
-		static Display& display = world.find_entity("Main Display").get<Display>();
+		Display& display = world.find_entity("Main Display").get<Display>();
 		if (display.size.x == 0 or display.size.y == 0) return;
 
 		static bool render_background = false;
@@ -120,26 +128,24 @@ namespace sethex {
 		static bool render_overlay = true;
 		static bool render_interface = false;
 		static bool render_generator = false;
-		static bool enable_tile_system = false;
+		static bool enable_tile_system = true;
 		static bool vertical_synchronization = true;
 		{
 			ui::ScopedWindow ui_window("", ImGuiWindowFlags_NoTitleBar);
 			ui::Checkbox("Background", &render_background);
-			if (executable) {
-				if (ui::Checkbox("World", &render_world)) {
-					auto tiles = world.find_entities_beginning("Tile #");
-					tiles.begin()->get<Instantiable>().active = render_world;
-				}
-				if (ui::Checkbox("Entity", &render_entity)) {
-					auto entity = world.find_entity("entity");
-					if (render_entity) entity.activate();
-					else entity.deactivate();
-				}
-				if (ui::Checkbox("Cube", &render_test_object)) {
-					auto entity = world.find_entity("test-object");
-					if (render_test_object) entity.activate();
-					else entity.deactivate();
-				}
+			if (ui::Checkbox("World", &render_world)) {
+				auto tiles = world.find_entities_beginning("Tile #");
+				tiles.begin()->get<Instantiable>().active = render_world;
+			}
+			if (ui::Checkbox("Entity", &render_entity)) {
+				auto entity = world.find_entity("entity");
+				if (render_entity) entity.activate();
+				else entity.deactivate();
+			}
+			if (ui::Checkbox("Cube", &render_test_object)) {
+				auto entity = world.find_entity("test-object");
+				if (render_test_object) entity.activate();
+				else entity.deactivate();
 			}
 			ui::Checkbox("Overlay", &render_overlay);
 			ui::Checkbox("Interface", &render_interface);
@@ -157,7 +163,7 @@ namespace sethex {
 		if (render_background) draw(background);
 		else clear();
 
-		if (executable and world.has<RenderSystem>()) world.get<RenderSystem>().render();
+		if (world.has<RenderSystem>()) world.get<RenderSystem>().render();
 		if (render_interface) ui::ShowTestWindow();
 		if (render_generator) generator.display();
 
@@ -169,6 +175,43 @@ namespace sethex {
 		drawStringRight(u8"Thomas Würstle", float2(display.size.x - 5, display.size.y - 15));
 		drawStringRight(stringify("Focus Position ", display.camera.getPivotPoint()), float2(display.size.x - 5, 5));
 		drawStringRight(stringify("Eye Position ", display.camera.getEyePoint()), float2(display.size.x - 5, 20));
+	}
+
+	void Game::mouseMove(MouseEvent event) {}
+
+	void Game::mouseDrag(MouseEvent event) {
+		camera_ui.mouseDrag(event);
+	}
+
+	void Game::mouseDown(MouseEvent event) {
+		camera_ui.mouseDown(event);
+	}
+
+	void Game::mouseUp(MouseEvent event) {
+		camera_ui.mouseUp(event);
+	}
+
+	void Game::mouseWheel(MouseEvent event) {
+		camera_ui.mouseWheel(event);
+	}
+
+	void Game::keyDown(KeyEvent event) {}
+
+	void Game::keyUp(KeyEvent event) {
+		Display& display = world.find_entity("Main Display").get<Display>();
+		switch (event.getCode()) {
+			case KeyEvent::KEY_F11:
+				display.window->setFullScreen(!display.window->isFullScreen());
+				break;
+			case KeyEvent::KEY_HOME:
+				display.camera.lookAt(vec3(0, 2.5, 2.5), vec3(0));
+				break;
+			case KeyEvent::KEY_SPACE:
+				display.camera.lookAt(vec3(0, 250, 0.001), vec3(0));
+				break;
+			default:
+				break;
+		}
 	}
 
 }
