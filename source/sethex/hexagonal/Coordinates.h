@@ -16,6 +16,10 @@ namespace sethex {
 			NorthEast, East, SouthEast, SouthWest, West, NorthWest
 		};
 
+		enum class Heading : uint8 {
+			Northward, NorthEastward, EastNorthward, Eastward, EastSouthward, SouthEastward, Southward, SouthWestward, WestSouthward, Westward, WestNorthward, NorthWestward
+		};
+
 		// Hexagonal Coordinates based on a homogeneous coordinate system with u + v + w = 0.
 		// The u-axis points north-east, the v-axis points south and the w-axis points north-west.
 		class Coordinates {
@@ -108,6 +112,60 @@ namespace sethex {
 						break;
 					case Direction::NorthWest:
 						_v -= distance;
+						break;
+					default:
+						throw_runtime_exception("unknown direction");
+						break;
+				}
+				return *this;
+			}
+
+			// Shifts these coordinates in the given heading by the given distance.
+			Coordinates& shift(Heading direction, int distance = 1) {
+				switch (direction) {
+					case Heading::Northward:
+						_u += distance;
+						_v -= 2 * distance;
+						break;
+					case Heading::NorthEastward:
+						_u += 2 * distance;
+						_v -= 2 * distance;
+						break;
+					case Heading::EastNorthward:
+						_u += 2 * distance;
+						_v -= distance;
+						break;
+					case Heading::Eastward:
+						_u += 2 * distance;
+						break;
+					case Heading::EastSouthward:
+						_u += distance;
+						_v += distance;
+						break;
+					case Heading::SouthEastward:
+						_v -= 2 * distance;
+						break;
+					case Heading::Southward:
+						_u -= distance;
+						_v += 2 * distance;
+						break;
+					case Heading::SouthWestward:
+						_u -= 2 * distance;
+						_v += 2 * distance;
+						break;
+					case Heading::WestSouthward:
+						_u -= 2 * distance;
+						_v += distance;
+						break;
+					case Heading::Westward:
+						_u -= 2 * distance;
+						break;
+					case Heading::WestNorthward:
+						_u -= distance;
+						_v -= distance;
+						break;
+					case Heading::NorthWestward:
+						_v -= 2 * distance;
 						break;
 					default:
 						throw_runtime_exception("unknown direction");

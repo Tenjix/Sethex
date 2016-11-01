@@ -17,12 +17,13 @@ namespace sethex {
 		float3 focus_position;
 		float focus_expansion;
 		Range<float> focus_range;
-		hex::Coordinates focus_coordinates;
 
 		shared<VertexBuffer> instance_positions;
 		shared<VertexBuffer> instance_colors;
 
 	public:
+
+		hex::Coordinates focus_coordinates;
 
 		TileSystem() : System(1) {
 			filter.required_types.insert<Tile>();

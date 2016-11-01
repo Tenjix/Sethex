@@ -34,7 +34,9 @@ namespace sethex {
 		unsigned n = 10;
 		map = Map(16 * n, 9 * n);
 
-		//display.window->getSignalMouseMove().connect([&](MouseEvent event) {});
+		display.window->getSignalMouseMove().connect([&](MouseEvent event) {
+
+		});
 
 		display.window->getSignalMouseDown().connect([&](MouseEvent event) {
 			mouse_down_position = event.getPos();
@@ -67,13 +69,65 @@ namespace sethex {
 		});
 
 		display.window->getSignalKeyUp().connect([&](KeyEvent event) {
-			switch (event.getCode()) {
-				case KeyEvent::KEY_SPACE:
-					target_focus_position = float3(0);
-					focusing = true;
+			Coordinates coordinates = focus_coordinates;
+			if (event.isAltDown()) switch (event.getCode()) {
+				case KeyEvent::KEY_KP1:
+					coordinates.shift(Heading::SouthWestward);
+					break;
+				case KeyEvent::KEY_KP2:
+					coordinates.shift(Heading::Southward);
+					break;
+				case KeyEvent::KEY_KP3:
+					coordinates.shift(Heading::SouthEastward);
+					break;
+				case KeyEvent::KEY_KP4:
+					coordinates.shift(Heading::Westward);
+					break;
+				case KeyEvent::KEY_KP6:
+					coordinates.shift(Heading::Eastward);
+					break;
+				case KeyEvent::KEY_KP7:
+					coordinates.shift(Heading::NorthWestward);
+					break;
+				case KeyEvent::KEY_KP8:
+					coordinates.shift(Heading::Northward);
+					break;
+				case KeyEvent::KEY_KP9:
+					coordinates.shift(Heading::NorthEastward);
 					break;
 				default:
 					break;
+			} else switch (event.getCode()) {
+				case KeyEvent::KEY_SPACE:
+					coordinates = Coordinates::Origin;
+					break;
+				case KeyEvent::KEY_KP1:
+					coordinates.shift(Direction::SouthWest);
+					break;
+				case KeyEvent::KEY_KP3:
+					coordinates.shift(Direction::SouthEast);
+					break;
+				case KeyEvent::KEY_KP4:
+					coordinates.shift(Direction::West);
+					break;
+				case KeyEvent::KEY_KP6:
+					coordinates.shift(Direction::East);
+					break;
+				case KeyEvent::KEY_KP7:
+					coordinates.shift(Direction::NorthWest);
+					break;
+				case KeyEvent::KEY_KP9:
+					coordinates.shift(Direction::NorthEast);
+					break;
+				default:
+					break;
+			}
+			if (coordinates != focus_coordinates) {
+				auto index = this->map.index(coordinates);
+				auto entity = world->find_entity(stringify("Tile #", index));
+				target_focus_position = entity.get<Geometry>().position() + float3(0, 2.7, 0);
+				world->find_entity_tagged("Player").get<Geometry>().position = target_focus_position;
+				focusing = true;
 			}
 		});
 
@@ -156,7 +210,7 @@ namespace sethex {
 
 		auto coordinate_iterator = map.coordinates().begin();
 		auto position_iterator = positions.begin();
-		world->create_entities(map.coordinates().size(), "Tile #", [&coordinate_iterator, &position_iterator, &mesh, &material, &instantiable](Entity entity) {
+		world->create_entities(map.coordinates().size(), "Tile #", [&](Entity entity) {
 			entity.add<Tile>().coordinates = *coordinate_iterator++;
 			entity.add<Geometry>().mesh(mesh).position(*position_iterator++);
 			entity.add(material);
@@ -179,19 +233,19 @@ namespace sethex {
 		Display& display = world->find_entity("Main Display").get<Display>();
 		if (display.minimized()) return;
 
-		auto pivot_point = display.camera.getPivotPoint();
+		focus_position = display.camera.getPivotPoint();
+		auto eye_position = display.camera.getEyePoint();
 		if (focusing) {
-			auto delta = target_focus_position - pivot_point;
+			auto delta = target_focus_position - focus_position;
 			if (length(delta) > 0.1f) {
-				pivot_point = pivot_point + delta * 0.1f;
+				focus_position += delta * 0.1f;
+				eye_position += delta * 0.1f;
 			} else {
-				pivot_point = target_focus_position;
+				focus_position = target_focus_position;
 				focusing = false;
 			}
-			display.camera.lookAt(pivot_point);
+			display.camera.lookAt(eye_position, focus_position);
 		}
-		focus_position = pivot_point;
-		focus_position.z = 0;
 		focus_coordinates = Coordinates::of(focus_position);
 		focus_range = { focus_position.x - focus_expansion, focus_position.x + focus_expansion };
 
