@@ -220,7 +220,7 @@
     <ClCompile Include="source\sethex\data\ModelLoader.cpp" />
     <ClCompile Include="source\sethex\data\ModelSource.cpp" />
     <ClCompile Include="source\sethex\game\Game.cpp" />
-    <ClCompile Include="source\sethex\hexagonal\Coordinates.cpp" />
+    <ClCompile Include="source\hexagonal\Coordinates.cpp" />
     <ClCompile Include="source\sethex\Sethex.cpp" />
     <ClCompile Include="source\sethex\systems\RenderSystem.cpp" />
     <ClCompile Include="source\sethex\systems\TileSystem.cpp" />
@@ -238,6 +238,7 @@
     <ClInclude Include="source\cinder\interface\imgui\stb_rect_pack.h" />
     <ClInclude Include="source\cinder\interface\imgui\stb_textedit.h" />
     <ClInclude Include="source\cinder\interface\imgui\stb_truetype.h" />
+    <ClInclude Include="source\hexagonal\Hexagonal.h" />
     <ClInclude Include="source\sethex\components\Display.h" />
     <ClInclude Include="source\sethex\components\Geometry.h" />
     <ClInclude Include="source\sethex\components\Instantiable.h" />
@@ -250,8 +251,8 @@
     <ClInclude Include="source\sethex\EntitySystem.h" />
     <ClInclude Include="source\sethex\Graphics.h" />
     <ClInclude Include="source\sethex\Common.h" />
-    <ClInclude Include="source\sethex\hexagonal\Coordinates.h" />
-    <ClInclude Include="source\sethex\hexagonal\Map.h" />
+    <ClInclude Include="source\hexagonal\Coordinates.h" />
+    <ClInclude Include="source\hexagonal\Map.h" />
     <ClInclude Include="source\sethex\systems\RenderSystem.h" />
     <ClInclude Include="source\sethex\systems\TileSystem.h" />
     <ClInclude Include="source\cinder\utilities\Assets.h" />

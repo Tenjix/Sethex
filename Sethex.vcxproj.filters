@@ -38,9 +38,6 @@
     <ClCompile Include="source\sethex\data\ModelSource.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="source\sethex\hexagonal\Coordinates.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
     <ClCompile Include="source\sethex\systems\TileSystem.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
@@ -60,6 +57,9 @@
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="source\cinder\interface\Imgui.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="source\hexagonal\Coordinates.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
@@ -101,13 +101,7 @@
     <ClInclude Include="source\sethex\data\ModelSource.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="source\sethex\hexagonal\Coordinates.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
     <ClInclude Include="source\sethex\components\Material.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="source\sethex\hexagonal\Map.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="source\sethex\components\Tile.h">
@@ -159,6 +153,15 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="source\sethex\components\Instantiable.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\hexagonal\Coordinates.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\hexagonal\Map.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="source\hexagonal\Hexagonal.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

@@ -3,18 +3,21 @@
 #include <sethex/Common.h>
 #include <sethex/Graphics.h>
 
-namespace sethex {
+namespace tenjix {
 
+	namespace sethex {
 
-	class Generator {
+		class Generator {
 
-	public:
+		public:
 
-		shared<ImageSource> biomes;
-		shared<ImageSource> elevation;
+			shared<ImageSource> biomes;
+			shared<ImageSource> elevation;
 
-		void display();
+			void display();
 
-	};
+		};
+
+	}
 
 }

@@ -1,11 +1,11 @@
 #pragma once
 
-#include <sethex/hexagonal/Coordinates.h>
+#include <hexagonal/Coordinates.h>
 
 #include <utilities/Optional.h>
 #include <utilities/Mathematics.h>
 
-namespace sethex {
+namespace tenjix {
 
 	namespace hexagonal {
 
@@ -16,7 +16,7 @@ namespace sethex {
 			int v_begin;
 			int v_end;
 
-			vector<Coordinates> content;
+			Lot<Coordinates> content;
 
 			int u_offset(int v) const {
 				return v / 2 - (v < 0 and odd(v));
@@ -34,9 +34,9 @@ namespace sethex {
 
 			ReadonlyProperty<unsigned, Map> width;
 			ReadonlyProperty<unsigned, Map> height;
-			//ReadonlyProperty<vector<Coordinates>, Map> coordinates;
+			//ReadonlyProperty<Lot<Coordinates>, Map> coordinates;
 
-			const vector<Coordinates>& coordinates() const {
+			const Lot<Coordinates>& coordinates() const {
 				return content;
 			}
 

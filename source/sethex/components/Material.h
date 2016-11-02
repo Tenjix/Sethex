@@ -6,69 +6,73 @@
 
 #include <utilities/Exceptions.h>
 
-namespace sethex {
+namespace tenjix {
 
-	class Material : public ObservableComponent {
+	namespace sethex {
 
-	public:
+		class Material : public ObservableComponent {
 
-		SharedProperty<Shader, Material> shader;
-		Textures textures;
+		public:
 
-		Property<String, Material> name;
-		Property<bool, Material> transparent;
+			SharedProperty<Shader, Material> shader;
+			Textures textures;
 
-		Material(const shared<Shader>& shader = nullptr) : shader(shader), transparent(false) {
-			this->shader.owner = this;
-			this->shader.attach([this]() { notify(); });
-			name.owner = this;
-			transparent.owner = this;
-		}
+			Property<String, Material> name;
+			Property<bool, Material> transparent;
 
-		static shared<Material> create(const shared<Shader>& shader = nullptr) {
-			return std::make_shared<Material>(shader);
-		}
-
-		Material& add(const shared<Texture>& texture) {
-			textures.push_back(texture);
-			return *this;
-		}
-
-		virtual void bind() const {
-			shader->bind();
-			bind_textures();
-		}
-
-		virtual void unbind() const {
-			unbind_textures();
-		}
-
-		virtual void bind_textures() const {
-			for (uint8 i = 0; i < number_of_textures(); i++) {
-				textures[i]->bind(i);
+			Material(const shared<Shader>& shader = nullptr) : shader(shader), transparent(false) {
+				this->shader.owner = this;
+				this->shader.attach([this]() { notify(); });
+				name.owner = this;
+				transparent.owner = this;
 			}
-		}
 
-		virtual void unbind_textures() const {
-			for (uint8 i = 0; i < number_of_textures(); i++) {
-				textures[i]->unbind(i);
+			static shared<Material> create(const shared<Shader>& shader = nullptr) {
+				return std::make_shared<Material>(shader);
 			}
-		}
 
-		uint8 number_of_textures() const {
-			uint n = textures.size();
-			if (n > 32) throw_runtime_exception("too many textures");
-			return static_cast<uint8>(n);
-		}
+			Material& add(const shared<Texture>& texture) {
+				textures.push_back(texture);
+				return *this;
+			}
 
-	};
+			virtual void bind() const {
+				shader->bind();
+				bind_textures();
+			}
 
-	class SmoothMaterial : public Material {
+			virtual void unbind() const {
+				unbind_textures();
+			}
 
-	};
+			virtual void bind_textures() const {
+				for (uint8 i = 0; i < number_of_textures(); i++) {
+					textures[i]->bind(i);
+				}
+			}
 
-	class RoughMaterial : public Material {
+			virtual void unbind_textures() const {
+				for (uint8 i = 0; i < number_of_textures(); i++) {
+					textures[i]->unbind(i);
+				}
+			}
 
-	};
+			uint8 number_of_textures() const {
+				uint n = textures.size();
+				if (n > 32) throw_runtime_exception("too many textures");
+				return static_cast<uint8>(n);
+			}
+
+		};
+
+		class SmoothMaterial : public Material {
+
+		};
+
+		class RoughMaterial : public Material {
+
+		};
+
+	}
 
 }

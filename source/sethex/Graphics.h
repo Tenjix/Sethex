@@ -3,43 +3,49 @@
 #include <cinder/gl/gl.h>
 #include <cinder/app/AppBase.h>
 
-namespace sethex {
+namespace tenjix {
 
-	using PerspectiveCamera = ci::CameraPersp;
-	using OrthogonalCamera = ci::CameraOrtho;
-	using OpaqueColor = ci::Color;
-	using Color = ci::ColorA;
-	using Font = ci::Font;
+	namespace sethex {
 
-	using ci::ImageSource;
-	using ci::Surface;
-	using ci::Surface8u;
-	using ci::Surface32f;
-	using ci::Channel;
-	using ci::Channel8u;
-	using ci::Channel32f;
+		using PerspectiveCamera = ci::CameraPersp;
+		using OrthogonalCamera = ci::CameraOrtho;
+		using OpaqueColor = ci::Color;
+		using Color = ci::ColorA;
+		using Font = ci::Font;
 
-	using ci::app::Window;
-	using ci::app::FileDropEvent;
-	using ci::app::KeyEvent;
-	using ci::app::MouseEvent;
-	using ci::app::TouchEvent;
-	using ci::app::EventSignalFileDrop;
-	using ci::app::EventSignalKey;
-	using ci::app::EventSignalMouse;
-	using ci::app::EventSignalShouldQuit;
-	using ci::app::EventSignalTouch;
-	using ci::app::EventSignalWindow;
+		using ci::DataSource;
+		using ci::ImageSource;
+		using ci::Surface;
+		using ci::Surface8u;
+		using ci::Surface32f;
+		using ci::Channel;
+		using ci::Channel8u;
+		using ci::Channel32f;
 
-	using TextureFont = ci::gl::TextureFont;
-	using Texture = ci::gl::Texture;
-	using Textures = std::vector<ci::gl::TextureRef>;
-	using Shader = ci::gl::GlslProg;
-	using Mesh = ci::gl::VboMesh;
-	using Batch = ci::gl::Batch;
-	using VertexArray = ci::gl::Vao;
-	using VertexBuffer = ci::gl::Vbo;
-	using FrameBuffer = ci::gl::Fbo;
+		using ci::app::Window;
+		using ci::app::FileDropEvent;
+		using ci::app::KeyEvent;
+		using ci::app::MouseEvent;
+		using ci::app::TouchEvent;
+		using ci::app::EventSignalFileDrop;
+		using ci::app::EventSignalKey;
+		using ci::app::EventSignalMouse;
+		using ci::app::EventSignalShouldQuit;
+		using ci::app::EventSignalTouch;
+		using ci::app::EventSignalWindow;
+
+		using TextureFont = ci::gl::TextureFont;
+		using Texture = ci::gl::Texture;
+		using Textures = Lot<shared<Texture>>;
+		using Shader = ci::gl::GlslProg;
+		using Mesh = ci::gl::VboMesh;
+		using Batch = ci::gl::Batch;
+		using VertexArray = ci::gl::Vao;
+		using VertexBuffer = ci::gl::Vbo;
+		using FrameBuffer = ci::gl::Fbo;
+
+	}
+
 
 }
 

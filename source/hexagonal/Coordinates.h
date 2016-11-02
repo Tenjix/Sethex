@@ -1,24 +1,16 @@
 #pragma once
 
-#include <cmath>
 #include <iostream>
+#include <iomanip>
 
-#include <sethex/Common.h>
+#include <hexagonal/Hexagonal.h>
 
+#include <utilities/Properties.h>
 #include <utilities/Exceptions.h>
-#include <utilities/Mathematics.h>
 
-namespace sethex {
+namespace tenjix {
 
 	namespace hexagonal {
-
-		enum class Direction : uint8 {
-			NorthEast, East, SouthEast, SouthWest, West, NorthWest
-		};
-
-		enum class Heading : uint8 {
-			Northward, NorthEastward, EastNorthward, Eastward, EastSouthward, SouthEastward, Southward, SouthWestward, WestSouthward, Westward, WestNorthward, NorthWestward
-		};
 
 		// Hexagonal Coordinates based on a homogeneous coordinate system with u + v + w = 0.
 		// The u-axis points north-east, the v-axis points south and the w-axis points north-west.
@@ -226,7 +218,7 @@ namespace sethex {
 
 			// Convertes these hexagonal coordinates to cartesian coordinates.
 			float2 to_cartesian() const {
-				return float2(static_cast<float>(constd::Sqrt_3 * (_u + _v / 2.0)), static_cast<float>(3.0 / 2.0 * _v));
+				return float2(static_cast<float>(d::Sqrt_3 * (_u + _v / 2.0)), static_cast<float>(3.0 / 2.0 * _v));
 			}
 
 			// Convertes these hexagonal coordinates to a world position in the y=0 plane.
@@ -237,7 +229,7 @@ namespace sethex {
 
 			// Calculates the hexagonal coordinates of the given cartesian coordinates.
 			static Coordinates of(float x, float y) {
-				return Coordinates(x * constd::Sqrt_3 / 3.0 - y / 3.0, 2.0 / 3.0 * y);
+				return Coordinates(x * d::Sqrt_3 / 3.0 - y / 3.0, 2.0 / 3.0 * y);
 			}
 
 			// Calculates the hexagonal coordinates of the given cartesian coordinates.
@@ -251,16 +243,16 @@ namespace sethex {
 			}
 
 			// Calculates hexagonal coordinates in a line between "begin" and "end". "supercover"  
-			static vector<Coordinates> line(const Coordinates& begin, const Coordinates& end, bool supercover = false);
+			static Lot<Coordinates> line(const Coordinates& begin, const Coordinates& end, bool supercover = false);
 
 			// Calculates hexagonal coordinates in a ring pattern with "radius" around "center".
-			static vector<Coordinates> ring(unsigned radius, const Coordinates& center = Coordinates::Origin);
+			static Lot<Coordinates> ring(unsigned radius, const Coordinates& center = Coordinates::Origin);
 
 			// Calculates hexagonal coordinates in a spiral pattern with "radius" around "center".
-			static vector<Coordinates> spiral(unsigned radius, const Coordinates& center = Coordinates::Origin);
+			static Lot<Coordinates> spiral(unsigned radius, const Coordinates& center = Coordinates::Origin);
 
 			// Calculates hexagonal coordinates in a rectangle pattern with "width" and "height" at "origin".
-			static vector<Coordinates> rectangle(unsigned width, unsigned height, const Coordinates& origin = Coordinates::Origin, bool centered = true);
+			static Lot<Coordinates> rectangle(unsigned width, unsigned height, const Coordinates& origin = Coordinates::Origin, bool centered = true);
 
 			// Calculates the hexagonal distance between two coordinates. 
 			static unsigned distance(const Coordinates& one, const Coordinates& two) {
@@ -290,18 +282,14 @@ namespace sethex {
 
 	}
 
-	#ifndef HEXAGONAL_NO_NAMESPACE_ALIAS
-	namespace hex = hexagonal;
-	#endif
-
 }
 
 namespace std {
 
 	template<>
-	struct hash<sethex::hexagonal::Coordinates> {
-		size_t operator()(const sethex::hexagonal::Coordinates& coordinates) const noexcept {
-			return hash_combined(coordinates.u(), coordinates.v());
+	struct hash<tenjix::hexagonal::Coordinates> {
+		size_t operator()(const tenjix::hexagonal::Coordinates& coordinates) const noexcept {
+			return tenjix::hash_combined(coordinates.u(), coordinates.v());
 		}
 	};
 

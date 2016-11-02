@@ -5,50 +5,55 @@
 #include <cinder/Font.h>
 #include <cinder/CameraUi.h>
 
+#include <hexagonal/Map.h>
+
 #include <sethex/Common.h>
 #include <sethex/EntitySystem.h>
 #include <sethex/Graphics.h>
 #include <sethex/components/Display.h>
-#include <sethex/hexagonal/Map.h>
 #include <sethex/world/Generator.h>
 
-namespace sethex {
+namespace tenjix {
 
-	class Game {
+	namespace sethex {
 
-		World world;
-		Generator generator;
-		ci::CameraUi camera_ui;
+		class Game {
 
-		shared<TextureFont> font;
-		Color font_color;
+			World world;
+			Generator generator;
+			ci::CameraUi camera_ui;
 
-		shared<Texture> background;
+			shared<TextureFont> font;
+			Color font_color;
 
-		float time;
-		float time_delta;
-		unsigned frames_per_second;
+			shared<Texture> background;
 
-		hexagonal::Map map;
-		vector<shared<Texture>> labels;
+			float time;
+			float time_delta;
+			unsigned frames_per_second;
 
-		String message;
+			hexagonal::Map map;
+			Lot<shared<Texture>> labels;
 
-	public:
+			String message;
 
-		void setup(const shared<Window>& window);
-		void resize();
-		void update(float elapsed_seconds, unsigned frames_per_second);
-		void render();
+		public:
 
-		void mouseMove(MouseEvent event);
-		void mouseDrag(MouseEvent event);
-		void mouseDown(MouseEvent event);
-		void mouseUp(MouseEvent event);
-		void mouseWheel(MouseEvent event);
-		void keyDown(KeyEvent event);
-		void keyUp(KeyEvent event);
+			void setup(const shared<Window>& window);
+			void resize();
+			void update(float elapsed_seconds, unsigned frames_per_second);
+			void render();
 
-	};
+			void mouseMove(MouseEvent event);
+			void mouseDrag(MouseEvent event);
+			void mouseDown(MouseEvent event);
+			void mouseUp(MouseEvent event);
+			void mouseWheel(MouseEvent event);
+			void keyDown(KeyEvent event);
+			void keyUp(KeyEvent event);
+
+		};
+
+	}
 
 }

@@ -13,8 +13,8 @@ namespace cinder {
 		protected:
 
 			int sync() {
-				cinder::app::console() << str();
-				cinder::app::console().flush();
+				app::console() << str();
+				app::console().flush();
 				str("");
 				return 0;
 			}

@@ -4,36 +4,40 @@
 #include <sethex/EntitySystem.h>
 #include <sethex/Graphics.h>
 
-namespace sethex {
+namespace tenjix {
 
-	class Instantiable : public ObservableComponent {
+	namespace sethex {
 
-	public:
+		class Instantiable : public ObservableComponent {
 
-		Property<bool, Instantiable> active;
-		SharedProperty<Batch, Instantiable> batch;
+		public:
 
-		Instantiable(const shared<Batch>& batch = nullptr) : active(true), batch(batch) {
-			this->active.owner = this;
-			//this->active.attach([this]() { notify(); });
-			this->batch.owner = this;
-			//this->batch.attach([this]() { notify(); });
-		}
+			Property<bool, Instantiable> active;
+			SharedProperty<Batch, Instantiable> batch;
 
-		static shared<Instantiable> create(const shared<Batch>& batch = nullptr) {
-			return std::make_shared<Instantiable>(batch);
-		}
-
-		void instantiate(uint number_of_instances = 1) {
-			if (not batch) {
-				error("instantiable requires a batch object");
-				active = false;
-				return;
+			Instantiable(const shared<Batch>& batch = nullptr) : active(true), batch(batch) {
+				this->active.owner = this;
+				//this->active.attach([this]() { notify(); });
+				this->batch.owner = this;
+				//this->batch.attach([this]() { notify(); });
 			}
-			runtime_assert(number_of_instances < INT_MAX, "number of instances may not exceed 32 bit integer range");
-			batch->drawInstanced(static_cast<unsigned>(number_of_instances));
-		}
 
-	};
+			static shared<Instantiable> create(const shared<Batch>& batch = nullptr) {
+				return std::make_shared<Instantiable>(batch);
+			}
+
+			void instantiate(uint number_of_instances = 1) {
+				if (not batch) {
+					error("instantiable requires a batch object");
+					active = false;
+					return;
+				}
+				runtime_assert(number_of_instances < INT_MAX, "number of instances may not exceed 32 bit integer range");
+				batch->drawInstanced(static_cast<unsigned>(number_of_instances));
+			}
+
+		};
+
+	}
 
 }

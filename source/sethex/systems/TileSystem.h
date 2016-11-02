@@ -1,43 +1,50 @@
 #pragma once
 
+#include <hexagonal/Map.h>
+
 #include <sethex/Common.h>
 #include <sethex/Graphics.h>
 #include <sethex/components/Tile.h>
-#include <sethex/hexagonal/Map.h>
 
-namespace sethex {
+namespace tenjix {
 
-	class TileSystem : public System {
+	namespace sethex {
 
-		hex::Map map;
+		//using namespace tenjix;
 
-		bool focusing = false;
-		float3 target_focus_position;
+		class TileSystem : public System {
 
-		float3 focus_position;
-		float focus_expansion;
-		Range<float> focus_range;
+			hex::Map map;
 
-		shared<VertexBuffer> instance_positions;
-		shared<VertexBuffer> instance_colors;
+			bool focusing = false;
+			float3 target_focus_position;
 
-	public:
+			float3 focus_position;
+			float focus_expansion;
+			Range<float> focus_range;
 
-		hex::Coordinates focus_coordinates;
+			shared<VertexBuffer> instance_positions;
+			shared<VertexBuffer> instance_colors;
 
-		TileSystem() : System(1) {
-			filter.required_types.insert<Tile>();
-		}
+		public:
 
-		void initialize() override;
-		void update(float delta_time) override;
-		void update(Entity& entity, float delta_time) override;
+			hex::Coordinates focus_coordinates;
 
-		void update(shared<Surface32f> biome_map = nullptr, shared<Channel32f> elevation_map = nullptr);
-		void update(shared<ImageSource> biome_map = nullptr, shared<ImageSource> elevation_map = nullptr) {
-			update(Surface32f::create(biome_map), Channel32f::create(elevation_map));
-		}
+			TileSystem() : System(1) {
+				filter.required_types.insert<Tile>();
+			}
 
-	};
+			void initialize() override;
+			void update(float delta_time) override;
+			void update(Entity& entity, float delta_time) override;
+
+			void update(shared<Surface32f> biome_map = nullptr, shared<Channel32f> elevation_map = nullptr);
+			void update(shared<ImageSource> biome_map = nullptr, shared<ImageSource> elevation_map = nullptr) {
+				update(Surface32f::create(biome_map), Channel32f::create(elevation_map));
+			}
+
+		};
+
+	}
 
 }

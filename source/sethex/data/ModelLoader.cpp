@@ -5,19 +5,23 @@
 using namespace cinder;
 using namespace std;
 
-namespace sethex {
+namespace tenjix {
 
-	shared<ModelSource> loadModel(const shared<DataSource>& data_source) {
-		XmlTree root(data_source);
+	namespace sethex {
 
-		auto geometries = root.getChild("collada/library_geometries");
-		auto materials = root.getChild("collada/library_materials");
+		shared<ModelSource> loadModel(const shared<DataSource>& data_source) {
+			XmlTree root(data_source);
 
-		//print("document path: ", document.getPath());
+			auto geometries = root.getChild("collada/library_geometries");
+			auto materials = root.getChild("collada/library_materials");
 
-		auto model = make_shared<ModelSource>();
+			//print("document path: ", document.getPath());
 
-		return model;
+			auto model = make_shared<ModelSource>();
+
+			return model;
+		}
+
 	}
 
 }

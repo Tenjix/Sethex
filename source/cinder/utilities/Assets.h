@@ -6,22 +6,29 @@
 #include <cinder/ImageIo.h>
 #include <cinder/Utilities.h>
 
-#include <utilities/Standard.h>
+namespace cinder {
 
-class Assets {
+	namespace utilities {
 
-	static std::unordered_map<uint, shared<ci::DataSource>> assets;
+		class Assets {
 
-public:
+			static std::unordered_map<std::size_t, std::shared_ptr<DataSource>> assets;
 
-	static shared<ci::DataSource> get(const ci::fs::path& path);
+		public:
 
-	static void release(const ci::fs::path& path);
+			static std::shared_ptr<DataSource> get(const fs::path& path);
 
-	static shared<ci::DataSource> load(const ci::fs::path& path);
+			static void release(const fs::path& path);
 
-	//static String load_string(const ci::fs::path& path);
+			static std::shared_ptr<DataSource> load(const fs::path& path);
 
-	//static shared<ImageSource> load_image(const ci::fs::path& path, const ci::ImageSource::Options& options = ci::ImageSource::Options(), const String& extension = "");
+			//static String load_string(const ci::fs::path& path);
 
-};
+			//static shared<ImageSource> load_image(const ci::fs::path& path, const ci::ImageSource::Options& options = ci::ImageSource::Options(), const String& extension = "");
+
+		};
+
+	}
+
+}
+

@@ -4,40 +4,44 @@
 #include <sethex/EntitySystem.h>
 #include <sethex/Graphics.h>
 
-namespace sethex {
+namespace tenjix {
 
-	class Geometry : public ObservableComponent {
+	namespace sethex {
 
-	public:
+		class Geometry : public ObservableComponent {
 
-		SharedProperty<Mesh, Geometry> mesh;
+		public:
 
-		Property<float3, Geometry> position;
-		Property<quaternion, Geometry> rotation;
-		Property<float3, Geometry> scaling;
+			SharedProperty<Mesh, Geometry> mesh;
 
-		Geometry(const shared<Mesh>& mesh = nullptr) : mesh(mesh), scaling(float3(1.0f)) {
-			this->mesh.owner = this;
-			this->mesh.attach([this]() { notify(); });
-			position.owner = this;
-			rotation.owner = this;
-			scaling.owner = this;
-		}
+			Property<float3, Geometry> position;
+			Property<quaternion, Geometry> rotation;
+			Property<float3, Geometry> scaling;
 
-		static shared<Geometry> create(const shared<Mesh>& mesh = nullptr) {
-			return std::make_shared<Geometry>(mesh);
-		}
+			Geometry(const shared<Mesh>& mesh = nullptr) : mesh(mesh), scaling(float3(1.0f)) {
+				this->mesh.owner = this;
+				this->mesh.attach([this]() { notify(); });
+				position.owner = this;
+				rotation.owner = this;
+				scaling.owner = this;
+			}
 
-		void render() {
-			using namespace ci::gl;
-			pushModelMatrix();
-			translate(position);
-			rotate(rotation);
-			scale(scaling);
-			draw(mesh);
-			popModelMatrix();
-		}
+			static shared<Geometry> create(const shared<Mesh>& mesh = nullptr) {
+				return std::make_shared<Geometry>(mesh);
+			}
 
-	};
+			void render() {
+				using namespace ci::gl;
+				pushModelMatrix();
+				translate(position);
+				rotate(rotation);
+				scale(scaling);
+				draw(mesh);
+				popModelMatrix();
+			}
+
+		};
+
+	}
 
 }

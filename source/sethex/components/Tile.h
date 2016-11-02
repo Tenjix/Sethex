@@ -1,16 +1,21 @@
 #pragma once
 
+#include <hexagonal/Coordinates.h>
+
 #include <sethex/EntitySystem.h>
-#include <sethex/hexagonal/Map.h>
 
-namespace sethex {
+namespace tenjix {
 
-	class Tile : public Component {
+	namespace sethex {
 
-	public:
+		class Tile : public Component {
 
-		hexagonal::Coordinates coordinates;
+		public:
 
-	};
+			hex::Coordinates coordinates;
+
+		};
+
+	}
 
 }
