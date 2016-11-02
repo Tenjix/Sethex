@@ -21,8 +21,6 @@ namespace tenjix {
 			Northward, NorthEastward, EastNorthward, Eastward, EastSouthward, SouthEastward, Southward, SouthWestward, WestSouthward, Westward, WestNorthward, NorthWestward
 		};
 
-
-
 	}
 
 	#ifndef HEXAGONAL_NO_NAMESPACE_ALIAS

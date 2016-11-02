@@ -200,12 +200,9 @@ namespace tenjix {
 				return not operator==(other);
 			}
 
-			unsigned distance(const Coordinates& coordinates) const {
-				return distance(*this, coordinates);
-			}
-
+			// Calculates the hexagonal distance to the origin. 
 			unsigned magnitude() const {
-				return magnitude(*this);
+				return (abs(u) + abs(v) + abs(w)) / 2;
 			}
 
 			String to_string(unsigned spacing = 3) const;
@@ -254,17 +251,16 @@ namespace tenjix {
 			// Calculates hexagonal coordinates in a rectangle pattern with "width" and "height" at "origin".
 			static Lot<Coordinates> rectangle(unsigned width, unsigned height, const Coordinates& origin = Coordinates::Origin, bool centered = true);
 
-			// Calculates the hexagonal distance between two coordinates. 
-			static unsigned distance(const Coordinates& one, const Coordinates& two) {
-				return (abs(one.u - two.u) + abs(one.v - two.v) + abs(one.w - two.w)) / 2;
-			}
-
-			// Calculates the hexagonal distance of the given coordinates to the origin. 
-			static unsigned magnitude(const Coordinates& coordinates) {
-				return distance(coordinates, Origin);
-			}
-
 		};
+
+		// Calculates the hexagonal distance between two coordinates. 
+		inline unsigned distance(const Coordinates& one, const Coordinates& two) {
+			return (one - two).magnitude();
+		}
+
+		inline Coordinates operator*(Direction direction, int distance) {
+			return Coordinates().shift(direction, distance);
+		}
 
 		inline std::ostream& append(std::ostream& output, const Coordinates& coordinates, unsigned spacing = 4) {
 			auto width = std::setw(spacing);
@@ -274,10 +270,6 @@ namespace tenjix {
 
 		inline std::ostream& operator<<(std::ostream& output, const Coordinates& coordinates) {
 			return append(output, coordinates);
-		}
-
-		inline Coordinates operator*(Direction direction, int distance) {
-			return Coordinates().shift(direction, distance);
 		}
 
 	}
