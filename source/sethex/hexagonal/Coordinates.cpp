@@ -8,6 +8,11 @@ namespace sethex {
 		const float2 Coordinates::Spacing = float2(constf::Sqrt_3, 3.0f / 2.0f);
 		const float2 Coordinates::Tilesize = float2(constf::Sqrt_3, 2.0f);
 
+		vector<Coordinates> Coordinates::line(const Coordinates& begin, const Coordinates& end, bool supercover) {
+			vector<Coordinates> line;
+			return line;
+		}
+
 		static void insert_ring(vector<Coordinates>& vector, unsigned radius, const Coordinates& center) {
 			Coordinates coordinates = center + Direction::West * radius;
 			for (unsigned direction = 0; direction < 6; direction++) {

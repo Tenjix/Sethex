@@ -176,6 +176,7 @@ namespace sethex {
 		drawStringRight(stringify("Focus Position ", display.camera.getPivotPoint()), float2(display.size.x - 5, 5));
 		drawStringRight(stringify("Eye Position ", display.camera.getEyePoint()), float2(display.size.x - 5, 20));
 		drawStringRight(stringify("Focus Coordinates ", world.get<TileSystem>().focus_coordinates), float2(display.size.x - 5, 35));
+		drawStringRight(stringify("Focus Coordinates Magnitude ", world.get<TileSystem>().focus_coordinates.magnitude()), float2(display.size.x - 5, 50));
 	}
 
 	void Game::mouseMove(MouseEvent event) {}

@@ -208,6 +208,14 @@ namespace sethex {
 				return not operator==(other);
 			}
 
+			unsigned distance(const Coordinates& coordinates) const {
+				return distance(*this, coordinates);
+			}
+
+			unsigned magnitude() const {
+				return magnitude(*this);
+			}
+
 			String to_string(unsigned spacing = 3) const;
 
 			operator String() const { return to_string(); }
@@ -242,6 +250,9 @@ namespace sethex {
 				return of(position.x, position.z);
 			}
 
+			// Calculates hexagonal coordinates in a line between "begin" and "end". "supercover"  
+			static vector<Coordinates> line(const Coordinates& begin, const Coordinates& end, bool supercover = false);
+
 			// Calculates hexagonal coordinates in a ring pattern with "radius" around "center".
 			static vector<Coordinates> ring(unsigned radius, const Coordinates& center = Coordinates::Origin);
 
@@ -250,6 +261,16 @@ namespace sethex {
 
 			// Calculates hexagonal coordinates in a rectangle pattern with "width" and "height" at "origin".
 			static vector<Coordinates> rectangle(unsigned width, unsigned height, const Coordinates& origin = Coordinates::Origin, bool centered = true);
+
+			// Calculates the hexagonal distance between two coordinates. 
+			static unsigned distance(const Coordinates& one, const Coordinates& two) {
+				return (abs(one.u - two.u) + abs(one.v - two.v) + abs(one.w - two.w)) / 2;
+			}
+
+			// Calculates the hexagonal distance of the given coordinates to the origin. 
+			static unsigned magnitude(const Coordinates& coordinates) {
+				return distance(coordinates, Origin);
+			}
 
 		};
 
