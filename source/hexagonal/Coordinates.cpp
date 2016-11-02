@@ -10,6 +10,18 @@ namespace tenjix {
 
 		Lot<Coordinates> Coordinates::line(const Coordinates& begin, const Coordinates& end, bool supercover) {
 			Lot<Coordinates> line;
+			auto delta = end - begin;
+			auto n = delta.magnitude();
+			line.reserve(n);
+			auto du = float(delta.u) / n;
+			auto dv = float(delta.v) / n;
+			auto u = float(begin.u);
+			auto v = float(begin.v);
+			for (uint i = 0; i < n; i++) {
+				u += du;
+				v += dv;
+				line.emplace_back(u, v);
+			}
 			return line;
 		}
 

@@ -39,16 +39,16 @@ namespace tenjix {
 			// Creates coordinates by rounding from floating point values. The value with the biggest deviation from an integer will be adjusted to satisfy u + v + w = 0.
 			Coordinates(double u, double v, double w) {
 				if (u + v + w != 0.0) throw_runtime_exception("The sum u + v + w has to be 0.");
-				double rounded_u = round(u);
-				double rounded_v = round(v);
-				double rounded_w = round(w);
-				double delta_u = abs(u - rounded_u);
-				double delta_v = abs(v - rounded_v);
-				double delta_w = abs(w - rounded_w);
-				if (delta_u > delta_v && delta_u > delta_w) rounded_u = 0 - rounded_v - rounded_w;
-				else if (delta_v > delta_w) rounded_v = 0 - rounded_u - rounded_w;
-				_u = static_cast<int>(rounded_u);
-				_v = static_cast<int>(rounded_v);
+				double ru = round(u);
+				double rv = round(v);
+				double rw = round(w);
+				double du = abs(u - ru);
+				double dv = abs(v - rv);
+				double dw = abs(w - rw);
+				if (du > dv and du > dw) ru = 0 - rv - rw;
+				else if (dv > dw) rv = 0 - ru - rw;
+				_u = static_cast<int>(ru);
+				_v = static_cast<int>(rv);
 				this->u.owner = this;
 				this->v.owner = this;
 				this->w.owner = this;
@@ -80,6 +80,10 @@ namespace tenjix {
 				_u = other._u;
 				_v = other._v;
 				return *this;
+			}
+
+			Coordinates copy() const {
+				return Coordinates(_u, _v);
 			}
 
 			// Shifts these coordinates in the given direction by the given distance.
@@ -167,9 +171,7 @@ namespace tenjix {
 			}
 
 			Coordinates neighbor(Direction direction) const {
-				Coordinates neighbor(*this);
-				neighbor.shift(direction, 1);
-				return neighbor;
+				return copy().shift(direction, 1);
 			}
 
 			Coordinates operator+(const Coordinates& other) const {
