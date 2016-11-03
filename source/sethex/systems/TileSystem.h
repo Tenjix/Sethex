@@ -17,7 +17,6 @@ namespace tenjix {
 			hex::Map map;
 
 			bool focusing = false;
-			float3 target_focus_position;
 
 			float3 focus_position;
 			float focus_expansion;
@@ -29,10 +28,15 @@ namespace tenjix {
 		public:
 
 			hex::Coordinates focus_coordinates;
+			hex::Coordinates previous_focus_coordinates;
+			float3 target_focus_position;
+			float3 previous_focus_position;
 
 			TileSystem() : System(1) {
 				filter.required_types.insert<Tile>();
 			}
+
+			void mark(const Lot<hex::Coordinates>& coordinates);
 
 			void initialize() override;
 			void update(float delta_time) override;

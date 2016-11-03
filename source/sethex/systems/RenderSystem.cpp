@@ -1,6 +1,7 @@
 #include "RenderSystem.h"
 
 #include <sethex/components/Tile.h>
+#include <sethex/systems/TileSystem.h>
 
 using namespace cinder::gl;
 
@@ -99,6 +100,7 @@ namespace tenjix {
 			}
 
 			enableDepth(false);
+			drawVector(world->get<TileSystem>().previous_focus_position, world->get<TileSystem>().target_focus_position);
 			display.framebuffer->unbindFramebuffer();
 			// draw display framebuffer
 			setMatricesWindow(display.size);

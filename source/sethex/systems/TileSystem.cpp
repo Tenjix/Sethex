@@ -27,6 +27,15 @@ namespace tenjix {
 
 		signed2 mouse_down_position;
 
+		void TileSystem::mark(const Lot<hex::Coordinates>& coordinates) {
+			float3* mapped_instance_colors = static_cast<float3*>(instance_colors->mapWriteOnly());
+			float3 color(0.15f);
+			for (auto& c : coordinates) {
+				mapped_instance_colors[map.index(c)] = color;
+			}
+			instance_colors->unmap();
+		}
+
 		void TileSystem::initialize() {
 			Font font = Font(Assets::get("fonts/Nunito.ttf"), 100.0f);
 
@@ -34,7 +43,7 @@ namespace tenjix {
 
 			// build map coordinates
 
-			unsigned n = 10;
+			unsigned n = 3;
 			map = hex::Map(16 * n, 9 * n);
 			float x = 3;
 			x::Map<int, int>();
@@ -62,9 +71,12 @@ namespace tenjix {
 						if (this->map.contains_vertically(intersection_coordinates)) {
 							auto index = this->map.index(intersection_coordinates);
 							auto entity = world->find_entity(stringify("Tile #", index));
+							previous_focus_position = target_focus_position;
 							target_focus_position = entity.get<Geometry>().position() + float3(0, 2.7, 0);
 							focusing = true;
 							player.get<Geometry>().position = target_focus_position;
+							mark(Coordinates::line(focus_coordinates, intersection_coordinates));
+							previous_focus_coordinates = focus_coordinates;
 						} else {
 							player.get<Geometry>().position = intersection_coordinates.to_position() + float3(0, 2.7, 0);
 						}
