@@ -6,7 +6,6 @@
 #include <hexagonal/Hexagonal.h>
 
 #include <utilities/Properties.h>
-#include <utilities/Exceptions.h>
 
 namespace tenjix {
 
@@ -15,6 +14,9 @@ namespace tenjix {
 		// Hexagonal Coordinates based on a homogeneous coordinate system with u + v + w = 0.
 		// The u-axis points north-east, the v-axis points south and the w-axis points north-west.
 		class Coordinates {
+
+			static const Coordinates Direction_Coordinates[6];
+			static const Coordinates Heading_Coordinates[12];
 
 			int _u, _v;
 
@@ -30,7 +32,6 @@ namespace tenjix {
 
 			static const Coordinates Origin;
 			static const float2 Spacing;
-			static const float2 Tilesize;
 
 			ByValueProperty<int, Coordinates, &Coordinates::get_u, &Coordinates::set_u> u;
 			ByValueProperty<int, Coordinates, &Coordinates::get_v, &Coordinates::set_v> v;
@@ -110,8 +111,7 @@ namespace tenjix {
 						_v -= distance;
 						break;
 					default:
-						throw_runtime_exception("unknown direction");
-						break;
+						throw_runtime_exception();
 				}
 				return *this;
 			}
@@ -164,8 +164,24 @@ namespace tenjix {
 						_v -= 2 * distance;
 						break;
 					default:
-						throw_runtime_exception("unknown direction");
-						break;
+						throw_runtime_exception();
+				}
+				return *this;
+			}
+
+			// Rotates these coordinates by 60 degree per iteration in the given direction.
+			Coordinates& rotate(int iterations = 1, Rotating rotating = Rotating::Clockwise) {
+				bool positive_iterations = sign(iterations) == 1;
+				bool clockwise = (rotating == Rotating::Clockwise) ? positive_iterations : not positive_iterations;
+				for (int i = 0; i < abs(iterations); i++) {
+					int _w = w;
+					if (clockwise) {
+						_u = -_v;
+						_v = -_w;
+					} else {
+						_u = -_w;
+						_v = -_u;
+					}
 				}
 				return *this;
 			}
@@ -194,8 +210,18 @@ namespace tenjix {
 				return *this;
 			}
 
+			Coordinates operator+(Direction direction) const { return copy().shift(direction); }
+			Coordinates operator-(Direction direction) const { return copy().shift(direction, -1); }
+			Coordinates& operator+=(Direction direction) { return shift(direction); }
+			Coordinates& operator-=(Direction direction) { return shift(direction, -1); }
+
+			Coordinates operator+(Heading heading) const { return copy().shift(heading); }
+			Coordinates operator-(Heading heading) const { return copy().shift(heading, -1); }
+			Coordinates& operator+=(Heading heading) { return shift(heading); }
+			Coordinates& operator-=(Heading heading) { return shift(heading, -1); }
+
 			bool operator==(const Coordinates& other) const {
-				return _u == other._u && _v == other._v;
+				return _u == other._u and _v == other._v;
 			}
 
 			bool operator!=(const Coordinates& other) const {
@@ -207,6 +233,38 @@ namespace tenjix {
 				return (abs(u) + abs(v) + abs(w)) / 2;
 			}
 
+			// Returns the coordinates' component for a given axis.
+			int component(Axis axis) const {
+				switch (axis) {
+					case Axis::U: return u;
+					case Axis::V: return v;
+					case Axis::W: return w;
+					default: throw_runtime_exception();
+				}
+			}
+
+			// Determines the axis of the coordinates' dominant component.
+			Axis dominant_axis() const {
+				int au = abs(u);
+				int av = abs(v);
+				int aw = abs(w);
+				if (au >= av and au >= aw) return Axis::U;
+				if (av >= aw) return Axis::V;
+				return Axis::W;
+			}
+
+			// Determines the general heading from the origin to these coordinates.
+			Heading general_heading() const {
+				runtime_assert(magnitude() != 0, "Coordinates equal to the origin have no general heading.");
+				auto axis = dominant_axis();
+				return heading_of(axis, component(axis) >= 0);
+			}
+
+			// Determines the general direction from the origin to these coordinates.
+			Direction general_direction() const {
+				return static_cast<Direction>(static_cast<uint8>(general_heading()) / 2);
+			}
+
 			String to_string(unsigned spacing = 3) const;
 
 			operator String() const { return to_string(); }
@@ -215,34 +273,54 @@ namespace tenjix {
 
 			operator float3() const { return to_floats(); }
 
+			// Convertes these hexagonal coordinates to offset coordinates. 
+			float2 to_offset(Handedness handedness = Handedness::Right) const {
+				auto v = handedness == Handedness::Right ? -_v : _v;
+				return float2(_u + 0.5f * _v, v);
+			}
+
 			// Convertes these hexagonal coordinates to cartesian coordinates.
-			float2 to_cartesian() const {
-				return float2(static_cast<float>(d::Sqrt_3 * (_u + _v / 2.0)), static_cast<float>(3.0 / 2.0 * _v));
+			float2 to_cartesian(Handedness handedness = Handedness::Right) const {
+				auto offset = to_offset(handedness);
+				return float2(f::Sqrt_3 * offset.x, 1.5f * offset.y);
 			}
 
 			// Convertes these hexagonal coordinates to a world position in the y=0 plane.
-			float3 to_position() const {
-				float2 cartesian = to_cartesian();
+			float3 to_position(Handedness handedness = Handedness::Left) const {
+				float2 cartesian = to_cartesian(handedness);
 				return float3(cartesian.x, 0.0f, cartesian.y);
 			}
 
 			// Calculates the hexagonal coordinates of the given cartesian coordinates.
-			static Coordinates of(float x, float y) {
-				return Coordinates(x * d::Sqrt_3 / 3.0 - y / 3.0, 2.0 / 3.0 * y);
+			static Coordinates of(float x, float y, Handedness handedness = Handedness::Right) {
+				y = handedness == Handedness::Right ? -y : y;
+				return Coordinates(d::One_Third * (d::Sqrt_3 * x - y), d::Two_Thirds * y);
 			}
 
 			// Calculates the hexagonal coordinates of the given cartesian coordinates.
-			static Coordinates of(float2 cartesian) {
-				return of(cartesian.x, cartesian.y);
+			static Coordinates of(float2 cartesian, Handedness handedness = Handedness::Right) {
+				return of(cartesian.x, cartesian.y, handedness);
 			}
 
 			// Calculates the hexagonal coordinates of the given world position by projecting it to the y=0 plane.
-			static Coordinates of(float3 position) {
-				return of(position.x, position.z);
+			static Coordinates of(float3 position, Handedness handedness = Handedness::Left) {
+				return of(position.x, position.z, handedness);
+			}
+
+			// Returns directional coordinates for the given direction.
+			static const Coordinates& going(Direction direction) {
+				uint8 index = static_cast<uint8>(direction);
+				return Direction_Coordinates[index];
+			}
+
+			// Returns directional coordinates for the given heading.
+			static const Coordinates& heading(Heading heading) {
+				uint8 index = static_cast<uint8>(heading);
+				return Heading_Coordinates[index];
 			}
 
 			// Calculates hexagonal coordinates in a line between "begin" and "end". "supercover"  
-			static Lot<Coordinates> line(const Coordinates& begin, const Coordinates& end, bool supercover = false);
+			static Lot<Coordinates> line(const Coordinates& begin, const Coordinates& end, bool supercover = false, bool edgecover = true);
 
 			// Calculates hexagonal coordinates in a ring pattern with "radius" around "center".
 			static Lot<Coordinates> ring(unsigned radius, const Coordinates& center = Coordinates::Origin);

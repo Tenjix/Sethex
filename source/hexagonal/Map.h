@@ -19,7 +19,7 @@ namespace tenjix {
 			Lot<Coordinates> content;
 
 			int u_offset(int v) const {
-				return v / 2 - (v < 0 and odd(v));
+				return v / 2 - (v < 0 and is_odd(v));
 			}
 
 			bool contains_horizontally(int u, int offset) const {

@@ -45,8 +45,6 @@ namespace tenjix {
 
 			unsigned n = 3;
 			map = hex::Map(16 * n, 9 * n);
-			float x = 3;
-			x::Map<int, int>();
 
 			display.window->getSignalMouseMove().connect([&](MouseEvent event) {
 
@@ -75,7 +73,9 @@ namespace tenjix {
 							target_focus_position = entity.get<Geometry>().position() + float3(0, 2.7, 0);
 							focusing = true;
 							player.get<Geometry>().position = target_focus_position;
-							mark(Coordinates::line(focus_coordinates, intersection_coordinates));
+							Coordinates().to_position(Handedness::Left);
+							print(focus_coordinates.to_cartesian(), " to ", intersection_coordinates.to_cartesian());
+							mark(Coordinates::line(focus_coordinates, intersection_coordinates, true));
 							previous_focus_coordinates = focus_coordinates;
 						} else {
 							player.get<Geometry>().position = intersection_coordinates.to_position() + float3(0, 2.7, 0);
@@ -170,18 +170,12 @@ namespace tenjix {
 			//material->add(hexagon_texure);
 
 			Shape2d shape;
-			{
-				// hexagon side length
-				float side = 1.0;
-				// height of the six equilateral triangles of the hexagon
-				float tirangle = Sqrt_3 / 2 * side;
-				shape.moveTo(0, +side);
-				shape.lineTo(-tirangle, +side / 2);
-				shape.lineTo(-tirangle, -side / 2);
-				shape.lineTo(0, -side);
-				shape.lineTo(+tirangle, -side / 2);
-				shape.lineTo(+tirangle, +side / 2);
-				shape.close();
+			for (auto& vertex : UnitHexagon.vertices) {
+				if (shape.empty()) {
+					shape.moveTo(vertex);
+				} else {
+					shape.lineTo(vertex);
+				}
 			}
 			shared<Mesh> mesh = Mesh::create(Extrude(shape, 5.0f) >> Rotate(quaternion(float3(-Pi_Half, 0.0f, 0.0f))));
 
@@ -239,7 +233,7 @@ namespace tenjix {
 			auto duration = end - start;
 			print("in ", chrono::duration_cast<chrono::milliseconds>(duration).count(), " milliseconds");
 
-			focus_expansion = (map.width / 2 + 1) * Coordinates::Tilesize.x;
+			focus_expansion = (map.width / 2 + 1) * UnitHexagon.size.x;
 			print(map.width, "x", map.height);
 
 		}
@@ -295,7 +289,7 @@ namespace tenjix {
 			auto& tile = entity.get<Tile>();
 			auto& position = geometry->position();
 			if (not focus_range.contains(position.x)) {
-				position.x += map.width * Coordinates::Spacing.x * signum(focus_position.x - position.x);
+				position.x += map.width * Coordinates::Spacing.x * sign(focus_position.x - position.x);
 				mapped_instance_positions[map.index(tile.coordinates)] = position;
 			}
 		}

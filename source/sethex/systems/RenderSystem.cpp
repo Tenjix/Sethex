@@ -100,6 +100,7 @@ namespace tenjix {
 			}
 
 			enableDepth(false);
+			drawCoordinateFrame();
 			drawVector(world->get<TileSystem>().previous_focus_position, world->get<TileSystem>().target_focus_position);
 			display.framebuffer->unbindFramebuffer();
 			// draw display framebuffer
