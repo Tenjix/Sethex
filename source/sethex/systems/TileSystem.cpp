@@ -80,7 +80,7 @@ namespace tenjix {
 
 			// build map coordinates
 
-			unsigned n = 3;
+			unsigned n = 10;
 			map = hex::Map(16 * n, 9 * n);
 			tiles.reserve(map.coordinates().size());
 
@@ -295,20 +295,6 @@ namespace tenjix {
 				instance_positions->unmap();
 			}
 			previous_focus_coordinates = focus_coordinates;
-
-			//static Entity& player = world->find_entity_tagged("Player");
-			//if (player.is_active) {
-			//	Ray ray = display.camera.generateRay(input.mouse.position, display.size);
-			//	float distance;
-			//	bool hit = ray.calcPlaneIntersection(float3(), float3(0, 1, 0), &distance);
-			//	float3 intersection_position;
-			//	Coordinates intersection_coordinates;
-			//	if (hit) {
-			//		intersection_position = ray.calcPosition(distance);
-			//		intersection_coordinates = Coordinates::of(intersection_position);
-			//		player.get<Geometry>().position = intersection_coordinates.to_position();
-			//	}
-			//}
 		}
 
 		void TileSystem::update(Entity& entity, float delta_time) {
@@ -317,7 +303,7 @@ namespace tenjix {
 			auto& tile = entity.get<Tile>();
 			auto& position = geometry->position();
 			if (not focus_range.contains(position.x)) {
-				position.x += map.width * Coordinates::Spacing.x * sign(focus_position.x - position.x);
+				position.x += map.width * UnitHexagon.width * sign(focus_position.x - position.x);
 				mapped_instance_positions[map.index(tile.coordinates)] = position;
 			}
 		}
@@ -325,7 +311,6 @@ namespace tenjix {
 		float3* mapped_instance_colors;
 
 		void TileSystem::update(shared<Surface32f> biome_map, shared<Channel32f> elevation_map) {
-			float2 map_size = float2(map.width * Coordinates::Spacing.x, map.height * Coordinates::Spacing.y);
 			float2 biome_map_size, elevation_map_size;
 			if (elevation_map) {
 				mapped_instance_positions = static_cast<float3*>(instance_positions->mapReplace());
@@ -338,10 +323,10 @@ namespace tenjix {
 			if (elevation_map or biome_map) for (auto& entity : get_entities()) {
 				auto& coordinates = entity.get<Tile>().coordinates;
 				auto& position = entity.get<Geometry>().position();
-				auto texinates = coordinates.to_cartesian() / map_size + 0.5f;
+				auto texinates = map.texinates(coordinates);
 				if (elevation_map) {
 					auto elevation = *elevation_map->getData(elevation_map_size * texinates);
-					position.y = elevation * glm::length(map_size) * 0.05f;
+					position.y = elevation * glm::length(map.cartesian_size()) * 0.05f;
 					mapped_instance_positions[map.index(coordinates)] = position;
 				}
 				if (biome_map) {

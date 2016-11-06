@@ -16,8 +16,6 @@ namespace tenjix {
 			int v_begin;
 			int v_end;
 
-			Lot<Coordinates> content;
-
 			int u_offset(int v) const {
 				return v / 2 - (v < 0 and is_odd(v));
 			}
@@ -34,11 +32,9 @@ namespace tenjix {
 
 			ReadonlyProperty<unsigned, Map> width;
 			ReadonlyProperty<unsigned, Map> height;
-			//ReadonlyProperty<Lot<Coordinates>, Map> coordinates;
-
-			const Lot<Coordinates>& coordinates() const {
-				return content;
-			}
+			ReadonlyProperty<Lot<Coordinates>, Map> coordinates;
+			ReadonlyProperty<unsigned2, Map> size;
+			ReadonlyProperty<float2, Map> cartesian_size;
 
 			// calculates the array index for given coordinates
 			unsigned index(const Coordinates& coordinates) const {
@@ -48,23 +44,23 @@ namespace tenjix {
 				return u + v * width;
 			}
 
-			Map() : width(), height(), u_begin(), u_end(), v_begin(), v_end() {
-				width.owner = this;
-				height.owner = this;
-			}
-
-			Map(unsigned width, unsigned height) : width(width), height(height) {
+			Map(unsigned width = 0, unsigned height = 0) : width(width), height(height), size({ width, height }), cartesian_size(float2(width, height) * Coordinates::Spacing) {
 				this->width.owner = this;
 				this->height.owner = this;
+				coordinates.owner = this;
+				size.owner = this;
+				cartesian_size.owner = this;
+
 				u_begin = -static_cast<int>(width / 2);
 				u_end = u_begin + width - 1;
 				v_begin = -static_cast<int>(height / 2);
 				v_end = v_begin + height - 1;
-				content.reserve(width * height);
+
+				coordinates->reserve(width * height);
 				for (int v = v_begin; v <= v_end; v++) {
 					int offset = u_offset(v);
 					for (int u = u_begin - offset; u <= u_end - offset; u++) {
-						content.push_back(Coordinates(u, v));
+						coordinates->push_back(Coordinates(u, v));
 					}
 				}
 			}
@@ -103,6 +99,10 @@ namespace tenjix {
 					u -= u_offset(v) - offset;
 				}
 				return Coordinates(u, v);
+			}
+
+			float2 texinates(const Coordinates& coordinates) const {
+				return 0.5f + coordinates.to_cartesian(Handedness::Left) / cartesian_size();
 			}
 
 		};

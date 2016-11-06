@@ -5,7 +5,7 @@ namespace tenjix {
 	namespace hexagonal {
 
 		const Coordinates Coordinates::Origin = Coordinates();
-		const float2 Coordinates::Spacing = float2(UnitHexagon.size.x, 1.5f * UnitHexagon.size.y);
+		const float2 Coordinates::Spacing = float2(UnitHexagon.width, UnitHexagon.height * 0.75f);
 
 		const Coordinates Direction_Coordinates[6] {
 			{ +1, -1 }, // NorthEast (dw=0)
