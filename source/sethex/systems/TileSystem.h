@@ -53,6 +53,10 @@ namespace tenjix {
 
 			optional<Entity> get_tile(float2 mouse_position) const;
 
+			void focus(const hex::Coordinates& coordinates);
+			void focus(const Entity& tile);
+			void focus(const float3& position);
+
 		};
 
 	}

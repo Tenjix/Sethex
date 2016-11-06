@@ -63,6 +63,23 @@ namespace tenjix {
 			return {};
 		}
 
+		void TileSystem::focus(const hex::Coordinates& coordinates) {
+			auto tile = tiles[map.index(coordinates)];
+			focus(tile);
+		}
+
+		void TileSystem::focus(const Entity& tile) {
+			auto position = tile.get<Geometry>().position() + float3(0, hexagon_extrusion / 2, 0);
+			focus(position);
+		}
+
+		void TileSystem::focus(const float3& position) {
+			previous_focus_coordinates = focus_coordinates;
+			previous_focus_position = target_focus_position;
+			target_focus_position = position;
+			focusing = true;
+		}
+
 		void TileSystem::initialize() {
 
 			hexagon_shape.clear();
@@ -103,21 +120,31 @@ namespace tenjix {
 			display.window->getSignalMouseUp().connect([&](MouseEvent event) {
 				auto mouse_position = event.getPos();
 				if (mouse_position != mouse_down_position) return;
-
-				static Entity& player = world->find_entity_tagged("Player");
-				if (player.is_active) {
-					auto tile = get_tile(mouse_position);
-					if (tile) {
-						auto position = tile->get<Geometry>().position() + float3(0, hexagon_extrusion / 2, 0);
-						player.get<Geometry>().position = position + float3(0, 0.2, 0);
-						previous_focus_coordinates = focus_coordinates;
-						previous_focus_position = target_focus_position;
-						target_focus_position = position;
-						focusing = true;
+				auto tile = get_tile(mouse_position);
+				if (tile) {
+					focus(*tile);
+					static Entity& player = world->find_entity_tagged("Player");
+					if (player.is_active) {
+						player.get<Geometry>().position = target_focus_position + float3(0, 0.2, 0);
 					}
 				}
-
 			});
+
+			display.window->getSignalKeyDown().connect([&](KeyEvent event) {
+				Coordinates coordinates = focus_coordinates;
+				switch (event.getCode()) {
+					case KeyEvent::KEY_RIGHT:
+						coordinates.shift(Direction::East, map.width / 5);
+						break;
+					case KeyEvent::KEY_LEFT:
+						coordinates.shift(Direction::West, map.width / 5);
+						break;
+					default:
+						break;
+				}
+				if (coordinates != focus_coordinates) focus(coordinates);
+			});
+
 
 			display.window->getSignalKeyUp().connect([&](KeyEvent event) {
 				Coordinates coordinates = focus_coordinates;
@@ -149,7 +176,7 @@ namespace tenjix {
 					default:
 						break;
 				} else switch (event.getCode()) {
-					case KeyEvent::KEY_SPACE:
+					case KeyEvent::KEY_HOME:
 						coordinates = Coordinates::Origin;
 						break;
 					case KeyEvent::KEY_KP1:
@@ -174,11 +201,11 @@ namespace tenjix {
 						break;
 				}
 				if (coordinates != focus_coordinates) {
-					auto index = this->map.index(coordinates);
-					auto entity = world->find_entity(stringify("Tile #", index));
-					target_focus_position = entity.get<Geometry>().position() + float3(0, hexagon_extrusion / 2 + 0.2, 0);
-					world->find_entity_tagged("Player").get<Geometry>().position = target_focus_position;
-					focusing = true;
+					focus(coordinates);
+					static Entity& player = world->find_entity_tagged("Player");
+					if (player.is_active) {
+						player.get<Geometry>().position = target_focus_position + float3(0, 0.2, 0);
+					}
 				}
 			});
 

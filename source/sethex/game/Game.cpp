@@ -206,8 +206,11 @@ namespace tenjix {
 				case KeyEvent::KEY_F11:
 					display.window->setFullScreen(!display.window->isFullScreen());
 					break;
-				case KeyEvent::KEY_HOME:
+				case KeyEvent::KEY_END:
 					display.camera.lookAt(vec3(0, 2.5, 2.5), vec3(0));
+					break;
+				case KeyEvent::KEY_SPACE:
+					display.camera.lookAt(float3(0, 250, 0.001), float3(0));
 					break;
 				default:
 					break;
