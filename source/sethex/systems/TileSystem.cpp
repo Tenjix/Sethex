@@ -36,7 +36,44 @@ namespace tenjix {
 			instance_colors->unmap();
 		}
 
+		optional<Entity> TileSystem::get_tile(float2 mouse_position) const {
+			Display& display = world->find_entity("Main Display").get<Display>();
+			Ray ray = display.camera.generateRay(mouse_position, display.size);
+			float distance;
+			bool hit_ground = ray.calcPlaneIntersection(float3(), float3(0, 1, 0), &distance);
+			if (hit_ground) {
+				auto ground_position = ray.calcPosition(distance);
+				auto camera_position = display.camera.getEyePoint();
+				auto line = Coordinates::line(Coordinates::of(camera_position), Coordinates::of(ground_position), true);
+				auto extrusion = float3(0, hexagon_extrusion / 2, 0);
+				for (auto& coordinates : line) {
+					auto tile = tiles[map.index(coordinates)];
+					auto position = tile.get<Geometry>().position() + extrusion;
+					//debug("check ", tile, " ", coordinates, " ", position);
+					bool hit_elevation = ray.calcPlaneIntersection(position, float3(0, 1, 0), &distance);
+					if (not hit_elevation) continue;
+					auto intersection = ray.calcPosition(distance);
+					vec2 plain_position = intersection.xz() - position.xz();
+					bool hit_hexagon = hexagon_shape.contains(plain_position);
+					//debug("hex shape ", hit_hexagon ? "contains" : "doesn't contain ", plain_position);
+					if (hit_hexagon) return tile;
+					//debug("hit ", coordinates);
+				}
+			}
+			return {};
+		}
+
 		void TileSystem::initialize() {
+
+			hexagon_shape.clear();
+			for (auto& vertex : UnitHexagon.vertices) {
+				if (hexagon_shape.empty()) {
+					hexagon_shape.moveTo(vertex);
+				} else {
+					hexagon_shape.lineTo(vertex);
+				}
+			}
+
 			Font font = Font(Assets::get("fonts/Nunito.ttf"), 100.0f);
 
 			Display& display = world->find_entity("Main Display").get<Display>();
@@ -45,13 +82,22 @@ namespace tenjix {
 
 			unsigned n = 3;
 			map = hex::Map(16 * n, 9 * n);
+			tiles.reserve(map.coordinates().size());
 
 			display.window->getSignalMouseMove().connect([&](MouseEvent event) {
-
+				if (event.isAltDown()) {
+					auto mouse_position = event.getPos();
+					auto tile = get_tile(mouse_position);
+					if (tile) mark({ tile->get<Tile>().coordinates });
+				}
 			});
 
 			display.window->getSignalMouseDown().connect([&](MouseEvent event) {
 				mouse_down_position = event.getPos();
+			});
+
+			display.window->getSignalMouseDrag().connect([&](MouseEvent event) {
+				focusing = false;
 			});
 
 			display.window->getSignalMouseUp().connect([&](MouseEvent event) {
@@ -60,26 +106,14 @@ namespace tenjix {
 
 				static Entity& player = world->find_entity_tagged("Player");
 				if (player.is_active) {
-					Ray ray = display.camera.generateRay(mouse_position, display.size);
-					float distance;
-					bool hit = ray.calcPlaneIntersection(float3(), float3(0, 1, 0), &distance);
-					if (hit) {
-						auto intersection_position = ray.calcPosition(distance);
-						auto intersection_coordinates = Coordinates::of(intersection_position);
-						if (this->map.contains_vertically(intersection_coordinates)) {
-							auto index = this->map.index(intersection_coordinates);
-							auto entity = world->find_entity(stringify("Tile #", index));
-							previous_focus_position = target_focus_position;
-							target_focus_position = entity.get<Geometry>().position() + float3(0, 2.7, 0);
-							focusing = true;
-							player.get<Geometry>().position = target_focus_position;
-							Coordinates().to_position(Handedness::Left);
-							print(focus_coordinates.to_cartesian(), " to ", intersection_coordinates.to_cartesian());
-							mark(Coordinates::line(focus_coordinates, intersection_coordinates, true));
-							previous_focus_coordinates = focus_coordinates;
-						} else {
-							player.get<Geometry>().position = intersection_coordinates.to_position() + float3(0, 2.7, 0);
-						}
+					auto tile = get_tile(mouse_position);
+					if (tile) {
+						auto position = tile->get<Geometry>().position() + float3(0, hexagon_extrusion / 2, 0);
+						player.get<Geometry>().position = position + float3(0, 0.2, 0);
+						previous_focus_coordinates = focus_coordinates;
+						previous_focus_position = target_focus_position;
+						target_focus_position = position;
+						focusing = true;
 					}
 				}
 
@@ -142,7 +176,7 @@ namespace tenjix {
 				if (coordinates != focus_coordinates) {
 					auto index = this->map.index(coordinates);
 					auto entity = world->find_entity(stringify("Tile #", index));
-					target_focus_position = entity.get<Geometry>().position() + float3(0, 2.7, 0);
+					target_focus_position = entity.get<Geometry>().position() + float3(0, hexagon_extrusion / 2 + 0.2, 0);
 					world->find_entity_tagged("Player").get<Geometry>().position = target_focus_position;
 					focusing = true;
 				}
@@ -169,15 +203,7 @@ namespace tenjix {
 			material->name("Shared Tile Material");
 			//material->add(hexagon_texure);
 
-			Shape2d shape;
-			for (auto& vertex : UnitHexagon.vertices) {
-				if (shape.empty()) {
-					shape.moveTo(vertex);
-				} else {
-					shape.lineTo(vertex);
-				}
-			}
-			shared<Mesh> mesh = Mesh::create(Extrude(shape, 5.0f) >> Rotate(quaternion(float3(-Pi_Half, 0.0f, 0.0f))));
+			shared<Mesh> mesh = Mesh::create(Extrude(hexagon_shape, hexagon_extrusion) >> Rotate(quaternion(float3(-Pi_Half, 0.0f, 0.0f))));
 
 			// make tiles instantiable
 
@@ -226,6 +252,7 @@ namespace tenjix {
 				entity.add<Geometry>().mesh(mesh).position(*position_iterator++);
 				entity.add(material);
 				entity.add(instantiable);
+				tiles.push_back(entity);
 			});
 
 			auto end = chrono::system_clock::now();
@@ -249,13 +276,14 @@ namespace tenjix {
 			if (focusing) {
 				auto delta = target_focus_position - focus_position;
 				if (length(delta) > 0.1f) {
-					focus_position += delta * 0.1f;
-					eye_position += delta * 0.1f;
+					delta *= 0.1f;
 				} else {
-					focus_position = target_focus_position;
 					focusing = false;
 				}
+				focus_position += delta;
+				eye_position += delta;
 				display.camera.lookAt(eye_position, focus_position);
+				mouse_down_position = display.window->getApp()->getMousePos();
 			}
 			focus_coordinates = Coordinates::of(focus_position);
 			focus_range = { focus_position.x - focus_expansion, focus_position.x + focus_expansion };
@@ -284,7 +312,7 @@ namespace tenjix {
 		}
 
 		void TileSystem::update(Entity& entity, float delta_time) {
-			auto& geometry = entity.has<Geometry>();
+			auto geometry = entity.get_shared<Geometry>();
 			if (not geometry) return;
 			auto& tile = entity.get<Tile>();
 			auto& position = geometry->position();

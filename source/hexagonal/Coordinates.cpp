@@ -22,7 +22,7 @@ namespace tenjix {
 			{ +2, -1 }, // EastNorthward (+u-axis)
 			{ +2, 0 }, // Eastward (dv=0)
 			{ +1, +1 }, // EastSouthward (-w-axis)
-			{ 0, -2 }, // SouthEastward (du=0)
+			{ 0, +2 }, // SouthEastward (du=0)
 			{ -1, +2 }, // Southward (+v-axis)
 			{ -2, +2 }, // SouthWestward (dw=0)
 			{ -2, +1 }, // WestSouthward (-u-axis)
@@ -39,11 +39,11 @@ namespace tenjix {
 			auto vector = end - begin;
 			auto length = vector.magnitude();
 
-			debug("line from ", begin, " to ", end, " (length=", length, ", supercover=", supercover, ", edgecover", edgecover, ")");
+			trace("line from ", begin, " to ", end, " (length=", length, ", supercover=", supercover, ", edgecover", edgecover, ")");
 
 			auto general_direction = vector.general_direction();
 			int rotation = hexagonal::rotation(general_direction, Direction::East);
-			debug("general direction: ", general_direction, " (rotation=", rotation, ")");
+			trace("general direction: ", general_direction, " (rotation=", rotation, ")");
 			Direction straight = general_direction;
 			Direction diagonal_up = hexagonal::rotate(straight, -1);
 			Direction diagonal_down = hexagonal::rotate(straight, 1);
@@ -65,7 +65,7 @@ namespace tenjix {
 			Coordinates current = begin;
 			line.reserve(length + 1);
 			line.push_back(begin);
-			debug("begin ", begin);
+			trace("begin ", begin);
 			int y = 0;
 			for (uint i = 1; i < length + 1; i++) {
 				y += dy; // y += m * x
@@ -73,35 +73,35 @@ namespace tenjix {
 				if (y >= dx) { // y > s/2 ?
 					if (supercover) {
 						if (edgecover ? (y == dx or cover_y <= 2 * dx) : (cover_y < 2 * dx)) { // y == s/2 or y + m <= s ?
-							debug("cover straight");
+							trace("cover straight");
 							line.push_back(current + straight);
 						} else if (edgecover ? (y >= 5 * dx) : (y > 5 * dx)) { // y >= 5 * s/2 ?
-							debug("cover straight_up");
+							trace("cover straight_up");
 							line.push_back(current + straight_up);
 						}
 					}
-					debug("go diagonal up");
+					trace("go diagonal up");
 					current += diagonal_up;
 					y -= 3 * dx; // y -= 3 * s/2
 				} else {
 					if (supercover) {
 						if (edgecover ? (abs(cover_y) >= 2 * dx) : (abs(cover_y) > 2 * dx)) { // |y + m| >= s ?
-							debug("cover ", (cover_y > 0 ? "diagonal_up" : "diagonal_down"));
+							trace("cover ", (cover_y > 0 ? "diagonal_up" : "diagonal_down"));
 							line.push_back(current + (cover_y > 0 ? diagonal_up : diagonal_down));
 						} else if (edgecover ? (y <= -dx) : (y < -dx)) { // y <= -s/2 ?
-							debug("cover diagonal_down");
+							trace("cover diagonal_down");
 							line.push_back(current + diagonal_down);
 						}
 					}
-					debug("go straight");
+					trace("go straight");
 					current += straight;
 					y += dy; // y += m
 				}
 				line.push_back(current);
-				debug("step ", i, " ", current);
+				trace("step ", i, " ", current);
 			}
 			runtime_assert(current == end, "invalid end coordinates of hexagonal line algorithm");
-			debug("end ", end);
+			trace("end ", end);
 
 			return line;
 		}

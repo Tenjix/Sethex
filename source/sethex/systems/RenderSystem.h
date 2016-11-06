@@ -18,7 +18,7 @@ namespace tenjix {
 			//using MaterialMapping = Map<linked<Material>, MeshMapping, std::owner_less<linked<Material>>>;
 			//using ShaderMapping = Map<linked<Shader>, MaterialMapping, std::owner_less<linked<Shader>>>;
 			//using InstantiableMapping = Map<linked<Instantiable>, Entities, std::owner_less<linked<Instantiable>>>;
-			using InstantiableMapping = x::Map<Instantiable*, Entities>;
+			using InstantiableMapping = Map<Instantiable*, Entities>;
 
 			//ShaderMapping entity_mapping;
 			Entities uninstantiables;

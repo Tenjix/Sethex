@@ -84,9 +84,9 @@ namespace tenjix {
 				return contains_vertically(coordinates) and contains_horizontally(coordinates);
 			}
 
-			Potential<Coordinates> neighbor(const Coordinates& coordinates, Direction direction) const {
+			optional<Coordinates> neighbor(const Coordinates& coordinates, Direction direction) const {
 				Coordinates neighbor_coordinates = coordinates.neighbor(direction);
-				if (not contains_vertically(neighbor_coordinates)) return nullptr;
+				if (not contains_vertically(neighbor_coordinates)) return {};
 				return reproject(neighbor_coordinates);
 			}
 

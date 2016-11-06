@@ -100,8 +100,6 @@ namespace tenjix {
 			}
 
 			enableDepth(false);
-			drawCoordinateFrame();
-			drawVector(world->get<TileSystem>().previous_focus_position, world->get<TileSystem>().target_focus_position);
 			display.framebuffer->unbindFramebuffer();
 			// draw display framebuffer
 			setMatricesWindow(display.size);
@@ -143,9 +141,9 @@ namespace tenjix {
 		}
 
 		void RenderSystem::map(const Entity& entity, const linked<Shader>& shader, const linked<Material>& material, const linked<Mesh>& mesh) {
-			auto instantiable = entity.has<Instantiable>();
+			auto instantiable = entity.get_shared<Instantiable>();
 			if (instantiable) {
-				instantiables[&instantiable.value()].insert(entity);
+				instantiables[instantiable.get()].insert(entity);
 			} else {
 				//entity_mapping[shader][material][mesh].insert(entity);
 				uninstantiables.insert(entity);
@@ -153,9 +151,9 @@ namespace tenjix {
 		}
 
 		void RenderSystem::unmap(const Entity& entity, const linked<Shader>& shader, const linked<Material>& material, const linked<Mesh>& mesh) {
-			auto instantiable = entity.has<Instantiable>();
+			auto instantiable = entity.get_shared<Instantiable>();
 			if (instantiable) {
-				instantiables[&instantiable.value()].erase(entity);
+				instantiables[instantiable.get()].erase(entity);
 			} else {
 				//entity_mapping[shader][material][mesh].erase(entity);
 				uninstantiables.erase(entity);
@@ -163,19 +161,19 @@ namespace tenjix {
 		}
 
 		void RenderSystem::on_entity_added(const Entity& entity) {
-			auto& material = entity.get<Material>();
-			auto& geometry = entity.get<Geometry>();
-			material.attach(this, entity);
-			geometry.attach(this, entity);
-			map(entity, material.shader(), entity.get_reference<Material>(), geometry.mesh());
+			auto material = entity.get_shared<Material>();
+			auto geometry = entity.get_shared<Geometry>();
+			material->attach(this, entity);
+			geometry->attach(this, entity);
+			map(entity, material->shader(), material, geometry->mesh());
 		}
 
 		void RenderSystem::on_entity_removed(const Entity& entity) {
-			auto& material = entity.get<Material>();
-			auto& geometry = entity.get<Geometry>();
-			material.detach(this, entity);
-			geometry.detach(this, entity);
-			unmap(entity, material.shader(), entity.get_reference<Material>(), geometry.mesh());
+			auto material = entity.get_shared<Material>();
+			auto geometry = entity.get_shared<Geometry>();
+			material->detach(this, entity);
+			geometry->detach(this, entity);
+			unmap(entity, material->shader(), material, geometry->mesh());
 		}
 
 		void RenderSystem::on_entity_modified(const Entity& entity) {

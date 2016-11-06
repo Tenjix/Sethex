@@ -15,6 +15,7 @@ namespace tenjix {
 		class TileSystem : public System {
 
 			hex::Map map;
+			Lot<Entity> tiles;
 
 			bool focusing = false;
 
@@ -24,6 +25,9 @@ namespace tenjix {
 
 			shared<VertexBuffer> instance_positions;
 			shared<VertexBuffer> instance_colors;
+
+			ci::Shape2d hexagon_shape;
+			float hexagon_extrusion = 5.0;
 
 		public:
 
@@ -46,6 +50,8 @@ namespace tenjix {
 			void update(shared<ImageSource> biome_map = nullptr, shared<ImageSource> elevation_map = nullptr) {
 				update(Surface32f::create(biome_map), Channel32f::create(elevation_map));
 			}
+
+			optional<Entity> get_tile(float2 mouse_position) const;
 
 		};
 

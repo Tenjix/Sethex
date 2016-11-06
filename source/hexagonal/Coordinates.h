@@ -139,7 +139,7 @@ namespace tenjix {
 						_v += distance;
 						break;
 					case Heading::SouthEastward:
-						_v -= 2 * distance;
+						_v += 2 * distance;
 						break;
 					case Heading::Southward:
 						_u -= distance;
