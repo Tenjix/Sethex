@@ -97,7 +97,7 @@ namespace tenjix {
 
 			// build map coordinates
 
-			unsigned n = 10;
+			unsigned n = 4;
 			map = hex::Map(16 * n, 9 * n);
 			tiles.reserve(map.coordinates().size());
 
@@ -250,10 +250,10 @@ namespace tenjix {
 
 			auto instantiable = Instantiable::create();
 
-			wd::watch("shaders/Tile.*", [instantiable, mesh, material](const fs::path& path) {
-				String vertex_shader = loadString(loadAsset("shaders/Tile.vertex.shader"));
+			wd::watch("shaders/Material.*", [instantiable, mesh, material](const fs::path& path) {
+				String vertex_shader = loadString(loadAsset("shaders/Material.vertex.shader"));
 				shader::define(vertex_shader, "INSTANTIATION");
-				String fragment_shader = loadString(loadAsset("shaders/Tile.fragment.shader"));
+				String fragment_shader = loadString(loadAsset("shaders/Material.fragment.shader"));
 				try {
 					material->shader = Shader::create(vertex_shader, fragment_shader);
 				} catch (GlslProgCompileExc exception) {

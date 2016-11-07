@@ -1,7 +1,7 @@
 // shadertype=glsl
 #version 430
 
-#include <shaders/Mathematics.h>
+#include <shaders/Mathematics.include>
 
 layout (std430, binding = 0) buffer sources_storage { 
 	uint sources[];
@@ -14,22 +14,22 @@ layout (std430, binding = 1) buffer targets_storage {
 uniform sampler2D uTemperatureMap;
 // uniform usampler2D uUnsignedTemperatureMap;
 
-in vec2 vTexinates;
+in vec2 Texinates;
 
-out vec4 oColor;
+out vec4 Output;
 
 ivec2 map_size;
 
 void debugSignedUnitRange(float value) {
-	oColor = vec4(smaller(value, 0.0), within(value, 0.0, 1.0) * value, greater(value, 1.0), 1.0);
+	Output = vec4(smaller(value, 0.0), within(value, 0.0, 1.0) * value, greater(value, 1.0), 1.0);
 }
 
 void debugUnsignedUnitRange(float value) {
-	oColor = vec4(smaller(value, -1.0), within(value, -1.0, 1.0) * (1.0 + value) * 0.5, greater(value, 1.0), 1.0);
+	Output = vec4(smaller(value, -1.0), within(value, -1.0, 1.0) * (1.0 + value) * 0.5, greater(value, 1.0), 1.0);
 }
 
 void debugUnsignedUnitRangeDual(float value) {
-	oColor = vec4(max(smaller(value, -1.0), greater(value, 1.0)), within(value, -1.0, 0.0) * -value, within(value, 0.0, 1.0) * value, 1.0);
+	Output = vec4(max(smaller(value, -1.0), greater(value, 1.0)), within(value, -1.0, 0.0) * -value, within(value, 0.0, 1.0) * value, 1.0);
 }
 
 // limits and projects "texel" onto a horizontally wrapping map with "map_size"
@@ -131,10 +131,10 @@ void main() {
 
 	// float temperature = get_temperature(texel);
 	// vec3 color = vec3(1.0, 0.2, 0.0);
-	// oColor = vec4(color * temperature, 1.0);
+	// Output = vec4(color * temperature, 1.0);
 	
 	vec2 flow = calculate_flow(texel);
-	oColor = vec4(convert_flow_to_color(flow), 0.0, 1.0);
+	Output = vec4(convert_flow_to_color(flow), 0.0, 1.0);
 
 	// backward advection
 	ivec2 source = limit(ivec2(round(texel - flow)), map_size);
@@ -146,19 +146,19 @@ void main() {
 
 	// atomicAdd(data[0], 1);
 
-	// oColor = vec4(data_array[0],data_array[1],data_array[2],data_array[3]);
+	// Output = vec4(data_array[0],data_array[1],data_array[2],data_array[3]);
 	// data[0] = 15;
 	// atomicAdd(data[0], 1);
 
-	// oColor = vec4(data_array);
+	// Output = vec4(data_array);
 	// data_array = vec4(1.0, 0.0, 0.0, 1.0);
 
-	// oColor = vec4(convert_flow_to_color(flow), length(flow), 1.0);
-	// oColor = vec4(convert_flow_to_color(flow), length(flow) > 1.0? 1.0 : 0.0, 1.0);
+	// Output = vec4(convert_flow_to_color(flow), length(flow), 1.0);
+	// Output = vec4(convert_flow_to_color(flow), length(flow) > 1.0? 1.0 : 0.0, 1.0);
 
-	// oColor = vec4(calculate_gradient(texel), 1.0);
+	// Output = vec4(calculate_gradient(texel), 1.0);
 
-	// oColor = vec4(0.0, 0.0, calculate_base_density(texel), 1.0);
+	// Output = vec4(0.0, 0.0, calculate_base_density(texel), 1.0);
 
-	// oColor = vec4(vTexinates.x, 0.0, vTexinates.y, 1.0);
+	// Output = vec4(Texinates.x, 0.0, Texinates.y, 1.0);
 }

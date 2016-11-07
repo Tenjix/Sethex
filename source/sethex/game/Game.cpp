@@ -76,9 +76,9 @@ namespace tenjix {
 						string geometry_shader = loadString(loadAsset("shaders/Wireframe.geometry.shader"));
 						shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
 					} else {
-						string vertex_shader = loadString(loadAsset("shaders/Tile.vertex.shader"));
+						string vertex_shader = loadString(loadAsset("shaders/Material.vertex.shader"));
 						//shader::define(vertex_shader, "HEIGHT_MAP");
-						string fragment_shader = loadString(loadAsset("shaders/Tile.fragment.shader"));
+						string fragment_shader = loadString(loadAsset("shaders/Material.fragment.shader"));
 						shader::define(fragment_shader, "DIFFUSE_TEXTURE", "SPECULAR_TEXTURE", "EMISSIVE_TEXTURE", "NORMAL_MAP");
 						shader = Shader::create(vertex_shader, fragment_shader);
 						shader->uniform("uDiffuseTexture", 0);

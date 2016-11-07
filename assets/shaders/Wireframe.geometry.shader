@@ -9,7 +9,7 @@ uniform ivec2 ciWindowSize;
 out VertexData {
 	noperspective vec3 distance;
 	vec4 color;
-} o;
+} Vertex;
 
 void main() {
 
@@ -29,18 +29,18 @@ void main() {
 
 	// calculate distance from center for each vertex (area (x2) / length of opposing edge)
 
-	o.distance = vec3(area / length(v0), 0, 0);
-	o.color = vec4(1.0, 0.0, 0.0, 1.0);
+	Vertex.distance = vec3(area / length(v0), 0, 0);
+	Vertex.color = vec4(1.0, 0.0, 0.0, 1.0);
 	gl_Position = gl_in[0].gl_Position;
 	EmitVertex();
 
-	o.distance = vec3(0, area / length(v1), 0);
-	o.color = vec4(0.0, 1.0, 0.0, 1.0);
+	Vertex.distance = vec3(0, area / length(v1), 0);
+	Vertex.color = vec4(0.0, 1.0, 0.0, 1.0);
 	gl_Position = gl_in[1].gl_Position;
 	EmitVertex();
 
-	o.distance = vec3(0, 0, area / length(v2));
-	o.color = vec4(0.0, 0.0, 1.0, 1.0);
+	Vertex.distance = vec3(0, 0, area / length(v2));
+	Vertex.color = vec4(0.0, 0.0, 1.0, 1.0);
 	gl_Position = gl_in[2].gl_Position;
 	EmitVertex();
 

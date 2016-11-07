@@ -494,13 +494,12 @@ namespace tenjix {
 				framebuffer = FrameBuffer::create(map_resolution.x, map_resolution.y);
 			}
 			if (simulation_shader == nullptr) {
-				wd::watch("shaders/*", [](const fs::path& path) {
-					debug("compiling shader ...");
+				wd::watch("shaders/Climate*", [](const fs::path& path) {
+					debug("compiling simulation shader ...");
 					try {
-						String vertex_shader = loadString(app::loadAsset("shaders/Climate.simulation.vertex.shader"));
-						String fragment_shader = loadString(app::loadAsset("shaders/Climate.simulation.fragment.shader"));
-						String geometry_shader = loadString(app::loadAsset("shaders/Climate.simulation.geometry.shader"));
-						//shader::define(fragment_shader, "DIFFUSE_TEXTURE");
+						String vertex_shader = loadString(app::loadAsset("shaders/Square.vertex.shader"));
+						String geometry_shader = loadString(app::loadAsset("shaders/Square.geometry.shader"));
+						String fragment_shader = loadString(app::loadAsset("shaders/Climate.fragment.shader"));
 						simulation_shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
 						update_display = true;
 					} catch (gl::GlslProgCompileExc exception) {

@@ -1,15 +1,14 @@
 // shadertype=glsl
 #version 150
 
-// #undef DIFFUSE_TEXTURE
-// #undef SPECULAR_TEXTURE
-// #undef EMISSIVE_TEXTURE
-// #undef NORMAL_MAP
+// #define UNLIT
+// #define DIFFUSE_TEXTURE
+// #define SPECULAR_TEXTURE
+// #define EMISSIVE_TEXTURE
+// #define NORMAL_MAP
+// #define OVERLAY_TEXTURE
 
-#define Pi_Half = 1.57079632679489661923;
-
-#include <shaders/Normals.h>
-#include <shaders/Texinates.h>
+#include <shaders/Normals.include>
 
 uniform sampler2D uDiffuseTexture;
 uniform sampler2D uSpecularTexture;
@@ -17,51 +16,58 @@ uniform sampler2D uEmissiveTexture;
 uniform sampler2D uOverlayTexture;
 uniform sampler2D uNormalMap;
 
-uniform vec3 uLightPosition = vec3(0, 1, 0);
-uniform float uLightIntensity = 1.0;
+flat in vec3 DiffuseColor;
+flat in vec3 SpecularColor;
+flat in vec3 EmissiveColor;
+flat in vec3 OverlayColor;
 
-uniform vec3 uDiffuseColor = vec3(1.0);
-uniform vec3 uSpecularColor = vec3(1.0);
-uniform vec3 uEmissiveColor = vec3(1.0);
-uniform vec3 uOverlayColor = vec3(1.0);
-uniform float uNormalIntensity = 1.0;
+flat in vec3 LightPosition;
+flat in vec3 LightDirection;
 
-uniform float uAmbience = 0.1;
-uniform float uSpecularity = 0.0;
-uniform float uLuminosity = 0.0;
-uniform float uRoughness = 0.1;
-uniform float uTransparency = 0.0;
+flat in float LightIntensity;
+flat in float NormalIntensity;
 
-uniform vec2 uTextureScale = vec2(1.0);
-uniform vec2 uTextureShift = vec2(0.0);
-uniform mat2x2 uTextureRotation = mat2x2(1.0);
+flat in float Ambience;
+flat in float Specularity;
+flat in float Luminosity;
+flat in float Roughness;
+flat in float Transparency;
+flat in float Alpha;
 
-uniform vec2 uOverlayScale = vec2(1.0);
-uniform vec2 uOverlayShift = vec2(0.0);
-uniform mat2x2 uOverlayRotation = mat2x2(1.0);
+in vec3 Position;
+in vec3 Normal;
+in vec3 Color;
+in vec2 Texinates;
+in vec2 OverlayTexinates;
 
-in vec4 vPosition;
-in vec3 vNormal;
-in vec2 vTexCoord0;
-
-out vec4 oColor;
+out vec4 Output;
 
 void main() {
-	vec3 light_position = uLightPosition;
-	float light_intensity = uLightIntensity;
 
-	float ambience = clamp(uAmbience, 0.0, 1.0);
-	float specularity = uSpecularity;
-	float luminosity = uLuminosity;
-	float roughness = clamp(uRoughness, 0.0001, 1.0);
-	float transparency = clamp(uTransparency, 0.0, 1.0);
-	float alpha = 1.0 - transparency;
+	vec3 diffuse_color = DiffuseColor;
+	vec3 specular_color = SpecularColor;
+	vec3 emissive_color = EmissiveColor;
+	vec3 overlay_color = OverlayColor;
 
-	vec2 texinates = transform_texinates(vTexCoord0, uTextureScale, uTextureShift, uTextureRotation);
+	float light_intensity = LightIntensity;
+	float normal_intensity = NormalIntensity;
 
-	vec3 diffuse_color = uDiffuseColor;
-	vec3 specular_color = uSpecularColor;
-	vec3 emissive_color = uEmissiveColor;
+	float ambience = Ambience;
+	float specularity = Specularity;
+	float luminosity = Luminosity;
+	float roughness = Roughness;
+	float transparency = Transparency;
+	float alpha = Alpha;
+
+	vec3 position = Position;
+	vec3 color = Color;
+	vec2 texinates = Texinates;
+	vec2 overlay_texinates = OverlayTexinates;
+
+	vec3 light_position = LightPosition;
+	vec3 light_direction = normalize(Position - LightPosition);
+	vec3 camera_direction = normalize(Position);
+	vec3 normal_direction = normalize(Normal);
 
 	#ifdef DIFFUSE_TEXTURE
 		vec4 mapped_diffuse = texture(uDiffuseTexture, texinates);
@@ -78,33 +84,33 @@ void main() {
 		emissive_color *= texture(uEmissiveTexture, texinates).rgb;
 	#endif
 
-	vec3 position = vPosition.xyz;
-	vec3 direction_to_light = normalize(light_position - position);
-	vec3 direction_to_camera = normalize(-position);
-	vec3 normal_direction = normalize(vNormal);
-
 	#ifdef NORMAL_MAP
 		vec3 mapped_normal = texture(uNormalMap, texinates).rgb;
-		normal_direction = calculate_normal(normal_direction, direction_to_camera, mapped_normal, texinates, uNormalIntensity);
+		normal_direction = calculate_normal(normal_direction, -camera_direction, mapped_normal, texinates, normal_intensity);
 	#endif
 
-	vec3 reflection_direction = normalize(reflect(-direction_to_light, normal_direction));
+	#ifdef UNLIT
+		Output.rgb = diffuse_color;
+		Output.a = alpha;
+	#else
+		vec3 reflection_direction = normalize(reflect(light_direction, normal_direction));
 
-	float diffuse_intensity = light_intensity * max(dot(normal_direction, direction_to_light), 0.0);
-	float specular_intensity = light_intensity * pow(max(dot(reflection_direction, direction_to_camera), 0.0), 1.0 / roughness);
-	float emissive_intensity = 1.0 + max(dot(normal_direction, direction_to_camera), 0.0);
+		float diffuse_intensity = light_intensity * max(dot(normal_direction, -light_direction), 0.0);
+		float specular_intensity = light_intensity * pow(max(dot(reflection_direction, -camera_direction), 0.0), 1.0 / roughness);
+		float emissive_intensity = 1.0 + max(dot(normal_direction, -camera_direction), 0.0);
 
-	vec3 diffuse = diffuse_color * max(diffuse_intensity, ambience);
-	vec3 specular = specular_color * specular_intensity * specularity;
-	vec3 emissive = emissive_color * emissive_intensity * luminosity;
+		vec3 diffuse = diffuse_color * max(diffuse_intensity, ambience);
+		vec3 specular = specular_color * specular_intensity * specularity;
+		vec3 emissive = emissive_color * emissive_intensity * luminosity;
 
-	oColor.rgb = diffuse + specular + emissive;
-	oColor.a = alpha;
+		Output.rgb = diffuse + specular + emissive;
+		Output.a = alpha;
+	#endif
 
 	#ifdef OVERLAY_TEXTURE
-		vec2 overlay_texinates = transform_texinates(vTexCoord0, uOverlayScale, uOverlayShift, uOverlayRotation);
 		vec4 overlay_color = texture(uOverlayTexture, overlay_texinates);
-		oColor.rgb = mix(oColor.rgb, overlay_color.rgb * uOverlayColor, overlay_color.a);
-		oColor.a = max(oColor.a, overlay_color.a);
+		Output.rgb = mix(Output.rgb, overlay_color.rgb * uOverlayColor, overlay_color.a);
+		Output.a = max(Output.a, overlay_color.a);
 	#endif
+
 }
