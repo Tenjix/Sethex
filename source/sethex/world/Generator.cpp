@@ -29,7 +29,8 @@ namespace tenjix {
 		shared<Texture> map_texture;
 		shared<Texture> world_texture;
 
-		shared<Shader> simulation_shader;
+		shared<Shader> elevation_shader;
+		shared<Shader> climate_shader;
 		shared<FrameBuffer> framebuffer;
 
 		float lower_threshold = One_Third;
@@ -138,7 +139,7 @@ namespace tenjix {
 			vector<uint32> sources(entries);
 			vector<uint32> targets(entries);
 
-			debug("simulating...");
+			debug("simulating climate...");
 
 			auto temperature_map_texture = Texture::create(*temperature_map);
 
@@ -152,7 +153,7 @@ namespace tenjix {
 				using namespace gl;
 				ScopedFramebuffer scoped_framebuffer(framebuffer);
 				ScopedViewport scoped_viewport(framebuffer->getSize());
-				ScopedGlslProg scoped_shader(simulation_shader);
+				ScopedGlslProg scoped_shader(climate_shader);
 				ScopedBuffer scoped_sources_buffer(sources_buffer);
 				ScopedBuffer scoped_targets_buffer(targets_buffer);
 				ScopedTextureBind scoped_texture(temperature_map_texture);
@@ -493,25 +494,38 @@ namespace tenjix {
 			if (framebuffer == nullptr) {
 				framebuffer = FrameBuffer::create(map_resolution.x, map_resolution.y);
 			}
-			if (simulation_shader == nullptr) {
-				wd::watch("shaders/Climate*", [](const fs::path& path) {
-					debug("compiling simulation shader ...");
+			if (climate_shader == nullptr) {
+				wd::watch("shaders/Elevation*", [](const fs::path& path) {
+					debug("compiling elevation shader ...");
 					try {
 						String vertex_shader = loadString(app::loadAsset("shaders/Square.vertex.shader"));
 						String geometry_shader = loadString(app::loadAsset("shaders/Square.geometry.shader"));
-						String fragment_shader = loadString(app::loadAsset("shaders/Climate.fragment.shader"));
-						simulation_shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
+						String fragment_shader = loadString(app::loadAsset("shaders/Elevation.fragment.shader"));
+						elevation_shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
 						update_display = true;
 					} catch (gl::GlslProgCompileExc exception) {
 						error(exception.what());
 					}
 				});
+				wd::watch("shaders/Climate*", [](const fs::path& path) {
+					debug("compiling climate shader ...");
+					try {
+						String vertex_shader = loadString(app::loadAsset("shaders/Square.vertex.shader"));
+						String geometry_shader = loadString(app::loadAsset("shaders/Square.geometry.shader"));
+						String fragment_shader = loadString(app::loadAsset("shaders/Climate.fragment.shader"));
+						climate_shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
+						update_display = true;
+					} catch (gl::GlslProgCompileExc exception) {
+						error(exception.what());
+					}
+				});
+
 			}
 
 			ui::BeginChild("map display", float2(map_resolution.x, 0));
 			static int selected_map = 0;
 			ui::PushItemWidth(150);
-			vector<string> map_names { "Biome", "Terrain", "Elevation", "Temperature", "Precipitation", "Simulated" };
+			vector<string> map_names { "Biome", "Terrain", "Elevation", "Temperature", "Precipitation", "Simulated", "Elevation (GPU)" };
 			static shared<ImageSource> image_source;
 			if (ui::Combo("Map##selection", selected_map, map_names) or update_display) {
 				switch (selected_map) {
@@ -534,6 +548,32 @@ namespace tenjix {
 						simulate();
 						image_source = framebuffer->getColorTexture()->createSource();
 						break;
+					case 6: {
+						debug("generating elevation...");
+						using namespace gl;
+						ScopedFramebuffer scoped_framebuffer(framebuffer);
+						ScopedViewport scoped_viewport(framebuffer->getSize());
+						elevation_shader->uniform("uWrapping", wrap_horizontally);
+						elevation_shader->uniform("uResolution", map_resolution);
+						//elevation_shader->uniform("uSeed", seed);
+						elevation_shader->uniform("uShift", shift);
+						elevation_shader->uniform("uScale", scale);
+						elevation_shader->uniform("uOctaces", current_options.octaves);
+						elevation_shader->uniform("uAmplitude", current_options.amplitude);
+						elevation_shader->uniform("uFrequency", current_options.frequency);
+						elevation_shader->uniform("uLacunarity", current_options.lacunarity);
+						elevation_shader->uniform("uPersistence", current_options.persistence);
+						elevation_shader->uniform("uPower", current_options.power);
+						elevation_shader->uniform("uContinentalAmplitudeFactor", continent_amplitude);
+						elevation_shader->uniform("uContinentalFrequencyFactor", continent_frequency);
+						//elevation_shader->uniform("uContinentalShift", seed);
+						elevation_shader->uniform("uEquatorDistanceFactor", equator_distance_factor);
+						elevation_shader->uniform("uEquatorDistancePower", equator_distance_power);
+						ScopedGlslProg scoped_shader(elevation_shader);
+						drawArrays(GL_POINTS, 0, 1);
+						image_source = framebuffer->getColorTexture()->createSource();
+						break;
+					}
 					default: throw_runtime_exception("invalid map");
 				}
 				if (selected_map < 5) {
@@ -586,11 +626,11 @@ namespace tenjix {
 					scale = 1.0f;
 					shift = { -150, -5200 };
 					current_options = {};
-					current_options.amplitude = 0.5f;
+					current_options.amplitude = 1.0f;
 					current_options.octaves = 5;
 					use_continents = true;
 					continent_frequency = 0.25f;
-					continent_amplitude = 1.0f;
+					continent_amplitude = 2.0f;
 					sealevel = 0.25f;
 					thresholds.ocean = -0.20f;
 					thresholds.coast = -0.02f;
@@ -608,11 +648,11 @@ namespace tenjix {
 					scale = 0.66f;
 					shift = { -160, -4650 };
 					current_options = {};
-					current_options.amplitude = 0.5f;
+					current_options.amplitude = 1.0f;
 					current_options.octaves = 5;
 					use_continents = true;
 					continent_frequency = 0.25f;
-					continent_amplitude = 1.0f;
+					continent_amplitude = 2.0f;
 					sealevel = 0.25f;
 					thresholds.ocean = -0.20f;
 					thresholds.coast = -0.02f;
