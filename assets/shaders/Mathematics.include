@@ -5,15 +5,31 @@
 const float Tau = 6.28318530717958647693;
 const float Tau_Inverse = 1.0 / Tau;
 const float Tau_Half = Tau / 2.0;
+const float Tau_Quarter = Tau / 4.0;
 const float Pi = Tau_Half;
 const float Pi_Inverse = 1.0 / Pi;
-const float Pi_Half = Pi / 2.0;
+const float Pi_Half = Tau_Quarter;
 const float Sqrt_2 = 1.41421356237309504880;
 const float Sqrt_2_Inverse = 1.0 / Sqrt_2;
 const float Sqrt_3 = 1.73205080756887729353;
 const float Sqrt_3_Inverse = 1.0 / Sqrt_3;
 const float One_Third = 1.0 / 3.0;
 const float Two_Thirds = 2.0 / 3.0;
+
+// creates a rotation matrix
+mat2 rotation(float angle) {
+	float sinus = sin(angle), cosinus = cos(angle);
+	return mat2(cosinus, -sinus, sinus, cosinus);
+}
+
+// projects "value" into the wrapping range "range_begin" to "range_end"
+int project(int value, int range_begin, int range_end) {
+	int range_size = (range_end + 1) - range_begin;
+	if (value < range_begin) value += range_size * ((range_begin - value) / range_size + 1);
+	return range_begin + (value - range_begin) % range_size;
+}
+
+// Comparator Functions
 
 // returns 1.0 if "one" == "two", 0.0 otherwise 
 float equal(float one, float two) {
@@ -50,15 +66,55 @@ float without(float value, float minimum, float maximum) {
 	return max(smaller(value, minimum), greater(value, maximum));
 }
 
-// creates a rotation matrix
-mat2 rotation(float angle) {
-	float sinus = sin(angle), cosinus = cos(angle);
-	return mat2(cosinus, -sinus, sinus, cosinus);
+// Easing Functions
+
+float ease_sine_in(float t) {
+	return sin((t - 1.0) * Tau_Quarter) + 1.0;
 }
 
-// projects "value" into the wrapping range "range_begin" to "range_end"
-int project(int value, int range_begin, int range_end) {
-	int range_size = (range_end + 1) - range_begin;
-	if (value < range_begin) value += range_size * ((range_begin - value) / range_size + 1);
-	return range_begin + (value - range_begin) % range_size;
+float ease_sine_out(float t) {
+	return sin(t * Tau_Quarter);
+}
+
+float ease_sine_in_out(float t) {
+  return -0.5 * (cos(Tau_Half * t) - 1.0);
+}
+
+float ease_quadratic_in(float t) {
+	return t * t;
+}
+
+float ease_quadratic_out(float t) {
+	return -t * (t - 2.0);
+}
+
+float ease_quadratic_in_out(float t) {
+	float tt2 = 2.0 * t * t;
+	return t < 0.5 ? tt2 : -tt2 + (4.0 * t) - 1.0;
+}
+
+float ease_cubic_in(float t) {
+	return t * t * t;
+}
+
+float ease_cubic_out(float t) {
+	t = t - 1.0;
+	return t * t * t + 1.0;
+}
+
+float ease_cubic_in_out(float t) {
+	return t < 0.5 ? (4.0 * t * t * t) : (0.5 * pow(2.0 * t - 2.0, 3.0) + 1.0);
+}
+
+float ease_quartic_in(float t) {
+	t = t * t;
+	return t * t;
+}
+
+float ease_quartic_out(float t) {
+	return pow(t - 1.0, 3.0) * (1.0 - t) + 1.0;
+}
+
+float ease_quartic_in_out(float t) {
+	return t < 0.5 ? (8.0 * pow(t, 4.0)) : (-8.0 * pow(t - 1.0, 4.0) + 1.0);
 }
