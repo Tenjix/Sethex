@@ -225,6 +225,7 @@ namespace tenjix {
 			static float evaporation_factor = 1.0f, transpiration_factor = 0.15f, precipitation_factor = 1.0f, precipitation_decay = 0.05f, slope_scale = 0.01f;
 			static float humidity_saturation = 25.0f;
 			static bool upper_precipitation = true;
+			static bool gpu = false;
 
 			static TerrainThresholds thresholds, default_thresholds;
 
@@ -500,7 +501,9 @@ namespace tenjix {
 					try {
 						String vertex_shader = loadString(app::loadAsset("shaders/Square.vertex.shader"));
 						String geometry_shader = loadString(app::loadAsset("shaders/Square.geometry.shader"));
+						shader::define(geometry_shader, "ORIGIN_UPPER_LEFT");
 						String fragment_shader = loadString(app::loadAsset("shaders/Elevation.fragment.shader"));
+						shader::define(fragment_shader, "ORIGIN_UPPER_LEFT");
 						elevation_shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
 						update_display = true;
 					} catch (gl::GlslProgCompileExc exception) {
@@ -550,9 +553,6 @@ namespace tenjix {
 						break;
 					case 6: {
 						debug("generating elevation...");
-						using namespace gl;
-						ScopedFramebuffer scoped_framebuffer(framebuffer);
-						ScopedViewport scoped_viewport(framebuffer->getSize());
 						elevation_shader->uniform("uWrapping", wrap_horizontally);
 						elevation_shader->uniform("uResolution", map_resolution);
 						//elevation_shader->uniform("uSeed", seed);
@@ -569,6 +569,9 @@ namespace tenjix {
 						//elevation_shader->uniform("uContinentalShift", seed);
 						elevation_shader->uniform("uEquatorDistanceFactor", equator_distance_factor);
 						elevation_shader->uniform("uEquatorDistancePower", equator_distance_power);
+						using namespace gl;
+						ScopedFramebuffer scoped_framebuffer(framebuffer);
+						ScopedViewport scoped_viewport(framebuffer->getSize());
 						ScopedGlslProg scoped_shader(elevation_shader);
 						drawArrays(GL_POINTS, 0, 1);
 						image_source = framebuffer->getColorTexture()->createSource();
@@ -587,9 +590,11 @@ namespace tenjix {
 				update_display = false;
 
 			}
+			ui::PopItemWidth();
 			ui::SameLine();
 			if (ui::Button("Save")) writeImage("exported/" + map_names[selected_map] + "_Map.jpg", image_source);
-			ui::PopItemWidth();
+			ui::SameLine(ui::GetWindowWidth() - 150);
+			if (ui::Checkbox("GPU Compute", gpu)) update_tectonic = true;
 			ui::ImageButton(map_texture, map_texture->getSize(), 0);
 			bool map_hovered = ui::IsItemHoveredRect() and ui::IsWindowHovered();
 			signed2 map_position = ui::GetItemRectMin();

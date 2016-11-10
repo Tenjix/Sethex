@@ -4,6 +4,10 @@
 #include <shaders/Mathematics.include>
 #include <shaders/Noise.include>
 
+#ifdef ORIGIN_UPPER_LEFT
+	layout(origin_upper_left) in vec4 gl_FragCoord;
+#endif
+
 uniform bool uWrapping = false;
 uniform uvec2 uResolution;
 uniform int uSeed;
@@ -23,7 +27,6 @@ uniform vec2 uContinentalShift = vec2(0.0, 0.0);
 uniform float uEquatorDistanceFactor = 0.0;
 uniform int uEquatorDistancePower = 1;
 
-layout(origin_upper_left) in vec4 gl_FragCoord;
 in vec2 Texinates;
 
 out vec4 Output;
@@ -67,6 +70,7 @@ void main() {
 
 	// Output.rgb = elevation > 1.0 ? vec3(1.0, 0.0, 0.0) : elevation > 0.9? vec3(0.0, 1.0, 0.0) : elevation < 0.1 ? vec3(0.0, 0.0, 1.0) : vec3(elevation);
 	Output.rgb = vec3(elevation);
+	// Output.rgb = vec3(Texinates.y);
 	Output.a = 1.0;
 
 }
