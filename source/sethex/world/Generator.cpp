@@ -1,6 +1,5 @@
 #include "Generator.h"
 
-#include <cinder/gl/Ssbo.h>
 #include <cinder/interface/Imgui.h>
 #include <cinder/utilities/Assets.h>
 #include <cinder/utilities/Shaders.h>
@@ -14,8 +13,6 @@ using namespace cinder;
 using namespace tenjix::float_constants;
 using namespace std;
 
-using Shaderbuffer = gl::Ssbo;
-
 namespace tenjix {
 
 	namespace sethex {
@@ -26,12 +23,23 @@ namespace tenjix {
 		shared<Channel> precipitation_map;
 		shared<Surface> terrain_map;
 		shared<Surface> biome_map;
+
 		shared<Texture> map_texture;
 		shared<Texture> world_texture;
 
 		shared<Shader> elevation_shader;
-		shared<Shader> climate_shader;
+		shared<Shader> temperature_shader;
+		shared<Shader> circulation_shader;
 		shared<FrameBuffer> framebuffer;
+
+		shared<Texture> elevation_texture;
+		shared<Texture> temperature_texture;
+		shared<Texture> precipitation_texture;
+		shared<Texture> biome_texture;
+
+		shared<FrameBuffer> elevation_framebuffer;
+		shared<FrameBuffer> temperature_framebuffer;
+		shared<FrameBuffer> biome_framebuffer;
 
 		float lower_threshold = One_Third;
 		float upper_threshold = Two_Thirds;
@@ -143,8 +151,8 @@ namespace tenjix {
 
 			auto temperature_map_texture = Texture::create(*temperature_map);
 
-			auto sources_buffer = Shaderbuffer::create(sizeof(uint32) * sources.size(), sources.data(), GL_STATIC_DRAW);
-			auto targets_buffer = Shaderbuffer::create(sizeof(uint32) * targets.size(), targets.data(), GL_STATIC_DRAW);
+			auto sources_buffer = ShaderBuffer::create(sizeof(uint32) * sources.size(), sources.data(), GL_STATIC_DRAW);
+			auto targets_buffer = ShaderBuffer::create(sizeof(uint32) * targets.size(), targets.data(), GL_STATIC_DRAW);
 
 			//auto surface = Surface::create(framebuffer->getColorTexture()->createSource());
 			//glBindImageTexture()
@@ -153,7 +161,7 @@ namespace tenjix {
 				using namespace gl;
 				ScopedFramebuffer scoped_framebuffer(framebuffer);
 				ScopedViewport scoped_viewport(framebuffer->getSize());
-				ScopedGlslProg scoped_shader(climate_shader);
+				ScopedGlslProg scoped_shader(circulation_shader);
 				ScopedBuffer scoped_sources_buffer(sources_buffer);
 				ScopedBuffer scoped_targets_buffer(targets_buffer);
 				ScopedTextureBind scoped_texture(temperature_map_texture);
@@ -225,7 +233,51 @@ namespace tenjix {
 			static float evaporation_factor = 1.0f, transpiration_factor = 0.15f, precipitation_factor = 1.0f, precipitation_decay = 0.05f, slope_scale = 0.01f;
 			static float humidity_saturation = 25.0f;
 			static bool upper_precipitation = true;
-			static bool gpu = false;
+			static bool gpu_compute = false;
+
+			const unsigned2 map_resolution = { 800, 450 };
+
+			if (framebuffer == nullptr) {
+				framebuffer = FrameBuffer::create(map_resolution.x, map_resolution.y);
+				wd::watch("shaders/generation/Elevation*", [](const fs::path& path) {
+					print("compiling elevation shader ...");
+					try {
+						String vertex_shader = loadString(app::loadAsset("shaders/Square.vertex.shader"));
+						String geometry_shader = loadString(app::loadAsset("shaders/Square.geometry.shader"));
+						shader::define(geometry_shader, "ORIGIN_UPPER_LEFT");
+						String fragment_shader = loadString(app::loadAsset("shaders/generation/Elevation.fragment.shader"));
+						shader::define(fragment_shader, "ORIGIN_UPPER_LEFT");
+						elevation_shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
+						update_tectonic = true;
+					} catch (gl::GlslProgCompileExc exception) {
+						error(exception.what());
+					}
+				});
+				wd::watch("shaders/generation/Temperature*", [](const fs::path& path) {
+					print("compiling temperature shader ...");
+					try {
+						String vertex_shader = loadString(app::loadAsset("shaders/Square.vertex.shader"));
+						String geometry_shader = loadString(app::loadAsset("shaders/Square.geometry.shader"));
+						String fragment_shader = loadString(app::loadAsset("shaders/generation/Temperature.fragment.shader"));
+						temperature_shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
+						update_topography = true;
+					} catch (gl::GlslProgCompileExc exception) {
+						error(exception.what());
+					}
+				});
+				wd::watch("shaders/generation/Circulation*", [](const fs::path& path) {
+					print("compiling climate shader ...");
+					try {
+						String vertex_shader = loadString(app::loadAsset("shaders/Square.vertex.shader"));
+						String geometry_shader = loadString(app::loadAsset("shaders/Square.geometry.shader"));
+						String fragment_shader = loadString(app::loadAsset("shaders/generation/Circulation.fragment.shader"));
+						circulation_shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
+						update_display = true;
+					} catch (gl::GlslProgCompileExc exception) {
+						error(exception.what());
+					}
+				});
+			}
 
 			static TerrainThresholds thresholds, default_thresholds;
 
@@ -245,100 +297,138 @@ namespace tenjix {
 				iterator << Color8u(0, 0, 96); // deep ocean
 			};
 
-			unsigned2 map_resolution = { 800, 450 };
 			if (update_tectonic or update_topography or update_climate or update_biomes) {
+				print("===== update =====");
 
 				if (update_tectonic) {
-					debug("update_tectonic");
-					if (not elevation_map) elevation_map = Channel32f::create(map_resolution.x, map_resolution.y);
-					elevation_minimum = elevation_maximum = Zero;
-					if (seed < 0 || seed > seed_maximum) seed = seed_maximum;
-					Simplex::seed(seed);
-					auto elevation_iterator = elevation_map->getIter();
-					signed2 resolution = map_resolution;
-					float2 center = float2(map_resolution) / 2.0f;
+					print("update tectonic");
 					scale = clamp(scale * (1.0f - roll), 0.1f, 10.0f);
 					shift -= wrap_horizontally ? float2(drag.x, drag.y / scale) : float2(drag) / scale;
-					while (elevation_iterator.line()) {
-						while (elevation_iterator.pixel()) {
-							signed2 pixel = elevation_iterator.getPos();
-							if (drag != Zero) {
-								bool x_copyable = drag.x == 0 or drag.x > 0 and pixel.x >= drag.x or drag.x < 0 and pixel.x < resolution.x + drag.x;
-								bool y_copyable = drag.y == 0 or drag.y > 0 and pixel.y >= drag.y or drag.y < 0 and pixel.y < resolution.y + drag.y;
-								if (x_copyable and y_copyable) {
-									elevation_iterator.v() = elevation_buffer->getValue(pixel - drag);
-									continue;
-								}
-							}
-							float elevation;
-							float2 position = pixel;
-							if (wrap_horizontally) {
-								float repeat_interval = map_resolution.x / scale;
-								position.y = (position.y - center.y) / scale + center.y;
-								position += shift;
-								float radians = position.x / map_resolution.x * Tau;
-								float3 cylindrical_position;
-								cylindrical_position.x = sin(radians) / Tau * repeat_interval;
-								cylindrical_position.y = position.y;
-								cylindrical_position.z = cos(radians) / Tau * repeat_interval;
-								elevation = calculate_elevation(cylindrical_position, current_options, use_continents, continent_frequency, continent_amplitude);
-							} else {
-								position = (position - center) / scale + center;
-								position += shift;
-								elevation = calculate_elevation(position, current_options, use_continents, continent_frequency, continent_amplitude);
-							}
-							elevation_iterator.v() = elevation;
+					if (gpu_compute) {
+						if (not elevation_framebuffer) elevation_framebuffer = FrameBuffer::create(map_resolution.x, map_resolution.y);
+						elevation_buffer = nullptr;
+						elevation_shader->uniform("uWrapping", wrap_horizontally);
+						elevation_shader->uniform("uResolution", map_resolution);
+						//elevation_shader->uniform("uSeed", seed);
+						elevation_shader->uniform("uShift", shift);
+						elevation_shader->uniform("uScale", scale);
+						elevation_shader->uniform("uOctaces", current_options.octaves);
+						elevation_shader->uniform("uAmplitude", current_options.amplitude);
+						elevation_shader->uniform("uFrequency", current_options.frequency);
+						elevation_shader->uniform("uLacunarity", current_options.lacunarity);
+						elevation_shader->uniform("uPersistence", current_options.persistence);
+						elevation_shader->uniform("uPower", current_options.power);
+						elevation_shader->uniform("uContinentalAmplitudeFactor", continent_amplitude);
+						elevation_shader->uniform("uContinentalFrequencyFactor", continent_frequency);
+						//elevation_shader->uniform("uContinentalShift", seed);
+						elevation_shader->uniform("uEquatorDistanceFactor", equator_distance_factor);
+						elevation_shader->uniform("uEquatorDistancePower", equator_distance_power);
+						{
+							using namespace gl;
+							ScopedFramebuffer scoped_framebuffer(elevation_framebuffer);
+							ScopedViewport scoped_viewport(map_resolution);
+							ScopedGlslProg scoped_shader(elevation_shader);
+							drawArrays(GL_POINTS, 0, 1);
 						}
+						elevation_texture = elevation_framebuffer->getColorTexture();
+						elevation_map = Channel32f::create(elevation_texture->createSource());
+					} else {
+						if (not elevation_map) elevation_map = Channel32f::create(map_resolution.x, map_resolution.y);
+						elevation_minimum = elevation_maximum = Zero;
+						if (seed < 0 || seed > seed_maximum) seed = seed_maximum;
+						Simplex::seed(seed);
+						auto elevation_iterator = elevation_map->getIter();
+						signed2 resolution = map_resolution;
+						float2 center = float2(map_resolution) / 2.0f;
+						while (elevation_iterator.line()) {
+							while (elevation_iterator.pixel()) {
+								signed2 pixel = elevation_iterator.getPos();
+								if (drag != Zero and elevation_buffer) {
+									bool x_copyable = drag.x == 0 or drag.x > 0 and pixel.x >= drag.x or drag.x < 0 and pixel.x < resolution.x + drag.x;
+									bool y_copyable = drag.y == 0 or drag.y > 0 and pixel.y >= drag.y or drag.y < 0 and pixel.y < resolution.y + drag.y;
+									if (x_copyable and y_copyable) {
+										elevation_iterator.v() = elevation_buffer->getValue(pixel - drag);
+										continue;
+									}
+								}
+								float elevation;
+								float2 position = pixel;
+								if (wrap_horizontally) {
+									float repeat_interval = map_resolution.x / scale;
+									position.y = (position.y - center.y) / scale + center.y;
+									position += shift;
+									float radians = position.x / map_resolution.x * Tau;
+									float3 cylindrical_position;
+									cylindrical_position.x = sin(radians) / Tau * repeat_interval;
+									cylindrical_position.y = position.y;
+									cylindrical_position.z = cos(radians) / Tau * repeat_interval;
+									elevation = calculate_elevation(cylindrical_position, current_options, use_continents, continent_frequency, continent_amplitude);
+								} else {
+									position = (position - center) / scale + center;
+									position += shift;
+									elevation = calculate_elevation(position, current_options, use_continents, continent_frequency, continent_amplitude);
+								}
+								elevation_iterator.v() = elevation;
+							}
+						}
+						if (not elevation_buffer) elevation_buffer = Channel32f::create(*elevation_map);
+						else elevation_buffer->copyFrom(*elevation_map, elevation_map->getBounds());
 					}
-					elevation_buffer = Channel32f::create(*elevation_map);
 					update_tectonic = false;
 					update_topography = true;
 				}
 
 				if (update_topography) {
-					debug("update_topography");
-					if (not temperature_map) temperature_map = Channel::create(map_resolution.x, map_resolution.y);
-					if (not precipitation_map) precipitation_map = Channel::create(map_resolution.x, map_resolution.y);
-					if (not terrain_map) terrain_map = Surface::create(map_resolution.x, map_resolution.y, false, SurfaceChannelOrder::RGB);
-					if (not biome_map) biome_map = Surface::create(map_resolution.x, map_resolution.y, false, SurfaceChannelOrder::RGB);
-
-					auto buffer_iterator = elevation_buffer->getIter();
-					auto elevation_iterator = elevation_map->getIter();
-					auto temperature_iterator = temperature_map->getIter();
-					auto terrain_iterator = terrain_map->getIter();
-					auto biome_iterator = biome_map->getIter();
-					water_pixels = 0;
-					while (buffer_iterator.line() and elevation_iterator.line() and temperature_iterator.line() and terrain_iterator.line() and biome_iterator.line()) {
-						float y = static_cast<float>(elevation_iterator.y()) / map_resolution.y; // y position [0.0, 1.0]
-						float distance_to_equator = abs(2.0f * (y - 0.5f)); // distance to equator [0.0, 1.0]
-						float elevation_change = pow(distance_to_equator, equator_distance_power) * equator_distance_factor;
-						while (buffer_iterator.pixel() and elevation_iterator.pixel() and temperature_iterator.pixel() and terrain_iterator.pixel() and biome_iterator.pixel()) {
-							float elevation = buffer_iterator.v();
-							elevation = clamp(elevation + elevation_change, current_options.positive ? 0.0f : -1.0f, 1.0f);
-							float elevation_above_sealevel = max(elevation - sealevel, 0.0f) / (1.0f - sealevel);
-							if (landmass) {
-								elevation_iterator.v() = elevation_above_sealevel;
-							} else {
-								elevation_iterator.v() = current_options.positive ? elevation : (elevation + 1.0f) / 2.0f;
-							}
-							float2 position = elevation_iterator.getPos();
-							float temperature = 1.0f - distance_to_equator * distance_to_equator;
-							//float temperature_noise = Simplex::to_unsigned(Simplex::noise(elevation_iterator.getPos().x * 0.02f * continent_frequency));
-							float temperature_noise = Simplex::to_unsigned(Simplex::noise(position * 0.02f * continent_frequency));
-							temperature = mix(temperature, temperature_noise, 0.1f);
-							if (elevation > sealevel) {
-								if (lapse_power == 1) {
-									float elevation_above_sealevel_in_km = (elevation - sealevel) * 10.0f;
-									temperature -= lapse_rate * elevation_above_sealevel_in_km / 70.0f;
+					print("update topography");
+					if (gpu_compute) {
+						if (not temperature_framebuffer) temperature_framebuffer = FrameBuffer::create(map_resolution.x, map_resolution.y);
+						temperature_shader->uniform("uElevationMap", 0);
+						temperature_shader->uniform("uSeaLevel", sealevel);
+						temperature_shader->uniform("uLapseRate", lapse_rate);
+						{
+							using namespace gl;
+							ScopedFramebuffer scoped_framebuffer(temperature_framebuffer);
+							ScopedViewport scoped_viewport(map_resolution);
+							ScopedGlslProg scoped_shader(temperature_shader);
+							ScopedTextureBind scoped_texture(elevation_texture);
+							drawArrays(GL_POINTS, 0, 1);
+						}
+						temperature_texture = temperature_framebuffer->getColorTexture();
+						temperature_map = Channel::create(temperature_texture->createSource());
+					} else {
+						if (not temperature_map) temperature_map = Channel::create(map_resolution.x, map_resolution.y);
+						auto buffer_iterator = elevation_buffer->getIter();
+						auto elevation_iterator = elevation_map->getIter();
+						auto temperature_iterator = temperature_map->getIter();
+						while (buffer_iterator.line() and elevation_iterator.line() and temperature_iterator.line()) {
+							float y = static_cast<float>(elevation_iterator.y()) / map_resolution.y; // y position [0.0, 1.0]
+							float distance_to_equator = abs(2.0f * (y - 0.5f)); // distance to equator [0.0, 1.0]
+							float elevation_change = pow(distance_to_equator, equator_distance_power) * equator_distance_factor;
+							while (buffer_iterator.pixel() and elevation_iterator.pixel() and temperature_iterator.pixel()) {
+								float elevation = buffer_iterator.v();
+								elevation = clamp(elevation + elevation_change, current_options.positive ? 0.0f : -1.0f, 1.0f);
+								float elevation_above_sealevel = max(elevation - sealevel, 0.0f) / (1.0f - sealevel);
+								if (landmass) {
+									elevation_iterator.v() = elevation_above_sealevel;
 								} else {
-									temperature -= elevation_above_sealevel * elevation_above_sealevel * lapse_rate / 20.0f;
+									elevation_iterator.v() = current_options.positive ? elevation : (elevation + 1.0f) / 2.0f;
 								}
-							} else temperature -= 0.1f;
-							temperature = clamp(temperature, 0.0f, 1.0f);
-							temperature_iterator.v() = static_cast<uint8>(temperature * 255.0f + 0.5f);
-							unsigned water = water_pixels;
-							assign_elevation(terrain_iterator, elevation);
-							if (water_pixels > water) biome_iterator << terrain_iterator;
+								float2 position = elevation_iterator.getPos();
+								float temperature = 1.0f - distance_to_equator * distance_to_equator;
+								//float temperature_noise = Simplex::to_unsigned(Simplex::noise(elevation_iterator.getPos().x * 0.02f * continent_frequency));
+								float temperature_noise = Simplex::to_unsigned(Simplex::noise(position * 0.02f * continent_frequency));
+								temperature = mix(temperature, temperature_noise, 0.1f);
+								if (elevation > sealevel) {
+									if (lapse_power == 1) {
+										float elevation_above_sealevel_in_km = (elevation - sealevel) * 10.0f;
+										temperature -= lapse_rate * elevation_above_sealevel_in_km / 70.0f;
+									} else {
+										temperature -= elevation_above_sealevel * elevation_above_sealevel * lapse_rate / 20.0f;
+									}
+								} else temperature -= 0.1f;
+								temperature = clamp(temperature, 0.0f, 1.0f);
+								temperature_iterator.v() = static_cast<uint8>(temperature * 255.0f + 0.5f);
+							}
 						}
 					}
 					update_topography = false;
@@ -346,11 +436,12 @@ namespace tenjix {
 				}
 
 				if (update_climate) {
-					debug("update_climate");
+					print("update climate");
+					if (not precipitation_map) precipitation_map = Channel::create(map_resolution.x, map_resolution.y);
 					vector<vector<float>> humidity_map { 6, vector<float>(map_resolution.x) };
 					unsigned map_height_sixth = map_resolution.y / 6;
 
-					auto calculate_evapotranspiration_precipitation = [&humidity_map, &map_resolution](unsigned belt, unsigned slot, unsigned& x, unsigned y, int x_delta, float& previous_elevation) {
+					auto calculate_evapotranspiration_precipitation = [&](unsigned belt, unsigned slot, unsigned& x, unsigned y, int x_delta, float& previous_elevation) {
 						float elevation = *elevation_map->getData(x, y);
 						if (not current_options.positive) elevation = elevation * 2.0f - 1.0f;
 						float elevation_above_sealevel = max(elevation - sealevel, 0.0f) / (1.0f - sealevel);
@@ -383,7 +474,7 @@ namespace tenjix {
 					};
 
 					//srand(15);
-					auto calculate_precipitation = [&humidity_map, &map_resolution](unsigned belt, unsigned slot, unsigned& x, unsigned y, int x_delta) {
+					auto calculate_precipitation = [&](unsigned belt, unsigned slot, unsigned& x, unsigned y, int x_delta) {
 						float elevation = *elevation_map->getData(x, y);
 						if (not current_options.positive) elevation = elevation * 2.0f - 1.0f;
 						bool land = elevation > sealevel;
@@ -436,7 +527,6 @@ namespace tenjix {
 						}
 					}
 					if (upper_precipitation) {
-						debug("upper_precipitation");
 						// humidity exchange of rising air
 						for (unsigned slot = 0; slot < map_resolution.x; slot++) {
 							humidity_map[0][slot] = humidity_map[1][slot] = (humidity_map[0][slot] + humidity_map[1][slot]) / 2.0f;
@@ -476,59 +566,55 @@ namespace tenjix {
 				}
 
 				if (update_biomes) {
-					debug("update_biomes");
+					print("update biomes");
+					if (not biome_map) biome_map = Surface::create(map_resolution.x, map_resolution.y, false, SurfaceChannelOrder::RGB);
+					if (not terrain_map) terrain_map = Surface::create(map_resolution.x, map_resolution.y, false, SurfaceChannelOrder::RGB);
+					//if (gpu_compute) {
+					//	if (not biome_framebuffer) biome_framebuffer = FrameBuffer::create(map_resolution.x, map_resolution.y);
+					//	temperature_shader->uniform("uElevationMap", 0);
+					//	temperature_shader->uniform("uTemperatureMap", 1);
+					//	temperature_shader->uniform("uPrecipitationMap", 2);
+					//	temperature_shader->uniform("uResolution", map_resolution);
+					//	temperature_shader->uniform("uSeaLevel", sealevel);
+					//	{
+					//		using namespace gl;
+					//		ScopedFramebuffer scoped_framebuffer(biome_framebuffer);
+					//		ScopedViewport scoped_viewport(map_resolution);
+					//		ScopedGlslProg scoped_shader(temperature_shader);
+					//		ScopedTextureBind scoped_texture(elevation_texture);
+					//		ScopedTextureBind scoped_texture(temperature_texture);
+					//		ScopedTextureBind scoped_texture(precipitation_texture);
+					//		drawArrays(GL_POINTS, 0, 1);
+					//	}
+					//	biome_texture = biome_framebuffer->getColorTexture();
+					//} else {
 					auto elevation_iterator = elevation_map->getIter();
 					auto temperature_iterator = temperature_map->getIter();
 					auto precipitation_iterator = precipitation_map->getIter();
 					auto biome_iterator = biome_map->getIter();
-					while (elevation_iterator.line() and temperature_iterator.line() and precipitation_iterator.line() and biome_iterator.line()) {
-						while (elevation_iterator.pixel() and temperature_iterator.pixel() and precipitation_iterator.pixel() and biome_iterator.pixel()) {
+					auto terrain_iterator = terrain_map->getIter();
+					water_pixels = 0;
+					while (elevation_iterator.line() and temperature_iterator.line() and precipitation_iterator.line() and biome_iterator.line() and terrain_iterator.line()) {
+						while (elevation_iterator.pixel() and temperature_iterator.pixel() and precipitation_iterator.pixel() and biome_iterator.pixel() and terrain_iterator.pixel()) {
 							float elevation = (not current_options.positive) ? elevation_iterator.v() * 2.0f - 1.0f : elevation_iterator.v();
-							if (elevation > sealevel) biome_iterator << determine_biome(temperature_iterator.v() / 255.0f, precipitation_iterator.v() / 255.0f);
+							assign_elevation(terrain_iterator, elevation);
+							if (elevation > sealevel) {
+								biome_iterator << determine_biome(temperature_iterator.v() / 255.0f, precipitation_iterator.v() / 255.0f);
+							} else {
+								biome_iterator << terrain_iterator;
+							}
 						}
 					}
+					//}
 					update_biomes = false;
 					update_display = true;
 				}
 			}
 
-			if (framebuffer == nullptr) {
-				framebuffer = FrameBuffer::create(map_resolution.x, map_resolution.y);
-			}
-			if (climate_shader == nullptr) {
-				wd::watch("shaders/Elevation*", [](const fs::path& path) {
-					debug("compiling elevation shader ...");
-					try {
-						String vertex_shader = loadString(app::loadAsset("shaders/Square.vertex.shader"));
-						String geometry_shader = loadString(app::loadAsset("shaders/Square.geometry.shader"));
-						shader::define(geometry_shader, "ORIGIN_UPPER_LEFT");
-						String fragment_shader = loadString(app::loadAsset("shaders/Elevation.fragment.shader"));
-						shader::define(fragment_shader, "ORIGIN_UPPER_LEFT");
-						elevation_shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
-						update_display = true;
-					} catch (gl::GlslProgCompileExc exception) {
-						error(exception.what());
-					}
-				});
-				wd::watch("shaders/Climate*", [](const fs::path& path) {
-					debug("compiling climate shader ...");
-					try {
-						String vertex_shader = loadString(app::loadAsset("shaders/Square.vertex.shader"));
-						String geometry_shader = loadString(app::loadAsset("shaders/Square.geometry.shader"));
-						String fragment_shader = loadString(app::loadAsset("shaders/Climate.fragment.shader"));
-						climate_shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
-						update_display = true;
-					} catch (gl::GlslProgCompileExc exception) {
-						error(exception.what());
-					}
-				});
-
-			}
-
 			ui::BeginChild("map display", float2(map_resolution.x, 0));
 			static int selected_map = 0;
 			ui::PushItemWidth(150);
-			vector<string> map_names { "Biome", "Terrain", "Elevation", "Temperature", "Precipitation", "Simulated", "Elevation (GPU)" };
+			vector<string> map_names { "Biome", "Terrain", "Elevation", "Temperature", "Precipitation", "Circulation" };
 			static shared<ImageSource> image_source;
 			if (ui::Combo("Map##selection", selected_map, map_names) or update_display) {
 				switch (selected_map) {
@@ -551,32 +637,6 @@ namespace tenjix {
 						simulate();
 						image_source = framebuffer->getColorTexture()->createSource();
 						break;
-					case 6: {
-						debug("generating elevation...");
-						elevation_shader->uniform("uWrapping", wrap_horizontally);
-						elevation_shader->uniform("uResolution", map_resolution);
-						//elevation_shader->uniform("uSeed", seed);
-						elevation_shader->uniform("uShift", shift);
-						elevation_shader->uniform("uScale", scale);
-						elevation_shader->uniform("uOctaces", current_options.octaves);
-						elevation_shader->uniform("uAmplitude", current_options.amplitude);
-						elevation_shader->uniform("uFrequency", current_options.frequency);
-						elevation_shader->uniform("uLacunarity", current_options.lacunarity);
-						elevation_shader->uniform("uPersistence", current_options.persistence);
-						elevation_shader->uniform("uPower", current_options.power);
-						elevation_shader->uniform("uContinentalAmplitudeFactor", continent_amplitude);
-						elevation_shader->uniform("uContinentalFrequencyFactor", continent_frequency);
-						//elevation_shader->uniform("uContinentalShift", seed);
-						elevation_shader->uniform("uEquatorDistanceFactor", equator_distance_factor);
-						elevation_shader->uniform("uEquatorDistancePower", equator_distance_power);
-						using namespace gl;
-						ScopedFramebuffer scoped_framebuffer(framebuffer);
-						ScopedViewport scoped_viewport(framebuffer->getSize());
-						ScopedGlslProg scoped_shader(elevation_shader);
-						drawArrays(GL_POINTS, 0, 1);
-						image_source = framebuffer->getColorTexture()->createSource();
-						break;
-					}
 					default: throw_runtime_exception("invalid map");
 				}
 				if (selected_map < 5) {
@@ -594,7 +654,7 @@ namespace tenjix {
 			ui::SameLine();
 			if (ui::Button("Save")) writeImage("exported/" + map_names[selected_map] + "_Map.jpg", image_source);
 			ui::SameLine(ui::GetWindowWidth() - 150);
-			if (ui::Checkbox("GPU Compute", gpu)) update_tectonic = true;
+			if (ui::Checkbox("GPU Compute", gpu_compute)) update_tectonic = true;
 			ui::ImageButton(map_texture, map_texture->getSize(), 0);
 			bool map_hovered = ui::IsItemHoveredRect() and ui::IsWindowHovered();
 			signed2 map_position = ui::GetItemRectMin();
@@ -610,7 +670,7 @@ namespace tenjix {
 
 			ui::BeginChild("map properties");
 			static int selected_preset = 0;
-			if (ui::Combo("Preset##selection", selected_preset, { "Default", "Alpha World", "Beta World" })) switch (selected_preset) {
+			if (ui::Combo("Preset##selection", selected_preset, { "Default", "Alpha World", "Beta World", "Continents", "Islands" })) switch (selected_preset) {
 				case 0:
 					seed = 0;
 					scale = 1.0f;
@@ -631,7 +691,6 @@ namespace tenjix {
 					scale = 1.0f;
 					shift = { -150, -5200 };
 					current_options = {};
-					current_options.amplitude = 1.0f;
 					current_options.octaves = 5;
 					use_continents = true;
 					continent_frequency = 0.25f;
@@ -653,7 +712,6 @@ namespace tenjix {
 					scale = 0.66f;
 					shift = { -160, -4650 };
 					current_options = {};
-					current_options.amplitude = 1.0f;
 					current_options.octaves = 5;
 					use_continents = true;
 					continent_frequency = 0.25f;
@@ -668,6 +726,56 @@ namespace tenjix {
 					thresholds.snowcap = 0.55f;
 					equator_distance_factor = -0.15f;
 					equator_distance_power = 15;
+					wrap_horizontally = true;
+					update_tectonic = true;
+					break;
+				case 3:
+					gpu_compute = true;
+					seed = 0;
+					scale = 0.6f;
+					shift = { 185, -7925 };
+					current_options = {};
+					current_options.octaves = 5;
+					use_continents = true;
+					continent_amplitude = 2.0f;
+					continent_frequency = 0.25f;
+					sealevel = 0.25f;
+					thresholds.ocean = -0.20f;
+					thresholds.coast = -0.02f;
+					thresholds.beach = 0.0f;
+					thresholds.prairie = 0.02f;
+					thresholds.forrest = 0.25f;
+					thresholds.mountain = 0.40f;
+					thresholds.snowcap = 0.55f;
+					equator_distance_factor = -0.4f;
+					equator_distance_power = 15;
+					transpiration_factor = 0.5f;
+					slope_scale = 1.0f;
+					wrap_horizontally = true;
+					update_tectonic = true;
+					break;
+				case 4:
+					gpu_compute = true;
+					seed = 0;
+					scale = 1.0f;
+					shift = { 330, -2330 };
+					current_options = {};
+					current_options.octaves = 5;
+					use_continents = true;
+					continent_amplitude = 1.0f;
+					continent_frequency = 0.5f;
+					sealevel = 0.25f;
+					thresholds.ocean = -0.20f;
+					thresholds.coast = -0.02f;
+					thresholds.beach = 0.0f;
+					thresholds.prairie = 0.02f;
+					thresholds.forrest = 0.25f;
+					thresholds.mountain = 0.40f;
+					thresholds.snowcap = 0.55f;
+					equator_distance_factor = -0.4f;
+					equator_distance_power = 15;
+					transpiration_factor = 0.5f;
+					slope_scale = 1.0f;
 					wrap_horizontally = true;
 					update_tectonic = true;
 					break;
@@ -715,10 +823,11 @@ namespace tenjix {
 					update_tectonic |= ui::SliderFloat("Continent Frequency", continent_frequency, 0.0f, 2.0f, "%.2f", 1.0f, 0.5f);
 				}
 
-				static float waterlevel = 0.0;
 				update_topography |= ui::SliderPercentage("Sealevel", sealevel, -1.0f, 1.0f, "%+.0f%%", 1.0f, 0.0f);
-				update_topography |= ui::SliderFloat("Equator Distance Factor", equator_distance_factor, -1.0f, 1.0f, "%.2f", 1.0f, 0.0f);
-				update_topography |= ui::SliderInt("Equator Distance Power", equator_distance_power, 1, 15, "%.0f", 10);
+
+				bool& update_optimized = gpu_compute ? update_tectonic : update_topography;
+				update_optimized |= ui::SliderFloat("Equator Distance Factor", equator_distance_factor, -1.0f, 1.0f, "%.2f", 1.0f, 0.0f);
+				update_optimized |= ui::SliderInt("Equator Distance Power", equator_distance_power, 1, 15, "%.0f", 10);
 
 				update_topography |= ui::SliderFloat("Lapse Rate", lapse_rate, 0.0f, 20.0f, u8"%.1f (°/km)", 1.0f, 10.0f);
 				update_topography |= ui::SliderInt("Lapse Power", lapse_power, 1, 2, "%.0f", 1);
@@ -734,16 +843,20 @@ namespace tenjix {
 				update_biomes |= ui::SliderFloat("Lower Threshold", lower_threshold, 0.0f, upper_threshold, "%.2f", 1.0f, One_Third);
 				update_biomes |= ui::SliderFloat("Upper Threshold", upper_threshold, lower_threshold, 1.0f, "%.2f", 1.0f, Two_Thirds);
 
-				update_biomes |= ui::ColorEdit3("Ocean", biome_colors.ocean);
-				update_biomes |= ui::ColorEdit3("Ice", biome_colors.ice);
-				update_biomes |= ui::ColorEdit3("Tundra", biome_colors.tundra);
-				update_biomes |= ui::ColorEdit3("Taiga", biome_colors.taiga);
-				update_biomes |= ui::ColorEdit3("Steppe", biome_colors.steppe);
-				update_biomes |= ui::ColorEdit3("Prairie", biome_colors.prairie);
-				update_biomes |= ui::ColorEdit3("Forest", biome_colors.forest);
-				update_biomes |= ui::ColorEdit3("Desert", biome_colors.desert);
-				update_biomes |= ui::ColorEdit3("Savanna", biome_colors.savanna);
-				update_biomes |= ui::ColorEdit3("Rainforest", biome_colors.rainforest);
+				static bool show_biome_colors = false;
+				if (ui::SmallButton("Biome Colors:")) show_biome_colors = not show_biome_colors;
+				if (show_biome_colors) {
+					update_biomes |= ui::ColorEdit3("Ocean", biome_colors.ocean);
+					update_biomes |= ui::ColorEdit3("Ice", biome_colors.ice);
+					update_biomes |= ui::ColorEdit3("Tundra", biome_colors.tundra);
+					update_biomes |= ui::ColorEdit3("Taiga", biome_colors.taiga);
+					update_biomes |= ui::ColorEdit3("Steppe", biome_colors.steppe);
+					update_biomes |= ui::ColorEdit3("Prairie", biome_colors.prairie);
+					update_biomes |= ui::ColorEdit3("Forest", biome_colors.forest);
+					update_biomes |= ui::ColorEdit3("Desert", biome_colors.desert);
+					update_biomes |= ui::ColorEdit3("Savanna", biome_colors.savanna);
+					update_biomes |= ui::ColorEdit3("Rainforest", biome_colors.rainforest);
+				}
 
 				static bool show_thresholds = false;
 				if (ui::SmallButton("Thresholds:")) show_thresholds = not show_thresholds;

@@ -1,7 +1,8 @@
 #pragma once
 
-#include <cinder/gl/gl.h>
 #include <cinder/app/AppBase.h>
+#include <cinder/gl/gl.h>
+#include <cinder/gl/Ssbo.h>
 
 namespace tenjix {
 
@@ -43,9 +44,9 @@ namespace tenjix {
 		using VertexArray = ci::gl::Vao;
 		using VertexBuffer = ci::gl::Vbo;
 		using FrameBuffer = ci::gl::Fbo;
+		using ShaderBuffer = ci::gl::Ssbo;
 
 	}
-
 
 }
 
