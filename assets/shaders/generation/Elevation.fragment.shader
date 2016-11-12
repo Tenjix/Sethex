@@ -31,11 +31,7 @@ in vec2 Texinates;
 
 out vec4 Output;
 
-ivec2 texel;
-
 void main() {
-
-	texel = ivec2(gl_FragCoord);
 
 	float distance_to_equator = abs(2.0 * (Texinates.y - 0.5));
 
@@ -66,11 +62,10 @@ void main() {
 
 	float elevation = (uContinentalAmplitudeFactor * continental_elevation + regional_elevation) / (uContinentalAmplitudeFactor + 1.0);
 	elevation += uEquatorDistanceFactor * pow(distance_to_equator, uEquatorDistancePower);
-	elevation = clamp(uAmplitude * elevation, -1.0, 1.0) * 0.5 + 0.5;
+	elevation = clamp(uAmplitude * elevation, -1.0, 1.0);
+	elevation = to_unsigned_range(elevation);
 
 	// Output.rgb = elevation > 1.0 ? vec3(1.0, 0.0, 0.0) : elevation > 0.9? vec3(0.0, 1.0, 0.0) : elevation < 0.1 ? vec3(0.0, 0.0, 1.0) : vec3(elevation);
 	Output.rgb = vec3(elevation);
-	// Output.rgb = vec3(Texinates.y);
 	Output.a = 1.0;
-
 }
