@@ -65,7 +65,6 @@ void main() {
 	elevation = clamp(uAmplitude * elevation, -1.0, 1.0);
 	elevation = to_unsigned_range(elevation);
 
-	// Output.rgb = elevation > 1.0 ? vec3(1.0, 0.0, 0.0) : elevation > 0.9? vec3(0.0, 1.0, 0.0) : elevation < 0.1 ? vec3(0.0, 0.0, 1.0) : vec3(elevation);
-	Output.rgb = vec3(elevation);
+	Output.r = elevation;
 	Output.a = 1.0;
 }

@@ -20,9 +20,9 @@ namespace tenjix {
 		shared<Channel32f> elevation_buffer;
 		shared<Channel32f> elevation_map;
 		shared<Channel> temperature_map;
+		shared<Channel> evapotranspiration_map;
+		shared<Surface> circulation_map;
 		shared<Channel> humidity_map;
-		shared<Surface> flow_map;
-		shared<Channel> circulation_map;
 		shared<Channel> precipitation_map;
 		shared<Surface> terrain_map;
 		shared<Surface> biome_map;
@@ -30,10 +30,7 @@ namespace tenjix {
 		shared<Texture> map_texture;
 		shared<Texture> world_texture;
 
-		struct Frame {
-			shared<FrameBuffer> buffer;
-			shared<Shader> shader;
-			shared<Texture> texture;
+		class Frame {
 
 			fs::path vertex_shader_path = "shaders/Square.vertex.shader";
 			fs::path geometry_shader_path = "shaders/Square.geometry.shader";
@@ -41,11 +38,49 @@ namespace tenjix {
 
 			bool flip_origin = false;
 			bool compiled = false;
+			unsigned current = 0;
 
-			Frame& framebuffer(unsigned2 size, GLint format = GL_RGBA32F) {
-				buffer = FrameBuffer::create(size.x, size.y, FrameBuffer::Format().disableDepth().colorTexture(Texture::Format().internalFormat(format)));
-				texture = buffer->getColorTexture();
+			shared<FrameBuffer> buffers[2];
+			shared<Shader> shader;
+
+		public:
+
+			Frame& framebuffer(unsigned2 size, GLint format = GL_RGBA32F, int samples = 0) {
+				buffers[0] = FrameBuffer::create(size.x, size.y, FrameBuffer::Format().samples(samples).disableDepth().colorTexture(Texture::Format().internalFormat(format)));
 				return *this;
+			}
+
+			Frame& dual_framebuffer(unsigned2 size, GLint format = GL_RGBA32F, int samples = 0) {
+				if (not buffers[0]) framebuffer(size, format);
+				buffers[1] = FrameBuffer::create(size.x, size.y, FrameBuffer::Format().samples(samples).disableDepth().colorTexture(Texture::Format().internalFormat(format)));
+				return *this;
+			}
+
+			bool initialized() { return buffers[0] != nullptr; }
+
+			unsigned active() { return current; }
+
+			unsigned inactive() { return 1 - current; }
+
+			Frame& activate(unsigned index) {
+				assert(index == 0 or index == 1);
+				current = index;
+			}
+
+			Frame& swap() { current = 1 - current; return *this; }
+
+			FrameBuffer& buffer() { return *buffers[current]; }
+
+			FrameBuffer& buffer(unsigned index) {
+				assert(index == 0 or index == 1);
+				return *buffers[index];
+			}
+
+			shared<Texture> texture() { return buffers[current]->getColorTexture(); }
+
+			shared<Texture> texture(unsigned index) {
+				assert(index == 0 or index == 1);
+				return buffers[index]->getColorTexture();
 			}
 
 			Frame& flip_horizontally() {
@@ -69,7 +104,7 @@ namespace tenjix {
 
 			bool compile() {
 				try {
-					print("compiling ", fragment_shader_path.filename(), " ...");
+					debug("compiling ", fragment_shader_path.filename(), " ...");
 					String vertex_shader = loadString(app::loadAsset(vertex_shader_path));
 					String geometry_shader = loadString(app::loadAsset(geometry_shader_path));
 					if (flip_origin) shader::define(geometry_shader, "ORIGIN_UPPER_LEFT");
@@ -86,24 +121,23 @@ namespace tenjix {
 
 			void render(std::initializer_list<shared<Texture>> textures = {}) {
 				if (not compiled) return;
-				{
-					print("rendering ", fragment_shader_path.filename(), " ...");
-					assert(buffer);
-					assert(shader);
-					using namespace gl;
-					ScopedFramebuffer scoped_framebuffer(buffer);
-					ScopedViewport scoped_viewport(buffer->getSize());
-					ScopedGlslProg scoped_shader(shader);
-					uint8 unit = 0;
-					for (auto& texture : textures) {
-						assert(texture);
-						texture->bind(unit++);
-					}
-					drawArrays(GL_POINTS, 0, 1);
-					unit = 0;
-					for (auto& texture : textures) {
-						texture->unbind(unit++);
-					}
+				debug("rendering ", fragment_shader_path.filename(), " ...");
+				auto buffer = buffers[current];
+				assert(buffer);
+				assert(shader);
+				using namespace gl;
+				ScopedFramebuffer scoped_framebuffer(buffer);
+				ScopedViewport scoped_viewport(buffer->getSize());
+				ScopedGlslProg scoped_shader(shader);
+				uint8 unit = 0;
+				for (auto& texture : textures) {
+					assert(texture);
+					texture->bind(unit++);
+				}
+				drawArrays(GL_POINTS, 0, 1);
+				unit = 0;
+				for (auto& texture : textures) {
+					texture->unbind(unit++);
 				}
 			}
 
@@ -111,9 +145,9 @@ namespace tenjix {
 
 		Frame elevation_frame;
 		Frame temperature_frame;
-		Frame humidity_frame;
-		Frame flow_frame;
+		Frame evapotranspiration_frame;
 		Frame circulation_frame;
+		Frame humidity_frame;
 		Frame precipitation_frame;
 		Frame biome_frame;
 
@@ -158,12 +192,6 @@ namespace tenjix {
 		};
 
 		BiomeColors biome_colors;
-
-		struct HumidityCell {
-			vector<float> humidity;
-			unsigned start;
-			unsigned end;
-		};
 
 		template <class Type>
 		float calculate_elevation(const Type& position, const Simplex::Options& options, bool continents, float continent_frequency, float continent_amplitude) {
@@ -232,21 +260,22 @@ namespace tenjix {
 			static bool update_tectonic = true, update_topography, update_climate, update_display, update_biomes;
 			static unsigned water_pixels;
 			static float elevation_minimum, elevation_maximum, lapse_rate = 10.0f;
-			static float evaporation_factor = 1.0f, transpiration_factor = 0.15f, precipitation_factor = 1.0f, precipitation_decay = 0.05f, slope_scale = 0.01f;
+			static float evaporation_factor = 1.0f, transpiration_factor = 0.25f, precipitation_factor = 1.0f, precipitation_decay = 0.05f, slope_scale = 0.01f;
 			static float humidity_saturation = 25.0f;
 			static bool upper_precipitation = true;
 			static bool gpu_compute = false;
 			static unsigned circulation_iterations = 10;
+			static float circulation_intensity = 1.0, orograpic_effect = 1.0;
 
 			const unsigned2 map_resolution = { 800, 450 };
 
-			if (gpu_compute and not elevation_frame.buffer) {
+			if (gpu_compute and not elevation_frame.initialized()) {
 				elevation_frame.framebuffer(map_resolution, GL_R32F).fragment("shaders/generation/Elevation.fragment.shader", update_tectonic).flip_horizontally();
 				temperature_frame.framebuffer(map_resolution, GL_R32F).fragment("shaders/generation/Temperature.fragment.shader", update_topography);
-				humidity_frame.framebuffer(map_resolution, GL_R32F).fragment("shaders/generation/Humidity.fragment.shader", update_climate);
-				flow_frame.framebuffer(map_resolution, GL_RG8).fragment("shaders/generation/Flow.fragment.shader", update_climate);
-				circulation_frame.framebuffer(map_resolution, GL_R32F).fragment("shaders/generation/Circulation.fragment.shader", update_climate);
-				precipitation_frame.framebuffer(map_resolution, GL_R32F).fragment("shaders/generation/Precipitation.fragment.shader", update_climate);
+				evapotranspiration_frame.framebuffer(map_resolution, GL_R32F).fragment("shaders/generation/Evapotranspiration.fragment.shader", update_climate);
+				circulation_frame.framebuffer(map_resolution, GL_RGB32F).fragment("shaders/generation/Circulation.fragment.shader", update_climate);
+				humidity_frame.dual_framebuffer(map_resolution, GL_R32F).fragment("shaders/generation/Humidity.fragment.shader", update_climate);
+				precipitation_frame.framebuffer(map_resolution, GL_R32F, 16).fragment("shaders/generation/Precipitation.fragment.shader", update_climate);
 			}
 
 			static TerrainThresholds thresholds, default_thresholds;
@@ -293,7 +322,7 @@ namespace tenjix {
 						elevation_frame.uniform("uEquatorDistanceFactor", equator_distance_factor);
 						elevation_frame.uniform("uEquatorDistancePower", equator_distance_power);
 						elevation_frame.render();
-						elevation_map = Channel32f::create(elevation_frame.texture->createSource());
+						elevation_map = Channel32f::create(elevation_frame.texture()->createSource());
 					} else {
 						if (not elevation_map) elevation_map = Channel32f::create(map_resolution.x, map_resolution.y);
 						elevation_minimum = elevation_maximum = Zero;
@@ -346,8 +375,8 @@ namespace tenjix {
 						temperature_frame.uniform("uElevationMap", 0);
 						temperature_frame.uniform("uSeaLevel", sealevel);
 						temperature_frame.uniform("uLapseRate", lapse_rate);
-						temperature_frame.render({ elevation_frame.texture });
-						temperature_map = Channel::create(temperature_frame.texture->createSource());
+						temperature_frame.render({ elevation_frame.texture() });
+						temperature_map = Channel::create(temperature_frame.texture()->createSource());
 					} else {
 						if (not temperature_map) temperature_map = Channel::create(map_resolution.x, map_resolution.y);
 						auto buffer_iterator = elevation_buffer->getIter();
@@ -387,36 +416,44 @@ namespace tenjix {
 				if (update_climate) {
 					print("update climate");
 					if (gpu_compute and circulation) {
-						// calculate humidity
-						humidity_frame.uniform("uElevationMap", 0);
-						humidity_frame.uniform("uTemperatureMap", 1);
-						humidity_frame.uniform("uSeaLevel", sealevel);
-						humidity_frame.uniform("uEvaporation", evaporation_factor);
-						humidity_frame.uniform("uTranspiration", transpiration_factor);
-						humidity_frame.render({ elevation_frame.texture, temperature_frame.texture });
-						humidity_map = Channel::create(humidity_frame.texture->createSource());
 						// calculate flow
-						flow_frame.uniform("uElevationMap", 0);
-						flow_frame.uniform("uTemperatureMap", 1);
-						flow_frame.render({ elevation_frame.texture, temperature_frame.texture });
-						flow_map = Surface::create(flow_frame.texture->createSource());
-						// simulate circulation
 						circulation_frame.uniform("uElevationMap", 0);
 						circulation_frame.uniform("uTemperatureMap", 1);
-						circulation_frame.uniform("uHumidityMap", 2);
-						circulation_frame.render({ elevation_frame.texture, temperature_frame.texture, humidity_frame.texture });
-						//shared<Texture> humidity_texture = Texture::create(humidity_frame.texture);
-						//for (uint i = 0; i < circulation_iterations; i++) {
-						//	circulation_frame.render({ elevation_frame.texture, temperature_frame.texture, humidity_texture });
-						//	humidity_texture = Texture::create(*circulation_frame.texture);
-						//}
-						circulation_map = Channel::create(circulation_frame.texture->createSource());
+						circulation_frame.render({ elevation_frame.texture(), temperature_frame.texture() });
+						circulation_map = Surface::create(circulation_frame.texture()->createSource());
+						// calculate humidity
+						evapotranspiration_frame.uniform("uElevationMap", 0);
+						evapotranspiration_frame.uniform("uTemperatureMap", 1);
+						evapotranspiration_frame.uniform("uCirculationMap", 2);
+						evapotranspiration_frame.uniform("uSeaLevel", sealevel);
+						evapotranspiration_frame.uniform("uEvaporation", evaporation_factor);
+						evapotranspiration_frame.uniform("uTranspiration", transpiration_factor);
+						evapotranspiration_frame.render({ elevation_frame.texture(), temperature_frame.texture(), circulation_frame.texture() });
+						evapotranspiration_map = Channel::create(evapotranspiration_frame.texture()->createSource());
+						// simulate circulation
+						humidity_frame.uniform("uElevationMap", 0);
+						humidity_frame.uniform("uTemperatureMap", 1);
+						humidity_frame.uniform("uCirculationMap", 2);
+						humidity_frame.uniform("uHumidityMap", 3);
+						humidity_frame.uniform("uSeaLevel", sealevel);
+						humidity_frame.uniform("uIntensity", circulation_intensity);
+						shared<Texture> humidity_texture = evapotranspiration_frame.texture();
+						for (unsigned iteration = 1; iteration <= circulation_iterations; iteration++) {
+							humidity_frame.uniform("uIteration", iteration);
+							humidity_frame.swap().render({ elevation_frame.texture(), temperature_frame.texture(), circulation_frame.texture(), humidity_texture });
+							humidity_texture = humidity_frame.texture();
+						}
+						humidity_map = Channel::create(humidity_frame.texture()->createSource());
 						// simulate circulation
 						precipitation_frame.uniform("uElevationMap", 0);
 						precipitation_frame.uniform("uTemperatureMap", 1);
-						precipitation_frame.uniform("uHumidityMap", 2);
-						precipitation_frame.render({ elevation_frame.texture, temperature_frame.texture, humidity_frame.texture });
-						precipitation_map = Channel::create(precipitation_frame.texture->createSource());
+						precipitation_frame.uniform("uCirculationMap", 2);
+						precipitation_frame.uniform("uHumidityMap", 3);
+						precipitation_frame.uniform("uResolution", map_resolution);
+						precipitation_frame.uniform("uSeaLevel", sealevel);
+						precipitation_frame.uniform("uOrograpicEffect", orograpic_effect);
+						precipitation_frame.render({ elevation_frame.texture(), temperature_frame.texture(), circulation_frame.texture(), humidity_texture });
+						precipitation_map = Channel::create(precipitation_frame.texture()->createSource());
 					} else {
 						if (not precipitation_map) precipitation_map = Channel::create(map_resolution.x, map_resolution.y);
 						vector<vector<float>> humidity_map { 6, vector<float>(map_resolution.x) };
@@ -595,9 +632,9 @@ namespace tenjix {
 
 			ui::BeginChild("map display", float2(map_resolution.x, 0));
 			static int selected_map = 0;
-			ui::PushItemWidth(150);
+			ui::PushItemWidth(180);
 			static Lot<String> cpu_map_names { "Biome", "Terrain", "Elevation", "Temperature", "Precipitation" };
-			static Lot<String> gpu_map_names { "Biome", "Terrain", "Elevation", "Temperature", "Humidity", "Flow", "Circulated", "Precipitation" };
+			static Lot<String> gpu_map_names { "Biome", "Terrain", "Elevation", "Temperature", "Circulation", "Evapotranspiration", "Humidity", "Precipitation" };
 			bool gpu = gpu_compute and circulation;
 			Lot<String>& map_names = gpu ? gpu_map_names : cpu_map_names;
 			static shared<ImageSource> image_source;
@@ -616,13 +653,14 @@ namespace tenjix {
 						image_source = *temperature_map;
 						break;
 					case 4:
-						image_source = gpu ? *humidity_map : *precipitation_map;
+						if (gpu) image_source = *circulation_map;
+						else image_source = *precipitation_map;
 						break;
 					case 5:
-						image_source = *flow_map;
+						image_source = *evapotranspiration_map;
 						break;
 					case 6:
-						image_source = *circulation_map;
+						image_source = *humidity_map;
 						break;
 					case 7:
 						image_source = *precipitation_map;
@@ -640,7 +678,7 @@ namespace tenjix {
 			ui::SameLine();
 			if (ui::Button("Save")) writeImage("exported/" + map_names[selected_map] + "_Map.jpg", image_source);
 			ui::SameLine(ui::GetWindowWidth() - 150);
-			if (ui::Checkbox("GPU Compute", gpu_compute)) update_tectonic = true;
+			update_tectonic |= ui::Checkbox("GPU Compute", gpu_compute);
 			ui::ImageButton(map_texture, map_texture->getSize(), 0);
 			bool map_hovered = ui::IsItemHoveredRect() and ui::IsWindowHovered();
 			signed2 map_position = ui::GetItemRectMin();
@@ -797,17 +835,13 @@ namespace tenjix {
 				update_tectonic |= ui::SliderFloat("Lacunarity", current_options.lacunarity, 0.0f, 10.0f, "%.2f", 1.0f, saved_options.lacunarity); ui::Hint("Ctrl+Click to enter an exact value");
 				update_tectonic |= ui::SliderFloat("Persistence", current_options.persistence, 0.0f, 2.0f, "%.2f", 1.0f, saved_options.persistence); ui::Hint("Ctrl+Click to enter an exact value");
 				update_tectonic |= ui::SliderFloat("Power", current_options.power, 0.1f, 10.0f, "%.2f", 1.0f, saved_options.power); ui::Hint("Ctrl+Click to enter an exact value");
+				update_tectonic |= ui::SliderFloat("Continent Amplitude", continent_amplitude, 0.0f, 10.0f, "%.2f", 1.0f, 1.0f);
+				update_tectonic |= ui::SliderFloat("Continent Frequency", continent_frequency, 0.0f, 2.0f, "%.2f", 1.0f, 0.5f);
 				//update_tectonic |= ui::Checkbox("Positive", current_options.positive); ui::Tooltip("sets noise range to [0,1] instead of [-1,1]");
 				//ui::SameLine();
 				update_tectonic |= ui::Checkbox("Wrap Horizontally", wrap_horizontally);
 				ui::SameLine();
-				update_climate |= ui::Checkbox("Circulation", circulation);
-				ui::SameLine();
 				update_tectonic |= ui::Checkbox("Continents##use", use_continents);
-				if (use_continents) {
-					update_tectonic |= ui::SliderFloat("Continent Amplitude", continent_amplitude, 0.0f, 10.0f, "%.2f", 1.0f, 1.0f);
-					update_tectonic |= ui::SliderFloat("Continent Frequency", continent_frequency, 0.0f, 2.0f, "%.2f", 1.0f, 0.5f);
-				}
 
 				update_topography |= ui::SliderPercentage("Sealevel", sealevel, -1.0f, 1.0f, "%+.0f%%", 1.0f, 0.0f);
 
@@ -819,12 +853,23 @@ namespace tenjix {
 				update_topography |= ui::SliderInt("Lapse Power", lapse_power, 1, 2, "%.0f", 1);
 
 				update_climate |= ui::SliderFloat("Evaporation", evaporation_factor, 0.0f, 10.0f, "%.3f", 2.0f, 1.0f);
-				update_climate |= ui::SliderFloat("Transpiration", transpiration_factor, 0.0f, 10.0f, "%.3f", 2.0f, 0.15f);
-				update_climate |= ui::SliderFloat("Precipitation", precipitation_factor, 0.0f, 10.0f, "%.3f", 2.0f, 1.0f);
-				update_climate |= ui::SliderFloat("Precipitation Decay", precipitation_decay, 0.0f, 1.0f, "%.3f", 2.0f, 0.05f);
-				update_climate |= ui::SliderFloat("Slope Scale", slope_scale, 0.001f, 1.0f, "%.3f", 3.0f, 0.01f);
-				update_climate |= ui::SliderFloat("Humidity Saturation", humidity_saturation, 1.0f, 100.0f, "%.3f", 3.0f, 25.0f);
-				update_climate |= ui::Checkbox("Upper Precipitation", upper_precipitation);
+				update_climate |= ui::SliderFloat("Transpiration", transpiration_factor, 0.0f, 10.0f, "%.3f", 2.0f, 0.25f);
+
+				if (gpu_compute) {
+					update_climate |= ui::Checkbox("Circulation", circulation);
+				}
+
+				if (circulation) {
+					update_climate |= ui::SliderUnsigned("Circulation Iterations", circulation_iterations, 0, 100, "%.0f", 10);
+					update_climate |= ui::SliderFloat("Circulation Intensity", circulation_intensity, 0.0f, 1.0f, "%.3f", 1.0f, 1.0f);
+					update_climate |= ui::SliderFloat("Orograpic Effect", orograpic_effect, 0.0f, 1.0f, "%.3f", 1.0f, 1.0f);
+				} else {
+					update_climate |= ui::SliderFloat("Precipitation", precipitation_factor, 0.0f, 10.0f, "%.3f", 2.0f, 1.0f);
+					update_climate |= ui::SliderFloat("Precipitation Decay", precipitation_decay, 0.0f, 1.0f, "%.3f", 2.0f, 0.05f);
+					update_climate |= ui::SliderFloat("Slope Scale", slope_scale, 0.001f, 1.0f, "%.3f", 3.0f, 0.01f);
+					update_climate |= ui::SliderFloat("Humidity Saturation", humidity_saturation, 1.0f, 100.0f, "%.3f", 3.0f, 25.0f);
+					update_climate |= ui::Checkbox("Upper Precipitation", upper_precipitation);
+				}
 
 				update_biomes |= ui::SliderFloat("Lower Threshold", lower_threshold, 0.0f, upper_threshold, "%.2f", 1.0f, One_Third);
 				update_biomes |= ui::SliderFloat("Upper Threshold", upper_threshold, lower_threshold, 1.0f, "%.2f", 1.0f, Two_Thirds);

@@ -18,17 +18,16 @@ in vec2 Texinates;
 
 out vec4 Output; 
 
-ivec2 texel;
-
 void main() {
 
-	texel = ivec2(gl_FragCoord);
+	ivec2 texel = ivec2(gl_FragCoord);
 
 	float distance_to_equator = abs(2.0 * (Texinates.y - 0.5));
 
-	float sea_level = uSeaLevel * 0.5 + 0.5;
-	float elevation = texture(uElevationMap, Texinates).x;
-	// float elevation = texelFetch(uElevationMap, texel, 0).x;
+	float sea_level = to_unsigned_range(uSeaLevel);
+	float elevation = texelFetch(uElevationMap, texel, 0).r;
+	// float elevation = texture(uElevationMap, Texinates).r;
+	
 	// float percentage_elevation_above_sealevel = max(elevation - uSeaLevel, 0.0f) / (1.0f - uSeaLevel);
 	float elevation_above_sealevel_in_km = (elevation - sea_level) * 2.0 * 10.0;
 	float elevation_based_temerature_decline = uLapseRate * elevation_above_sealevel_in_km / uTemperatureRange;
@@ -37,12 +36,10 @@ void main() {
 	float temperature_noise = simplex_noise(position.xy * 0.005);
 
 	float temperature = 1.0f - distance_to_equator * distance_to_equator;
-	// temperature = mix(temperature, temperature_noise, 0.05);
+	temperature = mix(temperature, temperature_noise, 0.05);
 	temperature -= elevation > sea_level ? elevation_based_temerature_decline : 0.1;
-	// temperature -= elevation_based_temerature_decline;
 
-	Output.rgb = vec3(temperature);
-	// Output.rgb = vec3(elevation);
+	Output.r = temperature;
 	Output.a = 1.0;
 
 }
