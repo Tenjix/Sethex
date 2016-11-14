@@ -38,7 +38,7 @@ namespace tenjix {
 			auto font_type = loadAsset("fonts/Nunito.ttf");
 			font = TextureFont::create(Font(font_type, 20.0f), TextureFont::Format(), TextureFont::defaultChars() + u8"дцья\ue000\ue001\ue002\ue003\ue004\ue005\ue006");
 			font_color = Color::white();
-			background = Texture::create(loadImage(loadAsset("images/Background.jpg")));
+			background = Texture::create(loadImage(loadAsset("images/Earth.jpg")));
 			display.camera.lookAt(float3(0, 250, 0.001), float3(0));
 			display.camera.setFarClip(1000.0f);
 
