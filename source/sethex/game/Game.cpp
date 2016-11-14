@@ -131,6 +131,7 @@ namespace tenjix {
 			static bool render_generator = false;
 			static bool enable_tile_system = true;
 			static bool vertical_synchronization = true;
+			bool update_world = false;
 			{
 				ui::ScopedWindow ui_window("", ImGuiWindowFlags_NoTitleBar);
 				ui::Checkbox("Background", &render_background);
@@ -150,14 +151,23 @@ namespace tenjix {
 				}
 				ui::Checkbox("Overlay", &render_overlay);
 				ui::Checkbox("Interface", &render_interface);
-				if (ui::Checkbox("Generator", &render_generator)) {
-					if (not render_generator) world.get<TileSystem>().update(generator.biomes, generator.elevation);
-				}
+				update_world |= ui::Checkbox("Generator", &render_generator) and not render_generator;
 				if (ui::Checkbox("Tile System", &enable_tile_system)) {
 					if (enable_tile_system)	world.get<TileSystem>().activate();
 					else world.get<TileSystem>().deactivate();
 				}
 				if (ui::Checkbox("V-Sync", &vertical_synchronization)) enableVerticalSync(vertical_synchronization);
+			}
+
+			if (render_world) {
+				ui::ScopedWindow ui_window("World Map");
+				static unsigned2 resolution = { 16, 9 };
+				static float elevation = 1.0;
+				//update_world |= ui::SliderUnsigned2("Resolution", resolution, 9, 160);
+				update_world |= ui::SliderFloat("Elevation", elevation, 0.1f, 2.0f, "%.2f", 1.0f, 1.0f);
+				if (update_world) {
+					world.get<TileSystem>().update(generator.biomes, generator.elevation, elevation);
+				}
 			}
 
 			setMatricesWindow(display.size);

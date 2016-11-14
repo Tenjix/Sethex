@@ -46,9 +46,9 @@ namespace tenjix {
 			void update(float delta_time) override;
 			void update(Entity& entity, float delta_time) override;
 
-			void update(shared<Surface32f> biome_map = nullptr, shared<Channel32f> elevation_map = nullptr);
-			void update(shared<ImageSource> biome_map = nullptr, shared<ImageSource> elevation_map = nullptr) {
-				update(Surface32f::create(biome_map), Channel32f::create(elevation_map));
+			void update(shared<Surface32f> biome_map = nullptr, shared<Channel32f> elevation_map = nullptr, float scale = 1.0);
+			void update(shared<ImageSource> biome_map = nullptr, shared<ImageSource> elevation_map = nullptr, float scale = 1.0) {
+				update(Surface32f::create(biome_map), Channel32f::create(elevation_map), scale);
 			}
 
 			optional<Entity> get_tile(float2 mouse_position) const;

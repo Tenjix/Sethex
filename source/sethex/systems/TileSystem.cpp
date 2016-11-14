@@ -337,7 +337,7 @@ namespace tenjix {
 
 		float3* mapped_instance_colors;
 
-		void TileSystem::update(shared<Surface32f> biome_map, shared<Channel32f> elevation_map) {
+		void TileSystem::update(shared<Surface32f> biome_map, shared<Channel32f> elevation_map, float scale) {
 			float2 biome_map_size, elevation_map_size;
 			if (elevation_map) {
 				mapped_instance_positions = static_cast<float3*>(instance_positions->mapReplace());
@@ -353,7 +353,7 @@ namespace tenjix {
 				auto texinates = map.texinates(coordinates);
 				if (elevation_map) {
 					auto elevation = *elevation_map->getData(elevation_map_size * texinates);
-					position.y = elevation * glm::length(map.cartesian_size()) * 0.05f;
+					position.y = elevation * glm::length(map.cartesian_size()) * 0.05f * scale;
 					mapped_instance_positions[map.index(coordinates)] = position;
 				}
 				if (biome_map) {
