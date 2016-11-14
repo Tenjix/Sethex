@@ -10,6 +10,8 @@
 uniform sampler2D uElevationMap;
 uniform sampler2D uTemperatureMap;
 
+uniform bool uDebug = false;
+
 in vec2 Texinates;
 
 out vec4 Output;
@@ -37,22 +39,21 @@ float calculate_base_density(ivec2 texel) {
 // calculates air density based on circulation cells and temperature
 float calculate_density(ivec2 texel) {
 	texel = limit(texel, map_size);
-	// return calculate_base_density(texel);
-	float ratio = 3.0;
+	float ratio = 2.0;
 	return (ratio * calculate_base_density(texel) + get_temperature(texel)) / (ratio + 1.0);
 }
 
 // calculates air density deltas between opposing neighbor cells of the given texel
 vec4 calculate_density_delta(ivec2 texel, int distance = 1) {
 	vec4 delta;
-	// north - south
-	delta.x = calculate_density(texel - ivec2(0, -distance)) - calculate_density(texel - ivec2(0, distance));
 	// west - east
-	delta.y = calculate_density(texel - ivec2(-distance, 0)) - calculate_density(texel - ivec2(distance, 0));
-	// north-west - south-east
-	delta.z = calculate_density(texel - ivec2(-distance, -distance)) - calculate_density(texel - ivec2(distance, distance));
+	delta.x = calculate_density(texel + ivec2(-distance, 0)) - calculate_density(texel + ivec2(distance, 0));
+	// south - south
+	delta.y = calculate_density(texel + ivec2(0, -distance)) - calculate_density(texel + ivec2(0, distance));
 	// south-west - north-east
-	delta.w = calculate_density(texel - ivec2(-distance, distance)) - calculate_density(texel - ivec2(distance, -distance));
+	delta.z = calculate_density(texel + ivec2(-distance, -distance)) - calculate_density(texel + ivec2(distance, distance));
+	// north-west - south-east
+	delta.w = calculate_density(texel + ivec2(-distance, distance)) - calculate_density(texel + ivec2(distance, -distance));
 	return delta;
 }
 
@@ -79,20 +80,18 @@ vec2 apply_coriolis_effect(vec2 texel, vec2 flow) {
 
 // calculates air flow at the given texel based on air pressure
 vec2 calculate_flow(ivec2 texel) {
-	vec2 north_south_direction = vec2(0, 1);
-	vec2 west_east_direction = vec2(1, 0);
-	vec2 northwest_southeast_direction = vec2(Sqrt_2_Inverse);
-	vec2 southwest_northeast_direction = vec2(Sqrt_2_Inverse, -Sqrt_2_Inverse);
+	vec2 east_direction = vec2(1, 0);
+	vec2 north_direction = vec2(0, 1);
+	vec2 northeast_direction = vec2(Sqrt_2_Inverse);
+	vec2 southeast_direction = vec2(Sqrt_2_Inverse, -Sqrt_2_Inverse);
 
 	vec4 pressure = calculate_pressure(texel, 7);
 
 	float pressure_coefficient = 1.5;
 	pressure = clamp(pressure * pressure_coefficient, -1.0, 1.0);
 
-	vec2 flow = north_south_direction * pressure.x 
-		+ west_east_direction * pressure.y 
-		+ northwest_southeast_direction * pressure.z 
-		+ southwest_northeast_direction * pressure.w;
+	vec2 flow = east_direction * pressure.x + north_direction * pressure.y + northeast_direction * pressure.z + southeast_direction * pressure.w;
+	// flow = pressure.xy;
 
 	flow = apply_coriolis_effect(texel, flow);
 
@@ -113,8 +112,23 @@ void main() {
 	
 	vec2 flow = calculate_flow(texel);
 
-	Output.rg = flow;
+	Output.rg = normalize(flow);
 	Output.b = length(flow);
 	Output.a = 1.0;
+
+	if(uDebug) {
+		Output.rgb = vec3(0.0);
+		if(Texinates.x < 0.25) {
+			Output.b = calculate_base_density(texel);
+		} else if(Texinates.x < 0.5) {
+			Output.b = calculate_density(texel);
+		} else if(Texinates.x < 0.75) {
+			Output.r = max(-flow.y, 0.0);
+			Output.g = max(flow.y, 0.0);
+		} else {
+			Output.r = max(-flow.x, 0.0);
+			Output.g = max(flow.x, 0.0);
+		}
+	}
 
 }

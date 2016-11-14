@@ -34,8 +34,8 @@ void main() {
 
 	bool land = elevation > sea_level;
 	float intensity = float(land) * uIntensity * 0.5;
-	float scale = float(uIteration) * 0.05;
-	// scale = 0.1;
+	float scale = float(uIteration) * 0.01;
+	scale = 0.33;
 
 	// circulate humidity
 

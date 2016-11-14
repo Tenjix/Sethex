@@ -97,7 +97,7 @@ namespace tenjix {
 
 			// build map coordinates
 
-			unsigned n = 4;
+			unsigned n = 10;
 			map = hex::Map(16 * n, 9 * n);
 			tiles.reserve(map.coordinates().size());
 
