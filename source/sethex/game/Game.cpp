@@ -161,9 +161,17 @@ namespace tenjix {
 
 			if (render_world) {
 				ui::ScopedWindow ui_window("World Map");
-				static unsigned2 resolution = { 16, 9 };
-				static float elevation = 1.0;
-				//update_world |= ui::SliderUnsigned2("Resolution", resolution, 9, 160);
+				static unsigned2 size = { 16, 9 };
+				static float elevation = 1.0f, resolution = 0.1f;
+				bool resize_world = false;
+				if (ui::SliderPercentage("Resolution", resolution, 0.1f, 1.0f, "%+.0f%%", 1.0f, 0.1f)) {
+					size = float2(160, 90) * resolution;
+					resize_world = true;
+				}
+				resize_world |= ui::SliderUnsigned("Width", size.x, 16, 160);
+				resize_world |= ui::SliderUnsigned("Height", size.y, 9, 90);
+				if (resize_world) world.get<TileSystem>().resize(size);
+				update_world |= resize_world;
 				update_world |= ui::SliderFloat("Elevation", elevation, 0.1f, 2.0f, "%.2f", 1.0f, 1.0f);
 				if (update_world) {
 					world.get<TileSystem>().update(generator.biomes, generator.elevation, elevation);

@@ -8,9 +8,6 @@
 
 #include <sethex/components/Display.h>
 #include <sethex/components/Geometry.h>
-#include <sethex/components/Instantiable.h>
-#include <sethex/components/Material.h>
-#include <sethex/components/Tile.h>
 
 using namespace std;
 using namespace cinder;
@@ -82,6 +79,12 @@ namespace tenjix {
 
 		void TileSystem::initialize() {
 
+			Font font = Font(Assets::get("fonts/Nunito.ttf"), 100.0f);
+
+			Display& display = world->find_entity("Main Display").get<Display>();
+
+			// create hexagon shape
+
 			hexagon_shape.clear();
 			for (auto& vertex : UnitHexagon.vertices) {
 				if (hexagon_shape.empty()) {
@@ -91,15 +94,49 @@ namespace tenjix {
 				}
 			}
 
-			Font font = Font(Assets::get("fonts/Nunito.ttf"), 100.0f);
+			// create material and mesh
 
-			Display& display = world->find_entity("Main Display").get<Display>();
+			//String vertex_shader = loadString(loadAsset("shaders/Tile.vertex.shader"));
+			//String fragment_shader = loadString(loadAsset("shaders/Tile.fragment.shader"));
+			//shader::define(fragment_shader, "DIFFUSE_TEXTURE");
+			//shared<Shader> shader;
+			//try {
+			//	shader = Shader::create(vertex_shader, fragment_shader);
+			//} catch (GlslProgCompileExc exception) {
+			//	error(exception.what());
+			//	return;
+			//}
+			//shader->setLabel("Tile Shader");
+			//shader->uniform("uDiffuseTexture", 0);
+			//shader->uniform("uTextureRotation", glm::mat2x2(0.0, 1.0, -1.0, 0.0));
+			//shared<Texture> hexagon_texure = Texture::create(loadImage(loadAsset("textures/pointy.png")), Texture::Format().mipmap());
+			material = Material::create();
+			material->name("Shared Tile Material");
+			//material->add(hexagon_texure);
 
-			// build map coordinates
+			// make tiles instantiable
 
-			unsigned n = 10;
-			map = hex::Map(16 * n, 9 * n);
-			tiles.reserve(map.coordinates().size());
+			instantiable = Instantiable::create();
+
+			wd::watch("shaders/Material.*", [this](const fs::path& path) {
+				String vertex_shader = loadString(loadAsset("shaders/Material.vertex.shader"));
+				shader::define(vertex_shader, "INSTANTIATION");
+				String fragment_shader = loadString(loadAsset("shaders/Material.fragment.shader"));
+				try {
+					material->shader = Shader::create(vertex_shader, fragment_shader);
+				} catch (GlslProgCompileExc exception) {
+					error(exception.what());
+					return;
+				}
+				material->shader->setLabel("Tile Shader");
+				if (not mesh) return;
+				Batch::AttributeMapping attributes;
+				attributes.emplace(Attrib::CUSTOM_0, "InstancePosition");
+				attributes.emplace(Attrib::CUSTOM_1, "InstanceColor");
+				instantiable->batch = Batch::create(mesh, material->shader, attributes);
+			});
+
+			resize({ 16, 9 });
 
 			display.window->getSignalMouseMove().connect([&](MouseEvent event) {
 				if (event.isAltDown()) {
@@ -208,88 +245,6 @@ namespace tenjix {
 					}
 				}
 			});
-
-
-			// create material and mesh
-
-			//String vertex_shader = loadString(loadAsset("shaders/Tile.vertex.shader"));
-			//String fragment_shader = loadString(loadAsset("shaders/Tile.fragment.shader"));
-			//shader::define(fragment_shader, "DIFFUSE_TEXTURE");
-			//shared<Shader> shader;
-			//try {
-			//	shader = Shader::create(vertex_shader, fragment_shader);
-			//} catch (GlslProgCompileExc exception) {
-			//	error(exception.what());
-			//	return;
-			//}
-			//shader->setLabel("Tile Shader");
-			//shader->uniform("uDiffuseTexture", 0);
-			//shader->uniform("uTextureRotation", glm::mat2x2(0.0, 1.0, -1.0, 0.0));
-			//shared<Texture> hexagon_texure = Texture::create(loadImage(loadAsset("textures/pointy.png")), Texture::Format().mipmap());
-			auto material = Material::create();
-			material->name("Shared Tile Material");
-			//material->add(hexagon_texure);
-
-			shared<Mesh> mesh = Mesh::create(Extrude(hexagon_shape, hexagon_extrusion) >> Rotate(quaternion(float3(-Pi_Half, 0.0f, 0.0f))));
-
-			// make tiles instantiable
-
-			vector<float3> positions;
-			vector<float3> colors;
-			positions.reserve(map.coordinates().size());
-			colors.reserve(map.coordinates().size());
-			for (auto& coordinates : map.coordinates()) {
-				positions.push_back(coordinates.to_position());
-				colors.push_back(glm::mix(float3(1.0), coordinates.to_floats(), 0.25));
-			}
-			instance_positions = VertexBuffer::create(GL_ARRAY_BUFFER, positions, GL_DYNAMIC_DRAW);
-			instance_colors = VertexBuffer::create(GL_ARRAY_BUFFER, colors, GL_DYNAMIC_DRAW);
-
-			mesh->appendVbo(BufferLayout({ { Attrib::CUSTOM_0, 3, 0, 0, 1 } }), instance_positions);
-			mesh->appendVbo(BufferLayout({ { Attrib::CUSTOM_1, 3, 0, 0, 1 } }), instance_colors);
-
-			auto instantiable = Instantiable::create();
-
-			wd::watch("shaders/Material.*", [instantiable, mesh, material](const fs::path& path) {
-				String vertex_shader = loadString(loadAsset("shaders/Material.vertex.shader"));
-				shader::define(vertex_shader, "INSTANTIATION");
-				String fragment_shader = loadString(loadAsset("shaders/Material.fragment.shader"));
-				try {
-					material->shader = Shader::create(vertex_shader, fragment_shader);
-				} catch (GlslProgCompileExc exception) {
-					error(exception.what());
-					return;
-				}
-				material->shader->setLabel("Tile Shader");
-				Batch::AttributeMapping attributes;
-				attributes.emplace(Attrib::CUSTOM_0, "InstancePosition");
-				attributes.emplace(Attrib::CUSTOM_1, "InstanceColor");
-				instantiable->batch = Batch::create(mesh, material->shader, attributes);
-			});
-
-			// create entities
-
-			print("generate tiles");
-			auto start = chrono::system_clock::now();
-
-			auto coordinate_iterator = map.coordinates().begin();
-			auto position_iterator = positions.begin();
-			world->create_entities(map.coordinates().size(), "Tile #", [&](Entity entity) {
-				entity.add<Tile>().coordinates = *coordinate_iterator++;
-				entity.add<Geometry>().mesh(mesh).position(*position_iterator++);
-				entity.add(material);
-				entity.add(instantiable);
-				tiles.push_back(entity);
-			});
-
-			auto end = chrono::system_clock::now();
-			print("tiles generated");
-			auto duration = end - start;
-			print("in ", chrono::duration_cast<chrono::milliseconds>(duration).count(), " milliseconds");
-
-			focus_expansion = (map.width / 2 + 1) * UnitHexagon.size.x;
-			print(map.width, "x", map.height);
-
 		}
 
 		float3* mapped_instance_positions;
@@ -333,6 +288,62 @@ namespace tenjix {
 				position.x += map.width * UnitHexagon.width * sign(focus_position.x - position.x);
 				mapped_instance_positions[map.index(tile.coordinates)] = position;
 			}
+		}
+
+		void TileSystem::resize(unsigned2 size) {
+
+			// build map coordinates
+
+			map = hex::Map(size.x, size.y);
+			tiles.reserve(map.coordinates().size());
+
+			vector<float3> positions;
+			vector<float3> colors;
+			positions.reserve(map.coordinates().size());
+			colors.reserve(map.coordinates().size());
+			for (auto& coordinates : map.coordinates()) {
+				positions.push_back(coordinates.to_position());
+				colors.push_back(glm::mix(float3(1.0), coordinates.to_floats(), 0.25));
+			}
+			instance_positions = VertexBuffer::create(GL_ARRAY_BUFFER, positions, GL_DYNAMIC_DRAW);
+			instance_colors = VertexBuffer::create(GL_ARRAY_BUFFER, colors, GL_DYNAMIC_DRAW);
+
+			mesh = Mesh::create(Extrude(hexagon_shape, hexagon_extrusion) >> Rotate(quaternion(float3(-Pi_Half, 0.0f, 0.0f))));
+			mesh->appendVbo(BufferLayout({ { Attrib::CUSTOM_0, 3, 0, 0, 1 } }), instance_positions);
+			mesh->appendVbo(BufferLayout({ { Attrib::CUSTOM_1, 3, 0, 0, 1 } }), instance_colors);
+
+			Batch::AttributeMapping attributes;
+			attributes.emplace(Attrib::CUSTOM_0, "InstancePosition");
+			attributes.emplace(Attrib::CUSTOM_1, "InstanceColor");
+			instantiable->batch = Batch::create(mesh, material->shader, attributes);
+
+			// create entities
+
+			for (auto tile : tiles) {
+				world->destroy_entity(tile);
+			}
+			tiles.clear();
+
+			print("generate tiles");
+			auto start = chrono::system_clock::now();
+
+			auto coordinate_iterator = map.coordinates().begin();
+			auto position_iterator = positions.begin();
+			world->create_entities(map.coordinates().size(), "Tile #", [&](Entity entity) {
+				entity.add<Tile>().coordinates = *coordinate_iterator++;
+				entity.add<Geometry>().mesh(mesh).position(*position_iterator++);
+				entity.add(material);
+				entity.add(instantiable);
+				tiles.push_back(entity);
+			});
+
+			auto end = chrono::system_clock::now();
+			print("tiles generated");
+			auto duration = end - start;
+			print("in ", chrono::duration_cast<chrono::milliseconds>(duration).count(), " milliseconds");
+
+			focus_expansion = (map.width / 2 + 1) * UnitHexagon.size.x;
+			print(map.width, "x", map.height);
 		}
 
 		float3* mapped_instance_colors;

@@ -4,6 +4,8 @@
 
 #include <sethex/Common.h>
 #include <sethex/Graphics.h>
+#include <sethex/components/Instantiable.h>
+#include <sethex/components/Material.h>
 #include <sethex/components/Tile.h>
 
 namespace tenjix {
@@ -29,6 +31,10 @@ namespace tenjix {
 			ci::Shape2d hexagon_shape;
 			float hexagon_extrusion = 5.0;
 
+			shared<Instantiable> instantiable;
+			shared<Material> material;
+			shared<Mesh> mesh;
+
 		public:
 
 			hex::Coordinates focus_coordinates;
@@ -46,8 +52,11 @@ namespace tenjix {
 			void update(float delta_time) override;
 			void update(Entity& entity, float delta_time) override;
 
+			void resize(unsigned2 size);
+
 			void update(shared<Surface32f> biome_map = nullptr, shared<Channel32f> elevation_map = nullptr, float scale = 1.0);
 			void update(shared<ImageSource> biome_map = nullptr, shared<ImageSource> elevation_map = nullptr, float scale = 1.0) {
+				if (not biome_map or not elevation_map) return;
 				update(Surface32f::create(biome_map), Channel32f::create(elevation_map), scale);
 			}
 
