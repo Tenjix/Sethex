@@ -47,8 +47,8 @@ namespace tenjix {
 			print("Sethex by Tenjix (Thomas Würstle)");
 			print("Cinder Version ", CINDER_VERSION_STR);
 			print("OpenGL Version ", cinder::gl::getVersionString());
-			bool opengl_version_supported = Version(cinder::gl::getVersion()).exceeds({ 4, 3 });
-			if (not opengl_version_supported) error = "Error: Unsupported opengl version. \nDetected: OpenGL " + cinder::gl::getVersionString() + "\nRequired: OpenGL 4.3";
+			bool opengl_version_supported = Version(cinder::gl::getVersion()).exceeds({ 3, 3 });
+			if (not opengl_version_supported) error = "Error: Unsupported opengl version. \nDetected: OpenGL " + cinder::gl::getVersionString() + "\nRequired: OpenGL 3.3";
 			ui::initialize(ui::Options().darkTheme().fonts({ { getAssetPath("fonts/Nunito.ttf"), 20.0f } }).fontGlyphRanges("Nunito", { 0x0020, 0x00FF, 0xe000, 0xe006, 0 }));
 			executable = opengl_version_supported;
 			if (executable) game.setup(getWindow());

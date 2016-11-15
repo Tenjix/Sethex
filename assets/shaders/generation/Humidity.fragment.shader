@@ -1,5 +1,5 @@
 // shadertype=glsl
-#version 430
+#version 330
 
 #include <shaders/Mathematics.include>
 
@@ -14,7 +14,7 @@ uniform sampler2D uHumidityMap;
 
 uniform float uSeaLevel = 0.0;
 uniform float uIntensity = 1.0;
-uniform uint uIteration = 1;
+uniform uint uIteration = 1u;
 
 in vec2 Texinates;
 

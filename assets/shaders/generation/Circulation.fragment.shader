@@ -1,5 +1,5 @@
 // shadertype=glsl
-#version 430
+#version 330
 
 #include <shaders/Mathematics.include>
 
