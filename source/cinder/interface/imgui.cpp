@@ -248,9 +248,9 @@ namespace ImGui {
 		style.Colors[ImGuiCol_Button] = { 0.25f, 0.25f, 0.25f, 0.50f };
 		style.Colors[ImGuiCol_ButtonHovered] = { 0.25f, 0.25f, 0.25f, 0.75f };
 		style.Colors[ImGuiCol_ButtonActive] = { 0.25f, 0.25f, 0.25f, 1.00f };
-		style.Colors[ImGuiCol_Header] = { 0.25f, 0.25f, 0.25f, 0.25f };
-		style.Colors[ImGuiCol_HeaderHovered] = { 0.25f, 0.25f, 0.25f, 0.50f };
-		style.Colors[ImGuiCol_HeaderActive] = { 0.25f, 0.25f, 0.25f, 0.75f };
+		style.Colors[ImGuiCol_Header] = { 0.25f, 0.25f, 0.25f, 0.40f };
+		style.Colors[ImGuiCol_HeaderHovered] = { 0.25f, 0.25f, 0.25f, 0.70f };
+		style.Colors[ImGuiCol_HeaderActive] = { 0.25f, 0.25f, 0.25f, 1.00f };
 		style.Colors[ImGuiCol_Column] = { 0.25f, 0.25f, 0.25f, 0.00f };
 		style.Colors[ImGuiCol_ColumnHovered] = { 0.25f, 0.25f, 0.25f, 1.00f };
 		style.Colors[ImGuiCol_ColumnActive] = { 0.25f, 0.25f, 0.25f, 1.00f };

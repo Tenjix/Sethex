@@ -92,8 +92,8 @@ namespace tenjix {
 				return buffers[index]->getColorTexture();
 			}
 
-			Frame& flip_horizontally() {
-				flip_origin = true;
+			Frame& flip_horizontally(bool origin_up = true) {
+				flip_origin = origin_up;
 				return *this;
 			}
 
@@ -163,6 +163,7 @@ namespace tenjix {
 
 		float lower_threshold = One_Third;
 		float upper_threshold = Two_Thirds;
+		float sealevel = 0.0f;
 
 		struct TerrainThresholds {
 			float ocean = -0.5f;
@@ -217,7 +218,14 @@ namespace tenjix {
 			return elevation;
 		}
 
-		Color8u determine_biome(float temperature, float precipitation) {
+		Color8u determine_biome(float elevation, float temperature, float precipitation) {
+			// deep ocean
+			if (elevation < sealevel - 0.5f) return biome_colors.abyssal;
+			// ocean
+			if (elevation < sealevel - 0.25f) return biome_colors.ocean;
+			// coast
+			if (elevation < sealevel) return biome_colors.coast;
+			// land
 			if (temperature < lower_threshold) {
 				// polar & dry -> ice
 				if (precipitation < lower_threshold) return biome_colors.ice;
@@ -266,26 +274,25 @@ namespace tenjix {
 			static float scale = 1.0f, roll = 0.0f;
 			static Simplex::Options current_options;
 			static Simplex::Options saved_options;
-			static float continent_frequency = 0.5f, continent_amplitude = 1.0f, sealevel = 0.0f, equator = 0.0f;
+			static float continent_frequency = 0.5f, continent_amplitude = 1.0f, equator = 0.0f;
 			static float equator_distance_factor = 0.0f;
 			static int equator_distance_power = 10, lapse_power = 1;
 			static bool wrap_horizontally = false;
-			static bool use_continents = false;
-			static bool circulation = false;
+			static bool use_continents = true;
 			static bool update_tectonic = true, update_topography, update_climate, update_display, update_biomes;
 			static unsigned water_pixels;
 			static float elevation_minimum, elevation_maximum, lapse_rate = 10.0f;
 			static float evaporation_factor = 1.0f, transpiration_factor = 0.25f, precipitation_factor = 1.0f, precipitation_decay = 0.05f, slope_scale = 0.01f;
 			static float humidity_saturation = 25.0f;
 			static bool upper_precipitation = true;
-			static bool gpu_compute = false, earth = false, debug = false;
+			static bool debug = false;
 			static unsigned circulation_iterations = 25;
 			static float circulation_intensity = 1.0, orograpic_effect = 1.0;
 			static float bathymetry_scale = 1.0, topography_scale = 1.0;
 
 			const unsigned2 map_resolution = { 800, 450 };
 
-			if (gpu_compute and not temperature_frame.initialized()) {
+			if (not temperature_frame.initialized()) {
 				temperature_frame.framebuffer(map_resolution, GL_R32F).fragment("shaders/generation/Temperature.fragment.shader", update_topography);
 				evapotranspiration_frame.framebuffer(map_resolution, GL_R32F).fragment("shaders/generation/Evapotranspiration.fragment.shader", update_climate);
 				circulation_frame.framebuffer(map_resolution, GL_RGB32F).fragment("shaders/generation/Circulation.fragment.shader", update_climate);
@@ -318,9 +325,9 @@ namespace tenjix {
 					print("update tectonic");
 					scale = clamp(scale * (1.0f - roll), 0.1f, 10.0f);
 					shift -= wrap_horizontally ? float2(drag.x, drag.y / scale) : float2(drag) / scale;
-					if (earth) {
+					if (elevation_source == Elevation_Maps) {
 						if (not elevation_frame.initialized()) elevation_frame.framebuffer(map_resolution, GL_R32F);
-						elevation_frame.fragment("shaders/generation/Elevation-Composing.fragment.shader", update_tectonic);
+						elevation_frame.fragment("shaders/generation/Elevation-Composing.fragment.shader", update_tectonic).flip_horizontally(false);
 						auto bathymetry_map = loadImage(app::loadAsset("maps/Bathymetry.png"));
 						auto topography_map = loadImage(app::loadAsset("maps/Topography.png"));
 						auto bathymetry_texture = Texture::create(bathymetry_map);
@@ -333,9 +340,9 @@ namespace tenjix {
 						elevation_map = Channel32f::create(elevation_frame.texture()->createSource());
 						if (not elevation_buffer) elevation_buffer = Channel32f::create(*elevation_map);
 						else elevation_buffer->copyFrom(*elevation_map, elevation_map->getBounds());
-					} else if (gpu_compute) {
+					} else if (elevation_source == GPU_Noise) {
 						if (not elevation_frame.initialized()) elevation_frame.framebuffer(map_resolution, GL_R32F);
-						elevation_frame.fragment("shaders/generation/Elevation.fragment.shader", update_tectonic).flip_horizontally();
+						elevation_frame.fragment("shaders/generation/Elevation.fragment.shader", update_tectonic).flip_horizontally(true);
 						elevation_buffer = nullptr;
 						elevation_frame.uniform("uWrapping", wrap_horizontally);
 						elevation_frame.uniform("uResolution", map_resolution);
@@ -404,7 +411,7 @@ namespace tenjix {
 
 				if (update_topography) {
 					print("update topography");
-					if (gpu_compute) {
+					if (elevation_source != CPU_Noise) {
 						temperature_frame.uniform("uElevationMap", 0);
 						temperature_frame.uniform("uSeaLevel", sealevel);
 						temperature_frame.uniform("uEquator", equator);
@@ -449,7 +456,7 @@ namespace tenjix {
 
 				if (update_climate) {
 					print("update climate");
-					if (gpu_compute and circulation) {
+					if (circulation_type == Deflected) {
 						// calculate circulation
 						circulation_frame.uniform("uElevationMap", 0);
 						circulation_frame.uniform("uTemperatureMap", 1);
@@ -651,11 +658,7 @@ namespace tenjix {
 						while (elevation_iterator.pixel() and temperature_iterator.pixel() and precipitation_iterator.pixel() and biome_iterator.pixel() and terrain_iterator.pixel()) {
 							float elevation = elevation_iterator.v();
 							assign_elevation(terrain_iterator, elevation);
-							if (elevation > sealevel) {
-								biome_iterator << determine_biome(temperature_iterator.v() / 255.0f, precipitation_iterator.v() / 255.0f);
-							} else {
-								biome_iterator << terrain_iterator;
-							}
+							biome_iterator << determine_biome(elevation_iterator.v(), temperature_iterator.v() / 255.0f, precipitation_iterator.v() / 255.0f);
 						}
 					}
 					//}
@@ -665,38 +668,34 @@ namespace tenjix {
 			}
 
 			ui::BeginChild("map display", float2(map_resolution.x, 0));
-			static int selected_map = 0;
 			ui::PushItemWidth(180);
-			static Lot<String> cpu_map_names { "Biome", "Terrain", "Elevation", "Temperature", "Precipitation" };
-			static Lot<String> gpu_map_names { "Biome", "Terrain", "Elevation", "Temperature", "Circulation", "Evapotranspiration", "Humidity", "Precipitation" };
-			bool gpu = gpu_compute and circulation;
-			Lot<String>& map_names = gpu ? gpu_map_names : cpu_map_names;
+			auto& map_display_list = circulation_type == Deflected ? map_display_list_gpu : map_display_list_cpu;
 			static shared<ImageSource> image_source;
-			if (ui::Combo("Map##selection", selected_map, map_names) or update_display) {
-				switch (selected_map) {
-					case 0:
+			if (ui::Combo("Map##selection", map_display, map_display_list) or update_display) {
+				switch (map_display) {
+					case Map_Display::Biome:
 						image_source = *biome_map;
 						break;
-					case 1:
+					case Map_Display::Terrain:
 						image_source = *terrain_map;
 						break;
-					case 2:
+					case Map_Display::Elevation:
 						image_source = *elevation_map;
 						break;
-					case 3:
+					case Map_Display::Temperature:
 						image_source = *temperature_map;
 						break;
-					case 4:
-						if (gpu) image_source = *circulation_map;
+					case Map_Display::Circulation:
+						if (circulation_type == Deflected) image_source = *circulation_map;
 						else image_source = *precipitation_map;
 						break;
-					case 5:
+					case Map_Display::Evapotranspiration:
 						image_source = *evapotranspiration_map;
 						break;
-					case 6:
+					case Map_Display::Humidity:
 						image_source = *humidity_map;
 						break;
-					case 7:
+					case Map_Display::Precipitation:
 						image_source = *precipitation_map;
 						break;
 					default: throw_runtime_exception("invalid map");
@@ -710,9 +709,9 @@ namespace tenjix {
 			}
 			ui::PopItemWidth();
 			ui::SameLine();
-			if (ui::Button("Save")) writeImage("exported/" + map_names[selected_map] + "_Map.jpg", image_source);
-			ui::SameLine(ui::GetWindowWidth() - 150);
-			update_tectonic |= ui::Checkbox("GPU Compute", gpu_compute);
+			if (ui::Button("Save")) writeImage("exported/" + map_display_list[map_display] + "_Map.jpg", image_source);
+			//ui::SameLine(ui::GetWindowWidth() - 150);
+			//update_tectonic |= ui::Checkbox("GPU Compute", gpu_compute);
 			ui::ImageButton(map_texture, map_texture->getSize(), 0);
 			bool map_hovered = ui::IsItemHoveredRect() and ui::IsWindowHovered();
 			signed2 map_position = ui::GetItemRectMin();
@@ -728,8 +727,10 @@ namespace tenjix {
 
 			ui::BeginChild("map properties");
 			static int selected_preset = 0;
-			if (ui::Combo("Preset##selection", selected_preset, { "Default", "Alpha World", "Beta World", "Continents", "Islands" })) switch (selected_preset) {
+			if (ui::Combo("Preset##selection", selected_preset, { "Default", "Alpha World", "Beta World", "Continents", "Islands", "Earth" })) switch (selected_preset) {
 				case 0:
+					elevation_source = CPU_Noise;
+					circulation_type = Linear;
 					seed = 0;
 					scale = 1.0f;
 					shift = {};
@@ -745,6 +746,8 @@ namespace tenjix {
 					update_tectonic = true;
 					break;
 				case 1:
+					elevation_source = CPU_Noise;
+					circulation_type = Linear;
 					seed = 0;
 					scale = 1.0f;
 					shift = { -150, -5200 };
@@ -766,6 +769,8 @@ namespace tenjix {
 					update_tectonic = true;
 					break;
 				case 2:
+					elevation_source = CPU_Noise;
+					circulation_type = Linear;
 					seed = 0;
 					scale = 0.66f;
 					shift = { -160, -4650 };
@@ -788,7 +793,8 @@ namespace tenjix {
 					update_tectonic = true;
 					break;
 				case 3:
-					gpu_compute = true;
+					elevation_source = GPU_Noise;
+					circulation_type = Deflected;
 					seed = 0;
 					scale = 0.6f;
 					shift = { 185, -7925 };
@@ -813,7 +819,8 @@ namespace tenjix {
 					update_tectonic = true;
 					break;
 				case 4:
-					gpu_compute = true;
+					elevation_source = GPU_Noise;
+					circulation_type = Deflected;
 					seed = 0;
 					scale = 1.0f;
 					shift = { 330, -2330 };
@@ -837,6 +844,22 @@ namespace tenjix {
 					wrap_horizontally = true;
 					update_tectonic = true;
 					break;
+				case 5:
+					elevation_source = Elevation_Maps;
+					circulation_type = Deflected;
+					bathymetry_scale = 0.8f;
+					topography_scale = 0.7f;
+					circulation_iterations = 50;
+					sealevel = 0.0f;
+					thresholds.ocean = -0.50f;
+					thresholds.coast = -0.10f;
+					thresholds.beach = 0.0f;
+					thresholds.prairie = 0.005f;
+					thresholds.forrest = 0.05f;
+					thresholds.mountain = 0.20f;
+					thresholds.snowcap = 0.25f;
+					update_tectonic = true;
+					break;
 				default: throw_runtime_exception("invalid preset");
 
 			}
@@ -858,114 +881,122 @@ namespace tenjix {
 						 mouse_position.x, mouse_position.y, coordinates.x, coordinates.y, elevation, temperature, precipitation, biome.c_str());
 			} else {
 				ui::PushItemWidth(-250);
+				ui::Text("Use the mouse pointer to examine map details.");
 
-				bool use_earth = ui::Checkbox("Earth", earth);
-				if (use_earth) {
-					bathymetry_scale = 0.8f;
-					topography_scale = 0.7f;
-					sealevel = 0.0f;
-					circulation_iterations = 0;
-					thresholds.ocean = -0.50f;
-					thresholds.coast = -0.10f;
-					thresholds.beach = 0.0f;
-					thresholds.prairie = 0.005f;
-					thresholds.forrest = 0.05f;
-					thresholds.mountain = 0.20f;
-					thresholds.snowcap = 0.25f;
-				}
-				update_tectonic |= use_earth;
-				if (earth) {
-					update_tectonic |= ui::SliderFloat("Bathymetry Scaling", bathymetry_scale, 0.0f, 1.0f, "%.2f", 1.0f, 1.0f);
-					update_tectonic |= ui::SliderFloat("Topography Scaling", topography_scale, 0.0f, 1.0f, "%.2f", 1.0f, 1.0f);
-				} else {
-					ui::Text("Use the mouse pointer to view map details.");
-					update_tectonic |= ui::DragInt("Seed", seed, 1.0f, 0, seed_maximum, "%.0f", 0);
-					update_tectonic |= ui::SliderFloat("Scale", scale, 0.1f, 10.0f, "%.2f", 3.45f, 1.0f);
-					update_tectonic |= ui::DragFloat2("Shift", shift, 1.0f, 0.0f, 0.0f, "%.2f", 1.0f, Zero);
-					update_tectonic |= ui::SliderUnsigned("Octaves", current_options.octaves, 1, 15, "%.0f", saved_options.octaves);
-					update_tectonic |= ui::SliderFloat("Amplitude", current_options.amplitude, 0.0f, 10.0f, "%.2f", 1.0f, saved_options.amplitude); ui::Hint("Ctrl+Click to enter an exact value");
-					update_tectonic |= ui::SliderFloat("Frequency", current_options.frequency, 0.0f, 10.0f, "%.2f", 1.0f, saved_options.frequency); ui::Hint("Ctrl+Click to enter an exact value");
-					update_tectonic |= ui::SliderFloat("Lacunarity", current_options.lacunarity, 0.0f, 10.0f, "%.2f", 1.0f, saved_options.lacunarity); ui::Hint("Ctrl+Click to enter an exact value");
-					update_tectonic |= ui::SliderFloat("Persistence", current_options.persistence, 0.0f, 2.0f, "%.2f", 1.0f, saved_options.persistence); ui::Hint("Ctrl+Click to enter an exact value");
-					update_tectonic |= ui::SliderFloat("Power", current_options.power, 0.1f, 10.0f, "%.2f", 1.0f, saved_options.power); ui::Hint("Ctrl+Click to enter an exact value");
-					update_tectonic |= ui::SliderFloat("Continent Amplitude", continent_amplitude, 0.0f, 10.0f, "%.2f", 1.0f, 1.0f);
-					update_tectonic |= ui::SliderFloat("Continent Frequency", continent_frequency, 0.0f, 2.0f, "%.2f", 1.0f, 0.5f);
-					update_tectonic |= ui::Checkbox("Wrap Horizontally", wrap_horizontally);
-					ui::SameLine();
-					update_tectonic |= ui::Checkbox("Continents##use", use_continents);
-				}
-
-				update_topography |= ui::SliderPercentage("Sealevel", sealevel, -1.0f, 1.0f, "%+.0f%%", 1.0f, 0.0f);
-				update_topography |= ui::SliderPercentage("Equator", equator, -1.0f, 1.0f, "%+.0f%%", 1.0f, 0.0f);
-
-				if (not earth) {
-					bool& update_optimized = gpu_compute ? update_tectonic : update_topography;
-					update_optimized |= ui::SliderFloat("Equator Distance Factor", equator_distance_factor, -1.0f, 1.0f, "%.2f", 1.0f, 0.0f);
-					update_optimized |= ui::SliderInt("Equator Distance Power", equator_distance_power, 1, 15, "%.0f", 10);
-
-					update_topography |= ui::SliderInt("Lapse Power", lapse_power, 1, 2, "%.0f", 1);
-				}
-				update_topography |= ui::SliderFloat("Lapse Rate", lapse_rate, 0.0f, 20.0f, u8"%.1f (°C/km)", 1.0f, 10.0f);
-
-				update_climate |= ui::SliderFloat("Evaporation", evaporation_factor, 0.0f, 10.0f, "%.3f", 2.0f, 1.0f);
-				update_climate |= ui::SliderFloat("Transpiration", transpiration_factor, 0.0f, 10.0f, "%.3f", 2.0f, 0.25f);
-
-				if (gpu_compute) {
-					update_climate |= ui::Checkbox("Circulation", circulation);
-					ui::SameLine();
-					update_climate |= ui::Checkbox("Debug", debug);
-				}
-
-				if (gpu_compute and circulation) {
-					update_climate |= ui::SliderUnsigned("Circulation Iterations", circulation_iterations, 0, 50, "%.0f", 25);
-					update_climate |= ui::SliderFloat("Circulation Intensity", circulation_intensity, 0.0f, 1.0f, "%.3f", 1.0f, 1.0f);
-					update_climate |= ui::SliderFloat("Orograpic Effect", orograpic_effect, 0.0f, 1.0f, "%.3f", 1.0f, 1.0f);
-				} else {
-					update_climate |= ui::SliderFloat("Precipitation", precipitation_factor, 0.0f, 10.0f, "%.3f", 2.0f, 1.0f);
-					update_climate |= ui::SliderFloat("Precipitation Decay", precipitation_decay, 0.0f, 1.0f, "%.3f", 2.0f, 0.05f);
-					update_climate |= ui::SliderFloat("Slope Scale", slope_scale, 0.001f, 1.0f, "%.3f", 3.0f, 0.01f);
-					update_climate |= ui::SliderFloat("Humidity Saturation", humidity_saturation, 1.0f, 100.0f, "%.3f", 3.0f, 25.0f);
-					update_climate |= ui::Checkbox("Upper Precipitation", upper_precipitation);
-				}
-
-				update_biomes |= ui::SliderFloat("Lower Threshold", lower_threshold, 0.0f, upper_threshold, "%.2f", 1.0f, One_Third);
-				update_biomes |= ui::SliderFloat("Upper Threshold", upper_threshold, lower_threshold, 1.0f, "%.2f", 1.0f, Two_Thirds);
-
-				static bool show_biome_colors = false;
-				if (ui::SmallButton("Biome Colors:")) show_biome_colors = not show_biome_colors;
-				if (show_biome_colors) {
-					update_biomes |= ui::ColorEdit3("Ice", biome_colors.ice);
-					update_biomes |= ui::ColorEdit3("Tundra", biome_colors.tundra);
-					update_biomes |= ui::ColorEdit3("Taiga", biome_colors.taiga);
-					update_biomes |= ui::ColorEdit3("Steppe", biome_colors.steppe);
-					update_biomes |= ui::ColorEdit3("Prairie", biome_colors.prairie);
-					update_biomes |= ui::ColorEdit3("Forest", biome_colors.forest);
-					update_biomes |= ui::ColorEdit3("Desert", biome_colors.desert);
-					update_biomes |= ui::ColorEdit3("Savanna", biome_colors.savanna);
-					update_biomes |= ui::ColorEdit3("Rainforest", biome_colors.rainforest);
-					update_biomes |= ui::ColorEdit3("Coast", biome_colors.coast);
-					update_biomes |= ui::ColorEdit3("Ocean", biome_colors.ocean);
-					update_biomes |= ui::ColorEdit3("Abyssal", biome_colors.abyssal);
-				}
-
-				static bool show_thresholds = false;
-				if (ui::SmallButton("Thresholds:")) show_thresholds = not show_thresholds;
-				if (show_thresholds) {
-					if (thresholds != default_thresholds) {
-						ui::SameLine();
-						if (ui::SmallButton("Reset##thresholds")) {
-							thresholds = default_thresholds;
-							update_topography = true;
+				if (ui::CollapsingHeader("Elevation")) {
+					static Lot<String> elevation_source_list { "CPU Simplex Noise", "GPU Simplex Noise", "Bathymetry & Topography Maps" };
+					if (ui::Combo("Source##elevation", elevation_source, elevation_source_list)) {
+						switch (elevation_source) {
+							case CPU_Noise:
+								circulation_type = Linear;
+								break;
+							case GPU_Noise: break;
+							case Elevation_Maps: break;
 						}
+						update_tectonic = true;
 					}
-					update_topography |= ui::SliderFloat("Snowcap", thresholds.snowcap, thresholds.mountain, 1.0f, "%.2f");
-					update_topography |= ui::SliderFloat("Mountain", thresholds.mountain, thresholds.forrest, thresholds.snowcap, "%.2f");
-					update_topography |= ui::SliderFloat("Forrest", thresholds.forrest, thresholds.prairie, thresholds.mountain, "%.2f");
-					update_topography |= ui::SliderFloat("Prairie", thresholds.prairie, thresholds.beach, thresholds.forrest, "%.2f");
-					update_topography |= ui::SliderFloat("Beach", thresholds.beach, thresholds.coast, thresholds.prairie, "%.2f");
-					update_topography |= ui::SliderFloat("Coast", thresholds.coast, thresholds.ocean, thresholds.beach, "%.2f");
-					update_topography |= ui::SliderFloat("Ocean", thresholds.ocean, -1.0f, thresholds.coast, "%.2f");
+					if (elevation_source == Elevation_Maps) {
+						update_tectonic |= ui::SliderFloat("Bathymetry Scaling", bathymetry_scale, 0.0f, 1.0f, "%.2f", 1.0f, 1.0f);
+						update_tectonic |= ui::SliderFloat("Topography Scaling", topography_scale, 0.0f, 1.0f, "%.2f", 1.0f, 1.0f);
+					} else {
+						update_tectonic |= ui::DragInt("Seed", seed, 1.0f, 0, seed_maximum, "%.0f", 0);
+						update_tectonic |= ui::SliderFloat("Scale", scale, 0.1f, 10.0f, "%.2f", 3.45f, 1.0f);
+						update_tectonic |= ui::DragFloat2("Shift", shift, 1.0f, 0.0f, 0.0f, "%.2f", 1.0f, Zero);
+						update_tectonic |= ui::SliderUnsigned("Octaves", current_options.octaves, 1, 15, "%.0f", saved_options.octaves);
+						update_tectonic |= ui::SliderFloat("Amplitude", current_options.amplitude, 0.0f, 10.0f, "%.2f", 1.0f, saved_options.amplitude); ui::Hint("Ctrl+Click to enter an exact value");
+						update_tectonic |= ui::SliderFloat("Frequency", current_options.frequency, 0.0f, 10.0f, "%.2f", 1.0f, saved_options.frequency); ui::Hint("Ctrl+Click to enter an exact value");
+						update_tectonic |= ui::SliderFloat("Lacunarity", current_options.lacunarity, 0.0f, 10.0f, "%.2f", 1.0f, saved_options.lacunarity); ui::Hint("Ctrl+Click to enter an exact value");
+						update_tectonic |= ui::SliderFloat("Persistence", current_options.persistence, 0.0f, 2.0f, "%.2f", 1.0f, saved_options.persistence); ui::Hint("Ctrl+Click to enter an exact value");
+						update_tectonic |= ui::SliderFloat("Power", current_options.power, 0.1f, 10.0f, "%.2f", 1.0f, saved_options.power); ui::Hint("Ctrl+Click to enter an exact value");
+						update_tectonic |= ui::Checkbox("Wrap Horizontally", wrap_horizontally);
+						ui::SameLine();
+						update_tectonic |= ui::Checkbox("Continents##use", use_continents);
+						update_tectonic |= ui::SliderFloat("Continent Amplitude", continent_amplitude, 0.0f, 10.0f, "%.2f", 1.0f, 1.0f);
+						update_tectonic |= ui::SliderFloat("Continent Frequency", continent_frequency, 0.0f, 2.0f, "%.2f", 1.0f, 0.5f);
+						bool& update_optimized = elevation_source == GPU_Noise ? update_tectonic : update_topography;
+						update_optimized |= ui::SliderFloat("Equator Distance Factor", equator_distance_factor, -1.0f, 1.0f, "%.2f", 1.0f, 0.0f);
+						update_optimized |= ui::SliderInt("Equator Distance Power", equator_distance_power, 1, 15, "%.0f", 10);
+					}
 				}
+
+				if (ui::CollapsingHeader("Thresholds")) {
+					update_topography |= ui::SliderPercentage("Sealevel", sealevel, -1.0f, 1.0f, "%+.0f%%", 1.0f, 0.0f);
+					update_topography |= ui::SliderPercentage("Equator", equator, -1.0f, 1.0f, "%+.0f%%", 1.0f, 0.0f);
+					static bool show_thresholds = false;
+					if (ui::SmallButton("Terrain:")) show_thresholds = not show_thresholds;
+					if (show_thresholds) {
+						if (thresholds != default_thresholds) {
+							ui::SameLine();
+							if (ui::SmallButton("Reset##thresholds")) {
+								thresholds = default_thresholds;
+								update_topography = true;
+							}
+						}
+						update_topography |= ui::SliderFloat("Snowcap", thresholds.snowcap, thresholds.mountain, 1.0f, "%.2f");
+						update_topography |= ui::SliderFloat("Mountain", thresholds.mountain, thresholds.forrest, thresholds.snowcap, "%.2f");
+						update_topography |= ui::SliderFloat("Forrest", thresholds.forrest, thresholds.prairie, thresholds.mountain, "%.2f");
+						update_topography |= ui::SliderFloat("Prairie", thresholds.prairie, thresholds.beach, thresholds.forrest, "%.2f");
+						update_topography |= ui::SliderFloat("Beach", thresholds.beach, thresholds.coast, thresholds.prairie, "%.2f");
+						update_topography |= ui::SliderFloat("Coast", thresholds.coast, thresholds.ocean, thresholds.beach, "%.2f");
+						update_topography |= ui::SliderFloat("Ocean", thresholds.ocean, -1.0f, thresholds.coast, "%.2f");
+					}
+				}
+
+				if (ui::CollapsingHeader("Temperature")) {
+					update_topography |= ui::SliderFloat("Lapse Rate", lapse_rate, 0.0f, 20.0f, u8"%.1f (°C/km)", 1.0f, 10.0f);
+					update_climate |= ui::SliderFloat("Evaporation", evaporation_factor, 0.0f, 10.0f, "%.3f", 2.0f, 1.0f);
+					update_climate |= ui::SliderFloat("Transpiration", transpiration_factor, 0.0f, 10.0f, "%.3f", 2.0f, 0.25f);
+				}
+
+				if (ui::CollapsingHeader("Precipitation")) {
+					if (elevation_source != CPU_Noise)
+						if (ui::Combo("Circulation##type", circulation_type, circulation_type_list)) {
+							switch (circulation_type) {
+								case Linear: break;
+								case Deflected: break;
+							}
+							update_climate = true;
+						}
+					if (circulation_type == Deflected and map_display == Circulation) {
+						ui::SameLine();
+						update_climate |= ui::Checkbox("Debug", debug);
+					}
+					if (circulation_type == Deflected) {
+						update_climate |= ui::SliderUnsigned("Circulation Iterations", circulation_iterations, 0, 50, "%.0f", 25);
+						update_climate |= ui::SliderFloat("Circulation Intensity", circulation_intensity, 0.0f, 1.0f, "%.3f", 1.0f, 1.0f);
+						update_climate |= ui::SliderFloat("Orograpic Effect", orograpic_effect, 0.0f, 1.0f, "%.3f", 1.0f, 1.0f);
+					} else {
+						update_climate |= ui::SliderFloat("Precipitation", precipitation_factor, 0.0f, 10.0f, "%.3f", 2.0f, 1.0f);
+						update_climate |= ui::SliderFloat("Precipitation Decay", precipitation_decay, 0.0f, 1.0f, "%.3f", 2.0f, 0.05f);
+						update_climate |= ui::SliderFloat("Slope Scale", slope_scale, 0.001f, 1.0f, "%.3f", 3.0f, 0.01f);
+						update_climate |= ui::SliderFloat("Humidity Saturation", humidity_saturation, 1.0f, 100.0f, "%.3f", 3.0f, 25.0f);
+						update_climate |= ui::Checkbox("Upper Precipitation", upper_precipitation);
+					}
+
+				}
+
+				if (ui::CollapsingHeader("Biomes")) {
+					update_biomes |= ui::SliderFloat("Lower Threshold", lower_threshold, 0.0f, upper_threshold, "%.2f", 1.0f, One_Third);
+					update_biomes |= ui::SliderFloat("Upper Threshold", upper_threshold, lower_threshold, 1.0f, "%.2f", 1.0f, Two_Thirds);
+
+					static bool show_biome_colors = false;
+					if (ui::SmallButton("Biome Colors:")) show_biome_colors = not show_biome_colors;
+					if (show_biome_colors) {
+						update_biomes |= ui::ColorEdit3("Ice", biome_colors.ice);
+						update_biomes |= ui::ColorEdit3("Tundra", biome_colors.tundra);
+						update_biomes |= ui::ColorEdit3("Taiga", biome_colors.taiga);
+						update_biomes |= ui::ColorEdit3("Steppe", biome_colors.steppe);
+						update_biomes |= ui::ColorEdit3("Prairie", biome_colors.prairie);
+						update_biomes |= ui::ColorEdit3("Forest", biome_colors.forest);
+						update_biomes |= ui::ColorEdit3("Desert", biome_colors.desert);
+						update_biomes |= ui::ColorEdit3("Savanna", biome_colors.savanna);
+						update_biomes |= ui::ColorEdit3("Rainforest", biome_colors.rainforest);
+						update_biomes |= ui::ColorEdit3("Coast", biome_colors.coast);
+						update_biomes |= ui::ColorEdit3("Ocean", biome_colors.ocean);
+						update_biomes |= ui::ColorEdit3("Abyssal", biome_colors.abyssal);
+					}
+				}
+
 				ui::Text("elevation range [%.5f, %.5f] (%s [-1, +1])", elevation_minimum, elevation_maximum, (elevation_minimum >= -1.0f and elevation_maximum <= 1.0f) ? "lies within" : "exceeds");
 
 				ui::PopItemWidth();
