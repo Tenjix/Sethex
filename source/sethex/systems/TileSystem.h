@@ -54,10 +54,10 @@ namespace tenjix {
 
 			void resize(unsigned2 size);
 
-			void update(shared<Surface32f> biome_map = nullptr, shared<Channel32f> elevation_map = nullptr, float scale = 1.0);
-			void update(shared<ImageSource> biome_map = nullptr, shared<ImageSource> elevation_map = nullptr, float scale = 1.0) {
+			void update(shared<Surface32f> biome_map = nullptr, shared<Channel32f> elevation_map = nullptr, float scale = 1.0, float power = 1.0);
+			void update(shared<ImageSource> biome_map = nullptr, shared<ImageSource> elevation_map = nullptr, float scale = 1.0, float power = 1.0) {
 				if (not biome_map or not elevation_map) return;
-				update(Surface32f::create(biome_map), Channel32f::create(elevation_map), scale);
+				update(Surface32f::create(biome_map), Channel32f::create(elevation_map), scale, power);
 			}
 
 			optional<Entity> get_tile(float2 mouse_position) const;

@@ -348,7 +348,7 @@ namespace tenjix {
 
 		float3* mapped_instance_colors;
 
-		void TileSystem::update(shared<Surface32f> biome_map, shared<Channel32f> elevation_map, float scale) {
+		void TileSystem::update(shared<Surface32f> biome_map, shared<Channel32f> elevation_map, float scale, float power) {
 			float2 biome_map_size, elevation_map_size;
 			if (elevation_map) {
 				mapped_instance_positions = static_cast<float3*>(instance_positions->mapReplace());
@@ -358,19 +358,22 @@ namespace tenjix {
 				mapped_instance_colors = static_cast<float3*>(instance_colors->mapReplace());
 				biome_map_size = biome_map->getSize();
 			}
-			if (elevation_map or biome_map) for (auto& entity : get_entities()) {
-				auto& coordinates = entity.get<Tile>().coordinates;
-				auto& position = entity.get<Geometry>().position();
-				auto texinates = map.texinates(coordinates);
-				if (elevation_map) {
-					auto elevation = *elevation_map->getData(elevation_map_size * texinates);
-					position.y = elevation * glm::length(map.cartesian_size()) * 0.05f * scale;
-					mapped_instance_positions[map.index(coordinates)] = position;
-				}
-				if (biome_map) {
-					auto biome = biome_map->getPixel(biome_map_size * texinates);
-					float3 color(biome.r, biome.g, biome.b);
-					mapped_instance_colors[map.index(coordinates)] = color;
+			if (elevation_map or biome_map) {
+				scale *= glm::length(map.cartesian_size()) * 0.02f;
+				for (auto& entity : get_entities()) {
+					auto& coordinates = entity.get<Tile>().coordinates;
+					auto& position = entity.get<Geometry>().position();
+					auto texinates = map.texinates(coordinates);
+					if (elevation_map) {
+						auto elevation = *elevation_map->getData(elevation_map_size * texinates);
+						position.y = (pow(elevation + 1.0f, power) - 1.0f) * scale;
+						mapped_instance_positions[map.index(coordinates)] = position;
+					}
+					if (biome_map) {
+						auto biome = biome_map->getPixel(biome_map_size * texinates);
+						float3 color(biome.r, biome.g, biome.b);
+						mapped_instance_colors[map.index(coordinates)] = color;
+					}
 				}
 			}
 			if (elevation_map) instance_positions->unmap();
