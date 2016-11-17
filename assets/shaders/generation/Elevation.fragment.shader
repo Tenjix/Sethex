@@ -63,7 +63,6 @@ void main() {
 	float elevation = (uContinentalAmplitudeFactor * continental_elevation + regional_elevation) / (uContinentalAmplitudeFactor + 1.0);
 	elevation += uEquatorDistanceFactor * pow(distance_to_equator, uEquatorDistancePower);
 	elevation = clamp(uAmplitude * elevation, -1.0, 1.0);
-	elevation = to_unsigned_range(elevation);
 
 	Output.r = elevation;
 	Output.a = 1.0;

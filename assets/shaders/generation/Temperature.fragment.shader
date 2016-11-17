@@ -24,12 +24,11 @@ void main() {
 
 	float distance_to_equator = abs(2.0 * (Texinates.y - 0.5));
 
-	float sea_level = to_unsigned_range(uSeaLevel);
 	float elevation = texelFetch(uElevationMap, texel, 0).r;
 	// float elevation = texture(uElevationMap, Texinates).r;
 	
 	// float percentage_elevation_above_sealevel = max(elevation - uSeaLevel, 0.0f) / (1.0f - uSeaLevel);
-	float elevation_above_sealevel_in_km = (elevation - sea_level) * 2.0 * 10.0;
+	float elevation_above_sealevel_in_km = (elevation - uSeaLevel) * 2.0 * 10.0;
 	float elevation_based_temerature_decline = uLapseRate * elevation_above_sealevel_in_km / uTemperatureRange;
 
 	vec2 position = gl_FragCoord.xy;
@@ -37,7 +36,7 @@ void main() {
 
 	float temperature = 1.0f - distance_to_equator * distance_to_equator;
 	temperature = mix(temperature, temperature_noise, 0.05);
-	temperature -= elevation > sea_level ? elevation_based_temerature_decline : 0.1;
+	temperature -= elevation > uSeaLevel ? elevation_based_temerature_decline : 0.1;
 
 	Output.r = temperature;
 	Output.a = 1.0;

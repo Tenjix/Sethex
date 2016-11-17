@@ -25,14 +25,13 @@ void main() {
 	ivec2 resolution = textureSize(uElevationMap, 0);
 	ivec2 texel = ivec2(gl_FragCoord);
 
-	float sea_level = to_unsigned_range(uSeaLevel);
 	float elevation = texture(uElevationMap, Texinates).r;
 	float temperature = texture(uTemperatureMap, Texinates).r;
 	float humidity = texture(uHumidityMap, Texinates).r;
 	vec2 wind_direction = normalize(texture(uCirculationMap, Texinates).rg);
 	float wind_speed = texture(uCirculationMap, Texinates).b;
 
-	bool land = elevation > sea_level;
+	bool land = elevation > uSeaLevel;
 	float intensity = float(land) * uIntensity * 0.5;
 	float scale = float(uIteration) * 0.01;
 	scale = 0.33;

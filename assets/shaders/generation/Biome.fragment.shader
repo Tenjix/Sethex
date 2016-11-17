@@ -20,12 +20,7 @@ out vec4 Output;
 
 void main() {
 
-	float sea_level = uSeaLevel * 0.5 + 0.5;
 	float elevation = texture(uElevationMap, Texinates).x;
-
-	if(elevation > sea_level) {
-		
-	}
 
 	Output.rgb = vec3(temperature);
 	Output.a = 1.0;

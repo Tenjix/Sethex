@@ -48,13 +48,12 @@ void main() {
 
 	ivec2 texel = ivec2(gl_FragCoord);
 
-	float sea_level = to_unsigned_range(uSeaLevel);
 	float elevation = read(uElevationMap, texel).r;
 	float temperature = read(uTemperatureMap, texel).r;
 	float humidity = read(uHumidityMap, texel).r;
 	vec2 wind_direction = normalize(texture(uCirculationMap, Texinates).rg);
 	float wind_speed = texture(uCirculationMap, Texinates).b;
-	bool on_land = elevation > sea_level;
+	bool land = elevation > uSeaLevel;
 
 	vec3 elevation_gradient = gradient(uElevationMap, texel, 5);
 	float slope = 1.0 - dot(elevation_gradient, vec3(0,1,0));
@@ -62,7 +61,7 @@ void main() {
 	// float temperature_slope = dot(temperature_gradient, vec3(0,1,0));
 
 	float uphill = max(dot(wind_direction, -elevation_gradient.xz), 0.0);
-	float orographic_effect = on_land? uphill * slope * uOrograpicEffect : 0.0;
+	float orographic_effect = land? uphill * slope * uOrograpicEffect : 0.0;
 
 	float precipitation = global_precipitation(texel) * 0.5;
 	precipitation += humidity * (temperature + orographic_effect);

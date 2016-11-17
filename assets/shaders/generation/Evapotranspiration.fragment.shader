@@ -21,12 +21,11 @@ out vec4 Output;
 
 void main() {
 
-	float sea_level = to_unsigned_range(uSeaLevel);
 	float elevation = texture(uElevationMap, Texinates).r;
 	float temperature = texture(uTemperatureMap, Texinates).r;
 	float wind_speed = texture(uCirculationMap, Texinates).b;
 
-	bool water = elevation <= sea_level;
+	bool water = elevation <= uSeaLevel;
 	float evapotranspiration = water ? uEvaporation : uTranspiration;
 	float humidity = evapotranspiration * mix(0.25, 1.0, temperature) * mix(0.75, 1.0, wind_speed);
 

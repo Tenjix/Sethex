@@ -1,4 +1,4 @@
-#include "Generator.h"
+ï»¿#include "Generator.h"
 
 #include <cinder/interface/Imgui.h>
 #include <cinder/utilities/Assets.h>
@@ -204,7 +204,6 @@ namespace tenjix {
 			float elevation = Simplex::noise(position * 0.01f, options);
 			if (continents) {
 				float continental_elevation = Simplex::noise(position * 0.01f * continent_frequency);
-				if (options.positive) continental_elevation = Simplex::to_unsigned(continental_elevation);
 				elevation = (elevation + continent_amplitude * continental_elevation) / (options.amplitude + continent_amplitude);
 			}
 			return elevation;
@@ -401,9 +400,9 @@ namespace tenjix {
 							float elevation_change = pow(distance_to_equator, equator_distance_power) * equator_distance_factor;
 							while (buffer_iterator.pixel() and elevation_iterator.pixel() and temperature_iterator.pixel()) {
 								float elevation = buffer_iterator.v();
-								elevation = clamp(elevation + elevation_change, current_options.positive ? 0.0f : -1.0f, 1.0f);
+								elevation = clamp(elevation + elevation_change, -1.0f, 1.0f);
 								float elevation_above_sealevel = max(elevation - sealevel, 0.0f) / (1.0f - sealevel);
-								elevation_iterator.v() = current_options.positive ? elevation : (elevation + 1.0f) / 2.0f;
+								elevation_iterator.v() = elevation;
 								float2 position = elevation_iterator.getPos();
 								float temperature = 1.0f - distance_to_equator * distance_to_equator;
 								//float temperature_noise = Simplex::to_unsigned(Simplex::noise(position.x * 0.02f * continent_frequency)); 
@@ -475,7 +474,6 @@ namespace tenjix {
 
 						auto calculate_evapotranspiration_precipitation = [&](unsigned belt, unsigned slot, unsigned& x, unsigned y, int x_delta, float& previous_elevation) {
 							float elevation = *elevation_map->getData(x, y);
-							if (not current_options.positive) elevation = elevation * 2.0f - 1.0f;
 							float elevation_above_sealevel = max(elevation - sealevel, 0.0f) / (1.0f - sealevel);
 							float temperature = *temperature_map->getData(x, y) / 255.0f;
 							float evapotranspiration = 0.0f;
@@ -490,7 +488,6 @@ namespace tenjix {
 								if (y > 0) {
 									if (isnan(previous_elevation)) {
 										previous_elevation = *elevation_map->getData(x - x_delta, y - 1);
-										if (not current_options.positive) previous_elevation = previous_elevation * 2.0f - 1.0f;
 									}
 									slope = (elevation - previous_elevation) / slope_scale;
 								}
@@ -508,7 +505,6 @@ namespace tenjix {
 						//srand(15);
 						auto calculate_precipitation = [&](unsigned belt, unsigned slot, unsigned& x, unsigned y, int x_delta) {
 							float elevation = *elevation_map->getData(x, y);
-							if (not current_options.positive) elevation = elevation * 2.0f - 1.0f;
 							bool land = elevation > sealevel;
 							float humidity = humidity_map[belt][slot];
 							float precipitation = humidity * precipitation_decay;
@@ -629,7 +625,7 @@ namespace tenjix {
 					water_pixels = 0;
 					while (elevation_iterator.line() and temperature_iterator.line() and precipitation_iterator.line() and biome_iterator.line() and terrain_iterator.line()) {
 						while (elevation_iterator.pixel() and temperature_iterator.pixel() and precipitation_iterator.pixel() and biome_iterator.pixel() and terrain_iterator.pixel()) {
-							float elevation = (not current_options.positive) ? elevation_iterator.v() * 2.0f - 1.0f : elevation_iterator.v();
+							float elevation = elevation_iterator.v();
 							assign_elevation(terrain_iterator, elevation);
 							if (elevation > sealevel) {
 								biome_iterator << determine_biome(temperature_iterator.v() / 255.0f, precipitation_iterator.v() / 255.0f);
@@ -692,10 +688,7 @@ namespace tenjix {
 			ui::SameLine();
 			if (ui::Button("Save")) writeImage("exported/" + map_names[selected_map] + "_Map.jpg", image_source);
 			ui::SameLine(ui::GetWindowWidth() - 150);
-			if (ui::Checkbox("GPU Compute", gpu_compute)) {
-				sealevel = gpu_compute ? 0.0f : 0.5f;
-				update_tectonic = true;
-			}
+			update_tectonic |= ui::Checkbox("GPU Compute", gpu_compute);
 			ui::ImageButton(map_texture, map_texture->getSize(), 0);
 			bool map_hovered = ui::IsItemHoveredRect() and ui::IsWindowHovered();
 			signed2 map_position = ui::GetItemRectMin();
@@ -826,7 +819,7 @@ namespace tenjix {
 
 			auto mouse_position = signed2(ui::GetIO().MousePos) - map_position;
 			auto coordinates = (float2(mouse_position) / float2(map_resolution) * 2.0f - 1.0f) * float2(180, 90);
-			auto elevation = (elevation_map->getValue(mouse_position) * 2.0f - 1.0f - sealevel) * 10000.0f;
+			auto elevation = (elevation_map->getValue(mouse_position) - sealevel) * 10000.0f;
 			auto temperature = temperature_map->getValue(mouse_position) / 255.0f * 70.0f - 25.0f;
 			auto precipitation = precipitation_map->getValue(mouse_position) / 255.0f * 80.0f;
 			auto biome = get_biome_name(biome_map->getPixel(mouse_position));
@@ -837,15 +830,12 @@ namespace tenjix {
 			ui::Text("%.1f%% Water, %.1f%% Land", water_percentage, 100.0f - water_percentage);
 
 			if (map_hovered) {
-				ui::Text(u8"Position: %i, %i \nCoordinates: %+4.1f°, %+4.1f° \nElevation: %.1fm \nTemperature: %.1f°C \nPrecipitation: %.1fkg/m² \nBiome: %s",
+				ui::Text(u8"Position: %i, %i \nCoordinates: %+4.1fÂ°, %+4.1fÂ° \nElevation: %.1fm \nTemperature: %.1fÂ°C \nPrecipitation: %.1fkg/mÂ² \nBiome: %s",
 						 mouse_position.x, mouse_position.y, coordinates.x, coordinates.y, elevation, temperature, precipitation, biome.c_str());
 			} else {
 				ui::PushItemWidth(-250);
 
-				if (ui::Checkbox("Earth", earth)) {
-					sealevel = gpu_compute ? 0.0f : 0.5f;
-					update_tectonic = true;
-				}
+				update_tectonic |= ui::Checkbox("Earth", earth);
 				if (not earth) {
 					ui::Text("Use the mouse pointer to view map details.");
 					update_tectonic |= ui::DragInt("Seed", seed, 1.0f, 0, seed_maximum, "%.0f", 0);
@@ -859,14 +849,12 @@ namespace tenjix {
 					update_tectonic |= ui::SliderFloat("Power", current_options.power, 0.1f, 10.0f, "%.2f", 1.0f, saved_options.power); ui::Hint("Ctrl+Click to enter an exact value");
 					update_tectonic |= ui::SliderFloat("Continent Amplitude", continent_amplitude, 0.0f, 10.0f, "%.2f", 1.0f, 1.0f);
 					update_tectonic |= ui::SliderFloat("Continent Frequency", continent_frequency, 0.0f, 2.0f, "%.2f", 1.0f, 0.5f);
-					//update_tectonic |= ui::Checkbox("Positive", current_options.positive); ui::Tooltip("sets noise range to [0,1] instead of [-1,1]");
-					//ui::SameLine();
 					update_tectonic |= ui::Checkbox("Wrap Horizontally", wrap_horizontally);
 					ui::SameLine();
 					update_tectonic |= ui::Checkbox("Continents##use", use_continents);
 				}
 
-				update_topography |= ui::SliderPercentage("Sealevel", sealevel, -1.0f, 1.0f, "%+.0f%%", 1.0f, gpu_compute ? 0.0f : 0.5f);
+				update_topography |= ui::SliderPercentage("Sealevel", sealevel, -1.0f, 1.0f, "%+.0f%%", 1.0f, 0.0f);
 
 				if (not earth) {
 					bool& update_optimized = gpu_compute ? update_tectonic : update_topography;
@@ -875,7 +863,7 @@ namespace tenjix {
 
 					update_topography |= ui::SliderInt("Lapse Power", lapse_power, 1, 2, "%.0f", 1);
 				}
-				update_topography |= ui::SliderFloat("Lapse Rate", lapse_rate, 0.0f, 20.0f, u8"%.1f (°C/km)", 1.0f, 10.0f);
+				update_topography |= ui::SliderFloat("Lapse Rate", lapse_rate, 0.0f, 20.0f, u8"%.1f (Â°C/km)", 1.0f, 10.0f);
 
 				update_climate |= ui::SliderFloat("Evaporation", evaporation_factor, 0.0f, 10.0f, "%.3f", 2.0f, 1.0f);
 				update_climate |= ui::SliderFloat("Transpiration", transpiration_factor, 0.0f, 10.0f, "%.3f", 2.0f, 0.25f);
