@@ -82,7 +82,10 @@ namespace tenjix {
 				return *this;
 			}
 
-			shared<Texture> texture() { return result ? result : buffers[current]->getColorTexture(); }
+			shared<Texture> texture() {
+				runtime_assert(buffers[current], "buffers[", current, "] isn't initialized");
+				return result ? result : buffers[current]->getColorTexture();
+			}
 
 			shared<Texture> texture(unsigned index) {
 				assert(index == 0 or index == 1);
@@ -95,6 +98,7 @@ namespace tenjix {
 			}
 
 			Frame& fragment(const String& fragment_shader_path, bool& update) {
+				//wd::unwatch(this->fragment_shader_path);
 				this->fragment_shader_path = fragment_shader_path;
 				wd::watch(fragment_shader_path, [&](const fs::path& path) {
 					if (compile()) update = true;
@@ -271,11 +275,11 @@ namespace tenjix {
 			static bool gpu_compute = false, earth = false, debug = false;
 			static unsigned circulation_iterations = 25;
 			static float circulation_intensity = 1.0, orograpic_effect = 1.0;
+			static float bathymetry_scale = 1.0, topography_scale = 1.0;
 
 			const unsigned2 map_resolution = { 800, 450 };
 
-			if (gpu_compute and not elevation_frame.initialized()) {
-				elevation_frame.framebuffer(map_resolution, GL_R32F).fragment("shaders/generation/Elevation.fragment.shader", update_tectonic).flip_horizontally();
+			if (gpu_compute and not temperature_frame.initialized()) {
 				temperature_frame.framebuffer(map_resolution, GL_R32F).fragment("shaders/generation/Temperature.fragment.shader", update_topography);
 				evapotranspiration_frame.framebuffer(map_resolution, GL_R32F).fragment("shaders/generation/Evapotranspiration.fragment.shader", update_climate);
 				circulation_frame.framebuffer(map_resolution, GL_RGB32F).fragment("shaders/generation/Circulation.fragment.shader", update_climate);
@@ -309,12 +313,23 @@ namespace tenjix {
 					scale = clamp(scale * (1.0f - roll), 0.1f, 10.0f);
 					shift -= wrap_horizontally ? float2(drag.x, drag.y / scale) : float2(drag) / scale;
 					if (earth) {
-						auto earth_map = loadImage(app::loadAsset("maps/Elevation_Map.jpg"));
-						elevation_frame.set(Texture::create(earth_map));
-						elevation_map = Channel32f::create(earth_map);
-						elevation_buffer = Channel32f::create(earth_map);
+						if (not elevation_frame.initialized()) elevation_frame.framebuffer(map_resolution, GL_R32F);
+						elevation_frame.fragment("shaders/generation/Elevation-Composing.fragment.shader", update_tectonic);
+						auto bathymetry_map = loadImage(app::loadAsset("maps/Bathymetry.png"));
+						auto topography_map = loadImage(app::loadAsset("maps/Topography.png"));
+						auto bathymetry_texture = Texture::create(bathymetry_map);
+						auto topography_texture = Texture::create(topography_map);
+						elevation_frame.uniform("uBathymetryMap", 0);
+						elevation_frame.uniform("uTopographyMap", 1);
+						elevation_frame.uniform("uBathymetryScale", bathymetry_scale);
+						elevation_frame.uniform("uTopographyScale", topography_scale);
+						elevation_frame.render({ bathymetry_texture, topography_texture });
+						elevation_map = Channel32f::create(elevation_frame.texture()->createSource());
+						if (not elevation_buffer) elevation_buffer = Channel32f::create(*elevation_map);
+						else elevation_buffer->copyFrom(*elevation_map, elevation_map->getBounds());
 					} else if (gpu_compute) {
-						elevation_frame.set(nullptr);
+						if (not elevation_frame.initialized()) elevation_frame.framebuffer(map_resolution, GL_R32F);
+						elevation_frame.fragment("shaders/generation/Elevation.fragment.shader", update_tectonic);
 						elevation_buffer = nullptr;
 						elevation_frame.uniform("uWrapping", wrap_horizontally);
 						elevation_frame.uniform("uResolution", map_resolution);
@@ -836,7 +851,10 @@ namespace tenjix {
 				ui::PushItemWidth(-250);
 
 				update_tectonic |= ui::Checkbox("Earth", earth);
-				if (not earth) {
+				if (earth) {
+					update_tectonic |= ui::SliderFloat("Bathymetry Scaling", bathymetry_scale, 0.0f, 1.0f, "%.2f", 1.0f, 1.0f);
+					update_tectonic |= ui::SliderFloat("Topography Scaling", topography_scale, 0.0f, 1.0f, "%.2f", 1.0f, 1.0f);
+				} else {
 					ui::Text("Use the mouse pointer to view map details.");
 					update_tectonic |= ui::DragInt("Seed", seed, 1.0f, 0, seed_maximum, "%.0f", 0);
 					update_tectonic |= ui::SliderFloat("Scale", scale, 0.1f, 10.0f, "%.2f", 3.45f, 1.0f);
