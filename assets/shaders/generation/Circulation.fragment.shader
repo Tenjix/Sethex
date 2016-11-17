@@ -10,6 +10,8 @@
 uniform sampler2D uElevationMap;
 uniform sampler2D uTemperatureMap;
 
+uniform float uEquator = 0.0;
+uniform float uBaseDensityInfluence = 2.0;
 uniform bool uDebug = false;
 
 in vec2 Texinates;
@@ -32,15 +34,14 @@ float get_temperature(ivec2 texel) {
 
 // calculates air density based on circulation cells
 float calculate_base_density(ivec2 texel) {
-	float verticality = float(texel.y) / map_size.y;
+	float verticality = float(texel.y) / map_size.y - uEquator * 0.5;
 	return (cos(verticality * 6 * Tau_Half) + 1.0) / 2.0;
 }
 
 // calculates air density based on circulation cells and temperature
 float calculate_density(ivec2 texel) {
 	texel = limit(texel, map_size);
-	float ratio = 2.0;
-	return (ratio * calculate_base_density(texel) + get_temperature(texel)) / (ratio + 1.0);
+	return (uBaseDensityInfluence * calculate_base_density(texel) + get_temperature(texel)) / (uBaseDensityInfluence + 1.0);
 }
 
 // calculates air density deltas between opposing neighbor cells of the given texel
@@ -71,8 +72,8 @@ vec4 calculate_pressure(ivec2 texel, int octaves = 1, float decline = 0.5) {
 }
 
 // deflects air flow depending on hemisphere and flow spead
-vec2 apply_coriolis_effect(vec2 texel, vec2 flow) {
-	float verticality = float(texel.y) / map_size.y;
+vec2 apply_coriolis_effect(ivec2 texel, vec2 flow) {
+	float verticality = float(texel.y) / map_size.y - uEquator * 0.5;
 	float direction = -sign(0.5 - verticality);
 	// todo: maybe don't deflect horizontal flow?
 	return rotation(Pi_Half * direction * length(flow)) * flow;

@@ -197,8 +197,12 @@ namespace tenjix {
 			Color8u desert = { 255, 255, 128 };
 			Color8u savanna = { 192, 240, 64 };
 			Color8u rainforest = { 0, 64, 0 };
+			Color8u hot_rock = { 160, 128, 128 };
 			Color8u rock = { 128, 128, 128 };
-			Color8u ocean = { 0, 0, 92 };
+			Color8u cold_rock = { 128, 128, 160 };
+			Color8u coast = { 16, 16, 160 };
+			Color8u ocean = { 0, 0, 128 };
+			Color8u abyssal = { 0, 0, 92 };
 		};
 
 		BiomeColors biome_colors;
@@ -239,17 +243,19 @@ namespace tenjix {
 		}
 
 		String get_biome_name(Color8u biome_color) {
-			if (biome_color == biome_colors.desert) return "desert";
-			if (biome_color == biome_colors.forest) return "forest";
-			if (biome_color == biome_colors.ice) return "ice";
-			if (biome_color == biome_colors.ocean) return "ocean";
-			if (biome_color == biome_colors.prairie) return "prairie";
-			if (biome_color == biome_colors.rainforest) return "rainforest";
-			if (biome_color == biome_colors.rock) return "rock";
-			if (biome_color == biome_colors.savanna) return "savanna";
-			if (biome_color == biome_colors.steppe) return "steppe";
-			if (biome_color == biome_colors.taiga) return "taiga";
-			if (biome_color == biome_colors.tundra) return "tundra";
+			if (biome_color == biome_colors.desert) return "Desert";
+			if (biome_color == biome_colors.forest) return "Forest";
+			if (biome_color == biome_colors.ice) return "Ice";
+			if (biome_color == biome_colors.prairie) return "Prairie";
+			if (biome_color == biome_colors.rainforest) return "Rainforest";
+			if (biome_color == biome_colors.rock) return "Rock";
+			if (biome_color == biome_colors.savanna) return "Savanna";
+			if (biome_color == biome_colors.steppe) return "Steppe";
+			if (biome_color == biome_colors.taiga) return "Taiga";
+			if (biome_color == biome_colors.tundra) return "Tundra";
+			if (biome_color == biome_colors.coast) return "Coast";
+			if (biome_color == biome_colors.ocean) return "Ocean";
+			if (biome_color == biome_colors.abyssal) return "Abyssal";
 			return "Unknown";
 		}
 
@@ -260,7 +266,7 @@ namespace tenjix {
 			static float scale = 1.0f, roll = 0.0f;
 			static Simplex::Options current_options;
 			static Simplex::Options saved_options;
-			static float continent_frequency = 0.5f, continent_amplitude = 1.0f, sealevel = 0.0f;
+			static float continent_frequency = 0.5f, continent_amplitude = 1.0f, sealevel = 0.0f, equator = 0.0f;
 			static float equator_distance_factor = 0.0f;
 			static int equator_distance_power = 10, lapse_power = 1;
 			static bool wrap_horizontally = false;
@@ -294,15 +300,15 @@ namespace tenjix {
 			auto assign_elevation = [](const Surface::Iter& iterator, float elevation) {
 				if (elevation < elevation_minimum) elevation_minimum = elevation;
 				if (elevation > elevation_maximum) elevation_maximum = elevation;
-				if (elevation > 0.33f * sealevel + thresholds.snowcap) { iterator << Color8u(255, 255, 255); return; } // snowcap
-				if (elevation > 0.5f * sealevel + thresholds.mountain) { iterator << Color8u(128, 128, 128); return; } // mountain
-				if (elevation > 0.66f * sealevel + thresholds.forrest) { iterator << Color8u(0, 160, 0); return; } // forrest
-				if (elevation > sealevel + thresholds.prairie) { iterator << Color8u(32, 204, 32); return; } // prairie
-				if (elevation > sealevel + thresholds.beach) { iterator << Color8u(240, 240, 160); return; } // beach
+				if (elevation > 0.33f * sealevel + thresholds.snowcap) { iterator << biome_colors.ice; return; } // snowcap
+				if (elevation > 0.5f * sealevel + thresholds.mountain) { iterator << biome_colors.rock; return; } // mountain
+				if (elevation > 0.66f * sealevel + thresholds.forrest) { iterator << biome_colors.forest; return; } // forrest
+				if (elevation > sealevel + thresholds.prairie) { iterator << biome_colors.prairie; return; } // prairie
+				if (elevation > sealevel + thresholds.beach) { iterator << biome_colors.desert; return; } // beach
 				water_pixels++;
-				if (elevation > sealevel + thresholds.coast) { iterator << Color8u(16, 16, 160); return; } // coast
-				if (elevation > sealevel + thresholds.ocean) { iterator << Color8u(0, 0, 128); return; } // ocean
-				iterator << Color8u(0, 0, 96); // deep ocean
+				if (elevation > sealevel + thresholds.coast) { iterator << biome_colors.coast; return; } // coast
+				if (elevation > sealevel + thresholds.ocean) { iterator << biome_colors.ocean; return; } // ocean
+				iterator << biome_colors.abyssal; // deep ocean
 			};
 
 			if (update_tectonic or update_topography or update_climate or update_biomes) {
@@ -329,7 +335,7 @@ namespace tenjix {
 						else elevation_buffer->copyFrom(*elevation_map, elevation_map->getBounds());
 					} else if (gpu_compute) {
 						if (not elevation_frame.initialized()) elevation_frame.framebuffer(map_resolution, GL_R32F);
-						elevation_frame.fragment("shaders/generation/Elevation.fragment.shader", update_tectonic);
+						elevation_frame.fragment("shaders/generation/Elevation.fragment.shader", update_tectonic).flip_horizontally();
 						elevation_buffer = nullptr;
 						elevation_frame.uniform("uWrapping", wrap_horizontally);
 						elevation_frame.uniform("uResolution", map_resolution);
@@ -401,6 +407,7 @@ namespace tenjix {
 					if (gpu_compute) {
 						temperature_frame.uniform("uElevationMap", 0);
 						temperature_frame.uniform("uSeaLevel", sealevel);
+						temperature_frame.uniform("uEquator", equator);
 						temperature_frame.uniform("uLapseRate", lapse_rate);
 						temperature_frame.render({ elevation_frame.texture() });
 						temperature_map = Channel::create(temperature_frame.texture()->createSource());
@@ -443,22 +450,24 @@ namespace tenjix {
 				if (update_climate) {
 					print("update climate");
 					if (gpu_compute and circulation) {
-						// calculate flow
+						// calculate circulation
 						circulation_frame.uniform("uElevationMap", 0);
 						circulation_frame.uniform("uTemperatureMap", 1);
+						circulation_frame.uniform("uEquator", equator);
 						circulation_frame.uniform("uDebug", debug);
 						circulation_frame.render({ elevation_frame.texture(), temperature_frame.texture() });
 						circulation_map = Surface::create(circulation_frame.texture()->createSource());
-						// calculate humidity
+						// calculate evapotranspiration
 						evapotranspiration_frame.uniform("uElevationMap", 0);
 						evapotranspiration_frame.uniform("uTemperatureMap", 1);
 						evapotranspiration_frame.uniform("uCirculationMap", 2);
 						evapotranspiration_frame.uniform("uSeaLevel", sealevel);
+						evapotranspiration_frame.uniform("uEquator", equator);
 						evapotranspiration_frame.uniform("uEvaporation", evaporation_factor);
 						evapotranspiration_frame.uniform("uTranspiration", transpiration_factor);
 						evapotranspiration_frame.render({ elevation_frame.texture(), temperature_frame.texture(), circulation_frame.texture() });
 						evapotranspiration_map = Channel::create(evapotranspiration_frame.texture()->createSource());
-						// simulate circulation
+						// calculate humidity by simulating calculation
 						humidity_frame.uniform("uElevationMap", 0);
 						humidity_frame.uniform("uTemperatureMap", 1);
 						humidity_frame.uniform("uCirculationMap", 2);
@@ -472,7 +481,7 @@ namespace tenjix {
 							humidity_texture = humidity_frame.texture();
 						}
 						humidity_map = Channel::create(humidity_frame.texture()->createSource());
-						// simulate circulation
+						// calculate precipitation
 						precipitation_frame.uniform("uElevationMap", 0);
 						precipitation_frame.uniform("uTemperatureMap", 1);
 						precipitation_frame.uniform("uCirculationMap", 2);
@@ -850,7 +859,21 @@ namespace tenjix {
 			} else {
 				ui::PushItemWidth(-250);
 
-				update_tectonic |= ui::Checkbox("Earth", earth);
+				bool use_earth = ui::Checkbox("Earth", earth);
+				if (use_earth) {
+					bathymetry_scale = 0.8f;
+					topography_scale = 0.7f;
+					sealevel = 0.0f;
+					circulation_iterations = 0;
+					thresholds.ocean = -0.50f;
+					thresholds.coast = -0.10f;
+					thresholds.beach = 0.0f;
+					thresholds.prairie = 0.005f;
+					thresholds.forrest = 0.05f;
+					thresholds.mountain = 0.20f;
+					thresholds.snowcap = 0.25f;
+				}
+				update_tectonic |= use_earth;
 				if (earth) {
 					update_tectonic |= ui::SliderFloat("Bathymetry Scaling", bathymetry_scale, 0.0f, 1.0f, "%.2f", 1.0f, 1.0f);
 					update_tectonic |= ui::SliderFloat("Topography Scaling", topography_scale, 0.0f, 1.0f, "%.2f", 1.0f, 1.0f);
@@ -873,6 +896,7 @@ namespace tenjix {
 				}
 
 				update_topography |= ui::SliderPercentage("Sealevel", sealevel, -1.0f, 1.0f, "%+.0f%%", 1.0f, 0.0f);
+				update_topography |= ui::SliderPercentage("Equator", equator, -1.0f, 1.0f, "%+.0f%%", 1.0f, 0.0f);
 
 				if (not earth) {
 					bool& update_optimized = gpu_compute ? update_tectonic : update_topography;
@@ -893,7 +917,7 @@ namespace tenjix {
 				}
 
 				if (gpu_compute and circulation) {
-					update_climate |= ui::SliderUnsigned("Circulation Iterations", circulation_iterations, 0, 100, "%.0f", 25);
+					update_climate |= ui::SliderUnsigned("Circulation Iterations", circulation_iterations, 0, 50, "%.0f", 25);
 					update_climate |= ui::SliderFloat("Circulation Intensity", circulation_intensity, 0.0f, 1.0f, "%.3f", 1.0f, 1.0f);
 					update_climate |= ui::SliderFloat("Orograpic Effect", orograpic_effect, 0.0f, 1.0f, "%.3f", 1.0f, 1.0f);
 				} else {
@@ -910,7 +934,6 @@ namespace tenjix {
 				static bool show_biome_colors = false;
 				if (ui::SmallButton("Biome Colors:")) show_biome_colors = not show_biome_colors;
 				if (show_biome_colors) {
-					update_biomes |= ui::ColorEdit3("Ocean", biome_colors.ocean);
 					update_biomes |= ui::ColorEdit3("Ice", biome_colors.ice);
 					update_biomes |= ui::ColorEdit3("Tundra", biome_colors.tundra);
 					update_biomes |= ui::ColorEdit3("Taiga", biome_colors.taiga);
@@ -920,6 +943,9 @@ namespace tenjix {
 					update_biomes |= ui::ColorEdit3("Desert", biome_colors.desert);
 					update_biomes |= ui::ColorEdit3("Savanna", biome_colors.savanna);
 					update_biomes |= ui::ColorEdit3("Rainforest", biome_colors.rainforest);
+					update_biomes |= ui::ColorEdit3("Coast", biome_colors.coast);
+					update_biomes |= ui::ColorEdit3("Ocean", biome_colors.ocean);
+					update_biomes |= ui::ColorEdit3("Abyssal", biome_colors.abyssal);
 				}
 
 				static bool show_thresholds = false;
