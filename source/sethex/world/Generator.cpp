@@ -29,6 +29,35 @@ namespace tenjix {
 		shared<Texture> map_texture;
 		shared<Texture> world_texture;
 
+		String bathymetry_file;
+		String topography_file;
+
+		struct ElevationMap {
+
+			shared<Texture> texture;
+			fs::path path;
+
+			void load(const String& file_path) {
+				if (file_path.empty() or file_path == path and loaded()) return;
+				debug("loading elevation map '", file_path, "' ...");
+				path = file_path;
+				try {
+					texture = Texture::create(loadImage(app::loadAsset(path)));
+				} catch (exception exception) {
+					texture = nullptr;
+					debug("couldn't load '", file_path, "'");
+				}
+			}
+
+			bool loaded() {
+				return texture != nullptr;
+			}
+
+		};
+
+		ElevationMap bathymetry_map;
+		ElevationMap topography_map;
+
 		class Frame {
 
 		public:
@@ -39,7 +68,7 @@ namespace tenjix {
 
 			fs::path vertex_shader_path = "shaders/Square.vertex.shader";
 			fs::path geometry_shader_path = "shaders/Square.geometry.shader";
-			fs::path fragment_shader_path {};
+			fs::path fragment_shader_path;
 
 			Origin origin = Origin::LowerLeft;
 			bool compiled_successfully = false;
@@ -119,7 +148,7 @@ namespace tenjix {
 
 			bool compile() {
 				try {
-					debug("compiling ", fragment_shader_path.filename(), " ...");
+					debug("compiling shader '", fragment_shader_path.filename(), "' ...");
 					String vertex_shader = loadString(app::loadAsset(vertex_shader_path));
 					String geometry_shader = loadString(app::loadAsset(geometry_shader_path));
 					if (origin == Origin::UpperLeft) shader::define(geometry_shader, "ORIGIN_UPPER_LEFT");
@@ -342,14 +371,20 @@ namespace tenjix {
 				precipitation_frame.framebuffer(map_resolution, GL_R32F, 16).fragment("shaders/generation/Precipitation.fragment.shader", update_climate);
 			}
 
+			bool resources_available;
 			switch (elevation_source) {
 				case CPU_Noise:
+					resources_available = true;
 					break;
 				case GPU_Noise:
 					elevation_frame.fragment("shaders/generation/Elevation.fragment.shader", update_tectonic, Frame::Origin::UpperLeft);
+					resources_available = all_compiled();
 					break;
 				case Elevation_Maps:
 					elevation_frame.fragment("shaders/generation/Elevation-Composing.fragment.shader", update_tectonic, Frame::Origin::LowerLeft);
+					bathymetry_map.load(bathymetry_file);
+					topography_map.load(topography_file);
+					resources_available = bathymetry_map.loaded() and topography_map.loaded();
 					break;
 				default:
 					throw_runtime_exception();
@@ -357,12 +392,7 @@ namespace tenjix {
 
 			ui::ScopedWindow ui_window("Noise Texture", ImGuiWindowFlags_HorizontalScrollbar);
 
-			if (not all_compiled()) {
-				ui::Text("Compiling ...");
-				return;
-			}
-
-			if (update_tectonic or update_topography or update_climate or update_biomes) {
+			if (resources_available and (update_tectonic or update_topography or update_climate or update_biomes)) {
 				print("===== update =====");
 
 				if (update_tectonic) {
@@ -370,15 +400,11 @@ namespace tenjix {
 					scale = clamp(scale * (1.0f - roll), 0.1f, 10.0f);
 					shift -= wrap_horizontally ? float2(drag.x, drag.y / scale) : float2(drag) / scale;
 					if (elevation_source == Elevation_Maps) {
-						auto bathymetry_map = loadImage(app::loadAsset("maps/Bathymetry.png"));
-						auto topography_map = loadImage(app::loadAsset("maps/Topography.png"));
-						auto bathymetry_texture = Texture::create(bathymetry_map);
-						auto topography_texture = Texture::create(topography_map);
 						elevation_frame.uniform("uBathymetryMap", 0);
 						elevation_frame.uniform("uTopographyMap", 1);
 						elevation_frame.uniform("uBathymetryScale", bathymetry_scale);
 						elevation_frame.uniform("uTopographyScale", topography_scale);
-						elevation_frame.render({ bathymetry_texture, topography_texture });
+						elevation_frame.render({ bathymetry_map.texture, topography_map.texture });
 						elevation_map = Channel32f::create(elevation_frame.texture()->createSource());
 						if (not elevation_buffer) elevation_buffer = Channel32f::create(*elevation_map);
 						else elevation_buffer->copyFrom(*elevation_map, elevation_map->getBounds());
@@ -752,15 +778,31 @@ namespace tenjix {
 			ui::PopItemWidth();
 			ui::SameLine();
 			if (ui::Button("Save")) writeImage("exported/" + map_display_list[map_display] + "_Map.jpg", image_source);
-			ui::ImageButton(map_texture, map_texture->getSize(), 0);
-			bool map_hovered = ui::IsItemHoveredRect() and ui::IsWindowHovered();
-			signed2 map_position = ui::GetItemRectMin();
-			if (map_hovered) {
-				roll = ui::GetIO().MouseWheel * 0.1f;
-				drag = ui::IsMouseDragging() ? signed2(ui::GetIO().MouseDelta) : Zero;
-				update_tectonic = drag != Zero or roll != Zero;
+			bool map_hovered = false;
+			signed2 map_position;
+			if (resources_available) {
+				ui::ImageButton(map_texture, map_texture->getSize(), 0);
+				map_hovered = ui::IsItemHoveredRect() and ui::IsWindowHovered();
+				map_position = ui::GetItemRectMin();
+				if (map_hovered) {
+					roll = ui::GetIO().MouseWheel * 0.1f;
+					drag = ui::IsMouseDragging() ? signed2(ui::GetIO().MouseDelta) : Zero;
+					update_tectonic = drag != Zero or roll != Zero;
+				}
+				//ui::Image(world_texture, world_texture->getSize());
+			} else {
+				if (elevation_source == Elevation_Maps) {
+					if (not bathymetry_map.loaded() or not topography_map.loaded()) {
+						ui::Text("Waiting for elevation map specification ...");
+						if (not bathymetry_map.loaded()) ui::Text(Color(1, 0, 0, 1), stringify("Can't load bathymetry map \"", bathymetry_file, "\"."));
+						if (not topography_map.loaded()) ui::Text(Color(1, 0, 0, 1), stringify("Can't load topography map \"", topography_file, "\"."));
+					} else {
+						ui::Text("Loading elevation maps ...");
+					}
+				} else {
+					ui::Text("Compiling shaders ...");
+				}
 			}
-			//ui::Image(world_texture, world_texture->getSize());
 			ui::EndChild();
 
 			ui::SameLine();
@@ -884,6 +926,8 @@ namespace tenjix {
 					break;
 				case 5:
 					elevation_source = Elevation_Maps;
+					bathymetry_file = "maps/Bathymetry.png";
+					topography_file = "maps/Topography.png";
 					circulation_type = Deflected;
 					bathymetry_scale = 0.8f;
 					topography_scale = 0.7f;
@@ -902,19 +946,17 @@ namespace tenjix {
 
 			}
 
-			auto mouse_position = signed2(ui::GetIO().MousePos) - map_position;
-			auto coordinates = (float2(mouse_position) / float2(map_resolution) * 2.0f - 1.0f) * float2(180, 90);
-			auto elevation = (elevation_map->getValue(mouse_position) - sealevel) * 10000.0f;
-			auto temperature = temperature_map->getValue(mouse_position) / 255.0f * 70.0f - 25.0f;
-			auto precipitation = precipitation_map->getValue(mouse_position) / 255.0f * 80.0f;
-			auto biome = get_biome_name(biome_map->getPixel(mouse_position));
-
 			unsigned pixels = map_texture->getWidth() * map_texture->getHeight();
 			float water_percentage = 100.0f * water_pixels / pixels;
-
 			ui::Text("%.1f%% Water, %.1f%% Land", water_percentage, 100.0f - water_percentage);
 
 			if (map_hovered) {
+				auto mouse_position = signed2(ui::GetIO().MousePos) - map_position;
+				auto coordinates = (float2(mouse_position) / float2(map_resolution) * 2.0f - 1.0f) * float2(180, 90);
+				auto elevation = (elevation_map->getValue(mouse_position) - sealevel) * 10000.0f;
+				auto temperature = temperature_map->getValue(mouse_position) / 255.0f * 70.0f - 25.0f;
+				auto precipitation = precipitation_map->getValue(mouse_position) / 255.0f * 80.0f;
+				auto biome = get_biome_name(biome_map->getPixel(mouse_position));
 				ui::Text(u8"Position: %i, %i \nCoordinates: %+4.1f°, %+4.1f° \nElevation: %.1fm \nTemperature: %.1f°C \nPrecipitation: %.1fkg/m² \nBiome: %s",
 						 mouse_position.x, mouse_position.y, coordinates.x, coordinates.y, elevation, temperature, precipitation, biome.c_str());
 			} else {
@@ -934,6 +976,8 @@ namespace tenjix {
 						update_tectonic = true;
 					}
 					if (elevation_source == Elevation_Maps) {
+						ui::InputText("Bathymetry Map", bathymetry_file); ui::Hint("Grayscale elevation map with 1.0 = sea level");
+						ui::InputText("Topography Map", topography_file); ui::Hint("Grayscale elevation map with 0.0 = sea level");
 						update_tectonic |= ui::SliderFloat("Bathymetry Scaling", bathymetry_scale, 0.0f, 1.0f, "%.2f", 1.0f, 1.0f);
 						update_tectonic |= ui::SliderFloat("Topography Scaling", topography_scale, 0.0f, 1.0f, "%.2f", 1.0f, 1.0f);
 					} else {

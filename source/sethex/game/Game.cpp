@@ -92,7 +92,7 @@ namespace tenjix {
 					}
 					message = "shader compiled successfully";
 					test_object.get<Material>().shader = shader;
-				} catch (GlslProgCompileExc exception) {
+				} catch (GlslProgExc exception) {
 					error(exception.what());
 					message = exception.what();
 				}

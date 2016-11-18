@@ -195,8 +195,17 @@ namespace ImGui {
 	inline bool Combo(const char* label, int& current_item, const std::vector<std::string>& items, int height_in_items = -1) {
 		return Combo(label, &current_item, items, height_in_items);
 	}
-	inline void Text(const std::string& format) {
-		Text(format.c_str());
+	inline void Text(const std::string& text) {
+		Text(text.c_str());
+	}
+	inline void Text(const ci::ColorA& color, const std::string& text) {
+		TextColored(color, text.c_str());
+	}
+	inline bool InputText(const char* label, std::string& buffer, ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = 0, void* user_data = nullptr) {
+		return InputText(label, &buffer, flags, callback, user_data);
+	}
+	inline bool InputTextMultiline(const char* label, std::string& buffer, const ImVec2& size = ImVec2(0, 0), ImGuiInputTextFlags flags = 0, ImGuiTextEditCallback callback = 0, void* user_data = nullptr) {
+		return InputTextMultiline(label, &buffer, size, flags, callback, user_data);
 	}
 
 	// Getters/Setters Helpers

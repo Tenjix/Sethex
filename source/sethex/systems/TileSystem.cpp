@@ -124,7 +124,7 @@ namespace tenjix {
 				String fragment_shader = loadString(loadAsset("shaders/Material.fragment.shader"));
 				try {
 					material->shader = Shader::create(vertex_shader, fragment_shader);
-				} catch (GlslProgCompileExc exception) {
+				} catch (GlslProgExc exception) {
 					error(exception.what());
 					return;
 				}
