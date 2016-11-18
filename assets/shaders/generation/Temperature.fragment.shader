@@ -19,10 +19,18 @@ in vec2 Texinates;
 
 out vec4 Output;
 
+// calcualtes normalized distance to equator
+float calculate_distance_to_equator() {
+	float latitude = to_signed_range(Texinates.y);
+	float delta = latitude - uEquator;
+	float range = 1.0 - sign(delta) * uEquator;
+	return abs(delta) / range;
+}
+
 void main() {
 
 	float elevation = texture(uElevationMap, Texinates).r;
-	float distance_to_equator = abs(uEquator - 2.0 * (Texinates.y - 0.5));
+	float distance_to_equator = calculate_distance_to_equator();
 	float distance_to_equator_squared = distance_to_equator * distance_to_equator;
 	
 	// float percentage_elevation_above_sealevel = max(elevation - uSeaLevel, 0.0f) / (1.0f - uSeaLevel);

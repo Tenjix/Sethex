@@ -20,6 +20,14 @@ out vec4 Output;
 
 ivec2 map_size;
 
+// calcualtes normalized distance to equator
+float calculate_distance_to_equator(ivec2 texel) {
+	float latitude = to_signed_range(float(texel.y) / map_size.y);
+	float delta = latitude - uEquator;
+	float range = 1.0 - sign(delta) * uEquator;
+	return abs(delta / range);
+}
+
 // limits and projects "texel" onto a horizontally wrapping map with "map_size"
 ivec2 limit(ivec2 texel, ivec2 map_size) {
 	texel.x = project(texel.x, 0, map_size.x - 1);
@@ -34,8 +42,8 @@ float get_temperature(ivec2 texel) {
 
 // calculates air density based on circulation cells
 float calculate_base_density(ivec2 texel) {
-	float verticality = float(texel.y) / map_size.y - uEquator * 0.5;
-	return (cos(verticality * 6 * Tau_Half) + 1.0) / 2.0;
+	float verticality = to_unsigned_range(calculate_distance_to_equator(texel));
+	return (cos(verticality * 3 * Tau) + 1.0) / 2.0;
 }
 
 // calculates air density based on circulation cells and temperature
@@ -73,8 +81,9 @@ vec4 calculate_pressure(ivec2 texel, int octaves = 1, float decline = 0.5) {
 
 // deflects air flow depending on hemisphere and flow spead
 vec2 apply_coriolis_effect(ivec2 texel, vec2 flow) {
-	float verticality = float(texel.y) / map_size.y - uEquator * 0.5;
-	float direction = -sign(0.5 - verticality);
+	float latitude = float(texel.y) / map_size.y;
+	float equator = 0.5;
+	float direction = sign(latitude - equator);
 	// todo: maybe don't deflect horizontal flow?
 	return rotation(Pi_Half * direction * length(flow)) * flow;
 }

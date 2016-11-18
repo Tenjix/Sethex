@@ -20,9 +20,18 @@ in vec2 Texinates;
 
 out vec4 Output; 
 
+// calcualtes normalized distance to equator
+float calculate_distance_to_equator() {
+	float latitude = to_signed_range(Texinates.y);
+	float delta = latitude - uEquator;
+	float range = 1.0 - sign(delta) * uEquator;
+	return abs(delta) / range;
+}
+
 // calculates moisture based on circulation cells
 float calculate_moisture() {
-	float verticality = Texinates.y - uEquator;
+	float verticality = to_unsigned_range(calculate_distance_to_equator());
+	// float verticality = Texinates.y - uEquator;
 	return -cos(verticality * 3 * Tau) * 0.5 + 0.5;
 }
 
