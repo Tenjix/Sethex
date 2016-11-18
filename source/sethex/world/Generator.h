@@ -17,17 +17,23 @@ namespace tenjix {
 			enum Circulation_Type { Linear, Deflected };
 			int circulation_type = Linear;
 
-			const Lot<String> map_display_list_gpu { "Biome", "Terrain", "Elevation", "Temperature", "Circulation", "Evapotranspiration", "Humidity", "Precipitation" };
-			const Lot<String> map_display_list_cpu { "Biome", "Terrain", "Elevation", "Temperature", "Precipitation" };
-			enum Map_Display { Biome, Terrain, Elevation, Temperature, Circulation, Evapotranspiration, Humidity, Precipitation };
+			const Lot<String> biome_determination_list { "Elevation based", "Elevation & Temperature & Precipitation based" };
+			enum Biome_Determination { Elevation_Based, Climate_Based };
+			int biome_determination = Elevation_Based;
+
+			const Lot<String> map_display_list_circulation_deflected { "Biome", "Elevation", "Temperature", "Circulation", "Evapotranspiration", "Humidity", "Precipitation" };
+			const Lot<String> map_display_list_circulation_linear { "Biome", "Elevation", "Temperature", "Precipitation" };
+			const Lot<String> map_display_list_elevation { "Biome", "Elevation" };
+			enum Map_Display { Biome, Elevation, Temperature, Circulation, Evapotranspiration, Humidity, Precipitation };
 			int map_display = Biome;
+
+			ci::Color8u determine_biome(float elevation, float temperature, float precipitation);
+			bool all_compiled();
 
 		public:
 
 			shared<ImageSource> biomes;
 			shared<ImageSource> elevation;
-
-			bool all_compiled();
 
 			void display();
 
