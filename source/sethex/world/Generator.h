@@ -27,6 +27,8 @@ namespace tenjix {
 			shared<ImageSource> biomes;
 			shared<ImageSource> elevation;
 
+			bool all_compiled();
+
 			void display();
 
 		};

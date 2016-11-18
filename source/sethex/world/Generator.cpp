@@ -32,12 +32,18 @@ namespace tenjix {
 
 		class Frame {
 
+		public:
+
+			enum class Origin { LowerLeft, UpperLeft };
+
+		private:
+
 			fs::path vertex_shader_path = "shaders/Square.vertex.shader";
 			fs::path geometry_shader_path = "shaders/Square.geometry.shader";
-			fs::path fragment_shader_path;
+			fs::path fragment_shader_path {};
 
-			bool flip_origin = false;
-			bool compiled = false;
+			Origin origin = Origin::LowerLeft;
+			bool compiled_successfully = false;
 			unsigned current = 0;
 
 			shared<FrameBuffer> buffers[2];
@@ -45,6 +51,8 @@ namespace tenjix {
 			shared<Texture> result;
 
 		public:
+
+			fs::path& get_fragment_shader_path() { return fragment_shader_path; }
 
 			Frame& framebuffer(unsigned2 size, GLint format = GL_RGBA32F, int samples = 0) {
 				buffers[0] = FrameBuffer::create(size.x, size.y, FrameBuffer::Format().samples(samples).disableDepth().colorTexture(Texture::Format().internalFormat(format)));
@@ -92,13 +100,11 @@ namespace tenjix {
 				return buffers[index]->getColorTexture();
 			}
 
-			Frame& flip_horizontally(bool origin_up = true) {
-				flip_origin = origin_up;
-				return *this;
-			}
-
-			Frame& fragment(const String& fragment_shader_path, bool& update) {
-				//wd::unwatch(this->fragment_shader_path);
+			Frame& fragment(const String& fragment_shader_path, bool& update, Origin origin = Origin::LowerLeft) {
+				this->origin = origin;
+				if (fragment_shader_path == this->fragment_shader_path) return *this;
+				compiled_successfully = false;
+				if (not this->fragment_shader_path.empty()) wd::unwatch(this->fragment_shader_path);
 				this->fragment_shader_path = fragment_shader_path;
 				wd::watch(fragment_shader_path, [&](const fs::path& path) {
 					if (compile()) update = true;
@@ -108,7 +114,7 @@ namespace tenjix {
 
 			template<class Type>
 			void uniform(const String& name, Type value) {
-				if (not compiled) return;
+				if (not compiled_successfully) return;
 				shader->uniform(name, value);
 			}
 
@@ -117,20 +123,24 @@ namespace tenjix {
 					debug("compiling ", fragment_shader_path.filename(), " ...");
 					String vertex_shader = loadString(app::loadAsset(vertex_shader_path));
 					String geometry_shader = loadString(app::loadAsset(geometry_shader_path));
-					if (flip_origin) shader::define(geometry_shader, "ORIGIN_UPPER_LEFT");
+					if (origin == Origin::UpperLeft) shader::define(geometry_shader, "ORIGIN_UPPER_LEFT");
 					String fragment_shader = loadString(app::loadAsset(fragment_shader_path));
-					if (flip_origin) shader::define(fragment_shader, "ORIGIN_UPPER_LEFT");
+					if (origin == Origin::UpperLeft)  shader::define(fragment_shader, "ORIGIN_UPPER_LEFT");
 					shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
-					compiled = true;
+					compiled_successfully = true;
 				} catch (gl::GlslProgCompileExc exception) {
 					error(exception.what());
-					compiled = false;
+					compiled_successfully = false;
 				}
-				return compiled;
+				return compiled_successfully;
+			}
+
+			bool compiled() {
+				return compiled_successfully;
 			}
 
 			void render(std::initializer_list<shared<Texture>> textures = {}) {
-				if (not compiled) return;
+				if (not compiled_successfully) return;
 				debug("rendering ", fragment_shader_path.filename(), " ...");
 				auto buffer = buffers[current];
 				assert(buffer);
@@ -267,6 +277,18 @@ namespace tenjix {
 			return "Unknown";
 		}
 
+		bool Generator::all_compiled() {
+			switch (elevation_source) {
+				case CPU_Noise:
+					return temperature_frame.compiled() and evapotranspiration_frame.compiled() and circulation_frame.compiled() and humidity_frame.compiled();
+				case GPU_Noise:
+				case Elevation_Maps:
+					return elevation_frame.compiled() and temperature_frame.compiled() and evapotranspiration_frame.compiled() and circulation_frame.compiled() and humidity_frame.compiled();
+				default:
+					throw_runtime_exception();
+			}
+		}
+
 		void Generator::display() {
 			static int seed = 0, seed_maximum = 1000000000;
 			static float2 shift;
@@ -278,8 +300,8 @@ namespace tenjix {
 			static float equator_distance_factor = 0.0f;
 			static int equator_distance_power = 10, lapse_power = 1;
 			static bool wrap_horizontally = false;
-			static bool use_continents = true;
-			static bool update_tectonic = true, update_topography, update_climate, update_display, update_biomes;
+			static bool use_continents = false;
+			static bool update_tectonic = true, update_topography = false, update_climate = false, update_display = false, update_biomes = false;
 			static unsigned water_pixels;
 			static float elevation_minimum, elevation_maximum, lapse_rate = 10.0f;
 			static float evaporation_factor = 1.0f, transpiration_factor = 0.25f, precipitation_factor = 1.0f, precipitation_decay = 0.05f, slope_scale = 0.01f;
@@ -289,10 +311,12 @@ namespace tenjix {
 			static unsigned circulation_iterations = 25;
 			static float circulation_intensity = 1.0, orograpic_effect = 1.0;
 			static float bathymetry_scale = 1.0, topography_scale = 1.0;
+			static TerrainThresholds thresholds, default_thresholds;
 
-			const unsigned2 map_resolution = { 800, 450 };
+			static const unsigned2 map_resolution = { 800, 450 };
 
-			if (not temperature_frame.initialized()) {
+			if (not elevation_frame.initialized()) {
+				elevation_frame.framebuffer(map_resolution, GL_R32F);
 				temperature_frame.framebuffer(map_resolution, GL_R32F).fragment("shaders/generation/Temperature.fragment.shader", update_topography);
 				evapotranspiration_frame.framebuffer(map_resolution, GL_R32F).fragment("shaders/generation/Evapotranspiration.fragment.shader", update_climate);
 				circulation_frame.framebuffer(map_resolution, GL_RGB32F).fragment("shaders/generation/Circulation.fragment.shader", update_climate);
@@ -300,9 +324,25 @@ namespace tenjix {
 				precipitation_frame.framebuffer(map_resolution, GL_R32F, 16).fragment("shaders/generation/Precipitation.fragment.shader", update_climate);
 			}
 
-			static TerrainThresholds thresholds, default_thresholds;
+			switch (elevation_source) {
+				case CPU_Noise:
+					break;
+				case GPU_Noise:
+					elevation_frame.fragment("shaders/generation/Elevation.fragment.shader", update_tectonic, Frame::Origin::UpperLeft);
+					break;
+				case Elevation_Maps:
+					elevation_frame.fragment("shaders/generation/Elevation-Composing.fragment.shader", update_tectonic, Frame::Origin::LowerLeft);
+					break;
+				default:
+					throw_runtime_exception();
+			}
 
 			ui::ScopedWindow ui_window("Noise Texture", ImGuiWindowFlags_HorizontalScrollbar);
+
+			if (not all_compiled()) {
+				ui::Text("Compiling ...");
+				return;
+			}
 
 			auto assign_elevation = [](const Surface::Iter& iterator, float elevation) {
 				if (elevation < elevation_minimum) elevation_minimum = elevation;
@@ -326,8 +366,6 @@ namespace tenjix {
 					scale = clamp(scale * (1.0f - roll), 0.1f, 10.0f);
 					shift -= wrap_horizontally ? float2(drag.x, drag.y / scale) : float2(drag) / scale;
 					if (elevation_source == Elevation_Maps) {
-						if (not elevation_frame.initialized()) elevation_frame.framebuffer(map_resolution, GL_R32F);
-						elevation_frame.fragment("shaders/generation/Elevation-Composing.fragment.shader", update_tectonic).flip_horizontally(false);
 						auto bathymetry_map = loadImage(app::loadAsset("maps/Bathymetry.png"));
 						auto topography_map = loadImage(app::loadAsset("maps/Topography.png"));
 						auto bathymetry_texture = Texture::create(bathymetry_map);
@@ -341,8 +379,6 @@ namespace tenjix {
 						if (not elevation_buffer) elevation_buffer = Channel32f::create(*elevation_map);
 						else elevation_buffer->copyFrom(*elevation_map, elevation_map->getBounds());
 					} else if (elevation_source == GPU_Noise) {
-						if (not elevation_frame.initialized()) elevation_frame.framebuffer(map_resolution, GL_R32F);
-						elevation_frame.fragment("shaders/generation/Elevation.fragment.shader", update_tectonic).flip_horizontally(true);
 						elevation_buffer = nullptr;
 						elevation_frame.uniform("uWrapping", wrap_horizontally);
 						elevation_frame.uniform("uResolution", map_resolution);
