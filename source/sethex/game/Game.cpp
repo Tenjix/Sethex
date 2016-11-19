@@ -126,14 +126,14 @@ namespace tenjix {
 			static bool render_world = true;
 			static bool render_entity = false;
 			static bool render_test_object = false;
-			static bool render_overlay = true;
-			static bool render_interface = false;
+			static bool render_infos = false;
+			static bool render_demo = false;
 			static bool render_generator = false;
 			static bool enable_tile_system = true;
 			static bool vertical_synchronization = true;
 			bool update_world = false;
 			{
-				ui::ScopedWindow ui_window("", ImGuiWindowFlags_NoTitleBar);
+				ui::ScopedWindow ui_window("Menu", ImGuiWindowFlags_NoTitleBar);
 				ui::Checkbox("Background", &render_background);
 				if (ui::Checkbox("World", &render_world)) {
 					auto tiles = world.find_entities_beginning("Tile #");
@@ -149,8 +149,8 @@ namespace tenjix {
 					if (render_test_object) entity.activate();
 					else entity.deactivate();
 				}
-				ui::Checkbox("Overlay", &render_overlay);
-				ui::Checkbox("Interface", &render_interface);
+				ui::Checkbox("Infos", &render_infos);
+				ui::Checkbox("Demo", &render_demo);
 				update_world |= ui::Checkbox("Generator", &render_generator) and not render_generator;
 				if (ui::Checkbox("Tile System", &enable_tile_system)) {
 					if (enable_tile_system)	world.get<TileSystem>().activate();
@@ -160,7 +160,7 @@ namespace tenjix {
 			}
 
 			if (render_world) {
-				ui::ScopedWindow ui_window("World Map");
+				ui::ScopedWindow ui_window("Hexagonal World Map");
 				static unsigned2 size = { 16, 9 };
 				static float scale = 1.0f, power = 1.0f, resolution = 0.1f;
 				bool resize_world = false;
@@ -184,13 +184,31 @@ namespace tenjix {
 			else clear();
 
 			if (world.has<RenderSystem>()) world.get<RenderSystem>().render();
-			if (render_interface) ui::ShowTestWindow();
+			if (render_demo) ui::ShowTestWindow();
 			if (render_generator) generator.display();
 
-			if (not render_overlay) return;
+			auto& tile = world.get<TileSystem>().selected_tile;
+			static double last = getElapsedSeconds();
+			double now = getElapsedSeconds();
+			if (tile or now - last < 0.15f) {
+				static const char* biome_name = nullptr;
+				if (tile) {
+					biome_name = tile->biome;
+					last = now;
+				}
+				if (biome_name != nullptr) {
+					color(0.0f, 0.0f, 0.0f, 0.9f);
+					drawSolidRect(Area(0, display.size.y - 100, 160, display.size.y - 60));
+					color(Color::white());
+					drawString(biome_name, float2(15, display.size.y - 100), font_color, font->getFont());
+				}
+			}
+
+			if (not render_infos) return;
+
 			drawString(u8"\ue000 Sethex", float2(10, 10), font_color, font->getFont());
 			drawString(u8"\ue001 \ue002 \ue003 \ue004 \ue005 \ue006", float2(10, 40), font_color, font->getFont());
-			drawString(message, float2(5, display.size.y - 50), font_color, font->getFont());
+			//drawString(message, float2(5, display.size.y - 50), font_color, font->getFont());
 			drawString(to_string(frames_per_second) + " FPS", float2(5, display.size.y - 15));
 			drawStringRight(u8"Thomas Würstle", float2(display.size.x - 5, display.size.y - 15));
 			drawStringRight(stringify("Focus Position ", display.camera.getPivotPoint()), float2(display.size.x - 5, 5));

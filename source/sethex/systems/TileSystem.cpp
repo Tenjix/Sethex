@@ -8,6 +8,7 @@
 
 #include <sethex/components/Display.h>
 #include <sethex/components/Geometry.h>
+#include <sethex/world/Generator.h>
 
 using namespace std;
 using namespace cinder;
@@ -139,10 +140,13 @@ namespace tenjix {
 			resize({ 16, 9 });
 
 			display.window->getSignalMouseMove().connect([&](MouseEvent event) {
-				if (event.isAltDown()) {
-					auto mouse_position = event.getPos();
-					auto tile = get_tile(mouse_position);
-					if (tile) mark({ tile->get<Tile>().coordinates });
+				auto mouse_position = event.getPos();
+				auto tile = get_tile(mouse_position);
+				if (tile) {
+					if (event.isAltDown()) mark({ tile->get<Tile>().coordinates });
+					selected_tile = tile->get<Tile>();
+				} else {
+					selected_tile = {};
 				}
 			});
 
@@ -348,7 +352,7 @@ namespace tenjix {
 
 		float3* mapped_instance_colors;
 
-		void TileSystem::update(shared<Surface32f> biome_map, shared<Channel32f> elevation_map, float scale, float power) {
+		void TileSystem::update(shared<Surface> biome_map, shared<Channel32f> elevation_map, float scale, float power) {
 			float2 biome_map_size, elevation_map_size;
 			if (elevation_map) {
 				mapped_instance_positions = static_cast<float3*>(instance_positions->mapReplace());
@@ -361,7 +365,8 @@ namespace tenjix {
 			if (elevation_map or biome_map) {
 				scale *= glm::length(map.cartesian_size()) * 0.02f;
 				for (auto& entity : get_entities()) {
-					auto& coordinates = entity.get<Tile>().coordinates;
+					auto& tile = entity.get<Tile>();
+					auto& coordinates = tile.coordinates;
 					auto& position = entity.get<Geometry>().position();
 					auto texinates = map.texinates(coordinates);
 					if (elevation_map) {
@@ -371,8 +376,9 @@ namespace tenjix {
 					}
 					if (biome_map) {
 						auto biome = biome_map->getPixel(biome_map_size * texinates);
+						tile.biome = Generator::get_biome_name(biome);
 						float3 color(biome.r, biome.g, biome.b);
-						mapped_instance_colors[map.index(coordinates)] = color;
+						mapped_instance_colors[map.index(coordinates)] = color / 255.0f;
 					}
 				}
 			}

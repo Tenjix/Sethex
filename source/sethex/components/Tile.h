@@ -13,6 +13,7 @@ namespace tenjix {
 		public:
 
 			hex::Coordinates coordinates;
+			const char* biome = "";
 
 		};
 

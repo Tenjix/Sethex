@@ -232,43 +232,7 @@ namespace tenjix {
 		};
 
 		TerrainThresholds thresholds, default_thresholds;
-
-		struct BiomeColors {
-			Color8u ice = { 255, 255, 255 };
-			Color8u tundra = { 128, 128, 64 };
-			Color8u taiga = { 0, 160, 80 };
-			Color8u steppe = { 192, 192, 96 };
-			Color8u prairie = { 0, 160, 0 };
-			Color8u forest = { 0, 96, 0 };
-			Color8u desert = { 255, 255, 128 };
-			Color8u savanna = { 192, 240, 64 };
-			Color8u rainforest = { 0, 64, 0 };
-			Color8u hot_rock = { 160, 128, 128 };
-			Color8u rock = { 128, 128, 128 };
-			Color8u cold_rock = { 128, 128, 160 };
-			Color8u coast = { 16, 16, 160 };
-			Color8u ocean = { 0, 0, 128 };
-			Color8u abyssal = { 0, 0, 92 };
-		};
-
-		BiomeColors biome_colors;
-
-		const char* Generator::get_biome_name(Color8u biome_color) {
-			if (biome_color == biome_colors.desert) return biome_determination == Elevation_Based ? "Beach" : "Desert";
-			if (biome_color == biome_colors.forest) return "Forest";
-			if (biome_color == biome_colors.ice) return "Ice";
-			if (biome_color == biome_colors.prairie) return "Prairie";
-			if (biome_color == biome_colors.rainforest) return "Rainforest";
-			if (biome_color == biome_colors.rock) return "Rock";
-			if (biome_color == biome_colors.savanna) return "Savanna";
-			if (biome_color == biome_colors.steppe) return "Steppe";
-			if (biome_color == biome_colors.taiga) return "Taiga";
-			if (biome_color == biome_colors.tundra) return "Tundra";
-			if (biome_color == biome_colors.coast) return "Coast";
-			if (biome_color == biome_colors.ocean) return "Ocean";
-			if (biome_color == biome_colors.abyssal) return "Abyssal";
-			return "Unknown";
-		}
+		Generator::BiomeColors Generator::biome_colors;
 
 		template <class Type>
 		float calculate_elevation(const Type& position, const Simplex::Options& options, bool continents, float continent_frequency, float continent_amplitude) {
@@ -288,17 +252,17 @@ namespace tenjix {
 				if (elevation > 0.5f * sealevel + thresholds.mountain) return biome_colors.rock; // mountain
 				if (elevation > 0.66f * sealevel + thresholds.forrest) return biome_colors.forest; // forrest
 				if (elevation > sealevel + thresholds.prairie) return biome_colors.prairie; // prairie
-				if (elevation > sealevel + thresholds.beach) return biome_colors.desert; // beach
+				if (elevation > sealevel + thresholds.beach) return biome_colors.beach; // beach
 				water_pixels++;
 				if (elevation > sealevel + thresholds.coast) return biome_colors.coast; // coast
 				if (elevation > sealevel + thresholds.ocean) return biome_colors.ocean; // ocean
-				return biome_colors.abyssal; // deep ocean
+				return biome_colors.deep_ocean; // deep ocean
 			}
 			// water
 			if (elevation < sealevel) {
 				water_pixels++;
 				// deep ocean
-				if (elevation < sealevel - 0.5f) return biome_colors.abyssal;
+				if (elevation < sealevel - 0.5f) return biome_colors.deep_ocean;
 				// ocean
 				if (elevation < sealevel - 0.25f) return biome_colors.ocean;
 				// coast
@@ -1091,18 +1055,21 @@ namespace tenjix {
 					static bool show_biome_colors = false;
 					if (ui::SmallButton("Biome Colors:")) show_biome_colors = not show_biome_colors;
 					if (show_biome_colors) {
-						update_biomes |= ui::ColorEdit3("Ice", biome_colors.ice);
-						update_biomes |= ui::ColorEdit3("Tundra", biome_colors.tundra);
-						update_biomes |= ui::ColorEdit3("Taiga", biome_colors.taiga);
-						update_biomes |= ui::ColorEdit3("Steppe", biome_colors.steppe);
-						update_biomes |= ui::ColorEdit3("Prairie", biome_colors.prairie);
-						update_biomes |= ui::ColorEdit3("Forest", biome_colors.forest);
-						update_biomes |= ui::ColorEdit3("Desert", biome_colors.desert);
-						update_biomes |= ui::ColorEdit3("Savanna", biome_colors.savanna);
-						update_biomes |= ui::ColorEdit3("Rainforest", biome_colors.rainforest);
-						update_biomes |= ui::ColorEdit3("Coast", biome_colors.coast);
-						update_biomes |= ui::ColorEdit3("Ocean", biome_colors.ocean);
-						update_biomes |= ui::ColorEdit3("Abyssal", biome_colors.abyssal);
+						#define add_color_edit(biome_color) update_biomes |= ui::ColorEdit3(get_biome_name(biome_color), biome_color);
+						add_color_edit(biome_colors.ice);
+						add_color_edit(biome_colors.rock);
+						add_color_edit(biome_colors.tundra);
+						add_color_edit(biome_colors.taiga);
+						add_color_edit(biome_colors.steppe);
+						add_color_edit(biome_colors.prairie);
+						add_color_edit(biome_colors.forest);
+						add_color_edit(biome_colors.desert);
+						add_color_edit(biome_colors.savanna);
+						add_color_edit(biome_colors.rainforest);
+						add_color_edit(biome_colors.coast);
+						add_color_edit(biome_colors.ocean);
+						add_color_edit(biome_colors.deep_ocean);
+						#undef add_color_edit
 					}
 				}
 
