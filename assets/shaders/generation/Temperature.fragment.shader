@@ -12,8 +12,8 @@ uniform sampler2D uElevationMap;
 
 uniform float uSeaLevel = 0.0;
 uniform float uEquator = 0.0;
-uniform float uLapseRate = 10.0; // temperature decline per km in celcius
-uniform float uTemperatureRange = 70.0; // total temperature range [-30,+40]
+uniform float uLapseRate = 10.0 / 70.0;
+uniform float uElevationScale = 10.0;
 
 in vec2 Texinates;
 
@@ -34,8 +34,9 @@ void main() {
 	float distance_to_equator_squared = distance_to_equator * distance_to_equator;
 	
 	// float percentage_elevation_above_sealevel = max(elevation - uSeaLevel, 0.0f) / (1.0f - uSeaLevel);
-	float elevation_above_sealevel_in_km = (elevation - uSeaLevel) * 2.0 * 10.0;
-	float elevation_based_temerature_decline = uLapseRate * elevation_above_sealevel_in_km / uTemperatureRange;
+	float percentage_temperature_decline_per_km = uLapseRate;
+	float elevation_above_sealevel_in_km = (elevation - uSeaLevel) * uElevationScale;
+	float elevation_based_temerature_decline = percentage_temperature_decline_per_km * elevation_above_sealevel_in_km;
 
 	vec2 position = gl_FragCoord.xy;
 	float temperature_noise = simplex_noise(position.xy * 0.005);

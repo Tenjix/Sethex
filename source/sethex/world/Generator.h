@@ -27,7 +27,9 @@ namespace tenjix {
 			enum Map_Display { Biome, Elevation, Temperature, Circulation, Evapotranspiration, Humidity, Precipitation };
 			int map_display = Biome;
 
+			const char* get_biome_name(ci::Color8u biome_color);
 			ci::Color8u determine_biome(float elevation, float temperature, float precipitation);
+
 			bool all_compiled();
 
 		public:

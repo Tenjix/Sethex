@@ -231,6 +231,8 @@ namespace tenjix {
 			}
 		};
 
+		TerrainThresholds thresholds, default_thresholds;
+
 		struct BiomeColors {
 			Color8u ice = { 255, 255, 255 };
 			Color8u tundra = { 128, 128, 64 };
@@ -249,8 +251,24 @@ namespace tenjix {
 			Color8u abyssal = { 0, 0, 92 };
 		};
 
-		TerrainThresholds thresholds, default_thresholds;
 		BiomeColors biome_colors;
+
+		const char* Generator::get_biome_name(Color8u biome_color) {
+			if (biome_color == biome_colors.desert) return biome_determination == Elevation_Based ? "Beach" : "Desert";
+			if (biome_color == biome_colors.forest) return "Forest";
+			if (biome_color == biome_colors.ice) return "Ice";
+			if (biome_color == biome_colors.prairie) return "Prairie";
+			if (biome_color == biome_colors.rainforest) return "Rainforest";
+			if (biome_color == biome_colors.rock) return "Rock";
+			if (biome_color == biome_colors.savanna) return "Savanna";
+			if (biome_color == biome_colors.steppe) return "Steppe";
+			if (biome_color == biome_colors.taiga) return "Taiga";
+			if (biome_color == biome_colors.tundra) return "Tundra";
+			if (biome_color == biome_colors.coast) return "Coast";
+			if (biome_color == biome_colors.ocean) return "Ocean";
+			if (biome_color == biome_colors.abyssal) return "Abyssal";
+			return "Unknown";
+		}
 
 		template <class Type>
 		float calculate_elevation(const Type& position, const Simplex::Options& options, bool continents, float continent_frequency, float continent_amplitude) {
@@ -264,7 +282,7 @@ namespace tenjix {
 
 		Color8u Generator::determine_biome(float elevation, float temperature, float precipitation) {
 			elevation_minimum = minimum(elevation_minimum, elevation);
-			elevation_maximum = maximum(elevation_minimum, elevation);
+			elevation_maximum = maximum(elevation_maximum, elevation);
 			if (biome_determination == Elevation_Based) {
 				if (elevation > 0.33f * sealevel + thresholds.snowcap) return biome_colors.ice; // snowcap
 				if (elevation > 0.5f * sealevel + thresholds.mountain) return biome_colors.rock; // mountain
@@ -276,6 +294,7 @@ namespace tenjix {
 				if (elevation > sealevel + thresholds.ocean) return biome_colors.ocean; // ocean
 				return biome_colors.abyssal; // deep ocean
 			}
+			// water
 			if (elevation < sealevel) {
 				water_pixels++;
 				// deep ocean
@@ -286,9 +305,13 @@ namespace tenjix {
 				return biome_colors.coast;
 			}
 			// land
+			if (temperature < Zero) {
+				// below freezing point -> ice
+				return biome_colors.ice;
+			}
 			if (temperature < lower_threshold) {
-				// polar & dry -> ice
-				if (precipitation < lower_threshold) return biome_colors.ice;
+				// polar & dry -> rock
+				if (precipitation < lower_threshold) return biome_colors.rock;
 				// polar & nor -> tundra
 				if (precipitation < upper_threshold) return biome_colors.tundra;
 				// polar & wet -> taiga
@@ -308,23 +331,6 @@ namespace tenjix {
 			if (precipitation < upper_threshold) return biome_colors.savanna;
 			// tropical & wet -> rainforest
 			return biome_colors.rainforest;
-		}
-
-		String get_biome_name(Color8u biome_color) {
-			if (biome_color == biome_colors.desert) return "Desert";
-			if (biome_color == biome_colors.forest) return "Forest";
-			if (biome_color == biome_colors.ice) return "Ice";
-			if (biome_color == biome_colors.prairie) return "Prairie";
-			if (biome_color == biome_colors.rainforest) return "Rainforest";
-			if (biome_color == biome_colors.rock) return "Rock";
-			if (biome_color == biome_colors.savanna) return "Savanna";
-			if (biome_color == biome_colors.steppe) return "Steppe";
-			if (biome_color == biome_colors.taiga) return "Taiga";
-			if (biome_color == biome_colors.tundra) return "Tundra";
-			if (biome_color == biome_colors.coast) return "Coast";
-			if (biome_color == biome_colors.ocean) return "Ocean";
-			if (biome_color == biome_colors.abyssal) return "Abyssal";
-			return "Unknown";
 		}
 
 		bool Generator::all_compiled() {
@@ -348,17 +354,30 @@ namespace tenjix {
 			static Simplex::Options saved_options;
 			static float continent_frequency = 0.5f, continent_amplitude = 1.0f, equator = 0.0f;
 			static float equator_distance_factor = 0.0f;
-			static int equator_distance_power = 10, lapse_power = 1;
+			static int equator_distance_power = 10;
 			static bool wrap_horizontally = false;
 			static bool use_continents = false;
 			static bool update_tectonic = true, update_topography = false, update_climate = false, update_display = false, update_biomes = false;
 			static float evaporation_factor = 1.0f, transpiration_factor = 0.25f, precipitation_factor = 1.0f, precipitation_decay = 0.05f;
-			static float humidity_saturation = 25.0f, lapse_rate = 10.0f;
+			static float humidity_saturation = 25.0f;
 			static bool upper_precipitation = true;
 			static bool debug_circulation = false;
 			static unsigned circulation_iterations = 25;
 			static float circulation_intensity = 1.0, orograpic_effect = 1.0;
 			static float bathymetry_scale = 1.0, topography_scale = 1.0;
+
+			static float maximum_elevation = 10000.0f, maximum_precipitation = 80.0f, maximum_temperature = +45.0f, minimum_temperature = -25.0f, lapse_rate = 6.0f;
+			float temperature_range = maximum_temperature - minimum_temperature;
+
+			auto convert_to_celcius = [&](uint8 temperature) {
+				return temperature / 255.0f * temperature_range + minimum_temperature;
+			};
+
+			auto normalize_temperature = [&](uint8 temperature) {
+				float temperature_in_degrees = convert_to_celcius(temperature);
+				float temperature_range_from_zero = temperature_range + sign(temperature_in_degrees) * minimum_temperature;
+				return temperature_in_degrees / temperature_range_from_zero;
+			};
 
 			static const unsigned2 map_resolution = { 800, 450 };
 
@@ -480,7 +499,8 @@ namespace tenjix {
 						temperature_frame.uniform("uElevationMap", 0);
 						temperature_frame.uniform("uSeaLevel", sealevel);
 						temperature_frame.uniform("uEquator", equator);
-						temperature_frame.uniform("uLapseRate", lapse_rate);
+						temperature_frame.uniform("uLapseRate", lapse_rate / temperature_range);
+						temperature_frame.uniform("uElevationScale", maximum_elevation * 0.001f);
 						temperature_frame.render({ elevation_frame.texture() });
 						temperature_map = Channel::create(temperature_frame.texture()->createSource());
 					} else {
@@ -503,13 +523,11 @@ namespace tenjix {
 								float temperature_noise = Simplex::to_unsigned(Simplex::noise(position * 0.02f * continent_frequency));
 								temperature = mix(temperature, temperature_noise, 0.1f);
 								if (elevation > sealevel) {
-									if (lapse_power == 1) {
-										float elevation_above_sealevel_in_km = (elevation - sealevel) * 10.0f;
-										temperature -= lapse_rate * elevation_above_sealevel_in_km / 70.0f;
-									} else {
-										temperature -= elevation_above_sealevel * elevation_above_sealevel * lapse_rate / 20.0f;
-									}
-								} else temperature -= 0.1f;
+									float elevation_above_sealevel_in_km = (elevation - sealevel) * maximum_elevation * 0.001f;
+									temperature -= lapse_rate * elevation_above_sealevel_in_km / temperature_range;
+								} else {
+									temperature -= 0.1f;
+								}
 								temperature = clamp(temperature, 0.0f, 1.0f);
 								temperature_iterator.v() = static_cast<uint8>(temperature * 255.0f + 0.5f);
 							}
@@ -720,7 +738,7 @@ namespace tenjix {
 					elevation_minimum = elevation_maximum = 0;
 					while (elevation_iterator.line() and temperature_iterator.line() and precipitation_iterator.line() and biome_iterator.line()) {
 						while (elevation_iterator.pixel() and temperature_iterator.pixel() and precipitation_iterator.pixel() and biome_iterator.pixel()) {
-							biome_iterator << determine_biome(elevation_iterator.v(), temperature_iterator.v() / 255.0f, precipitation_iterator.v() / 255.0f);
+							biome_iterator << determine_biome(elevation_iterator.v(), normalize_temperature(temperature_iterator.v()), precipitation_iterator.v() / 255.0f);
 						}
 					}
 					//}
@@ -928,10 +946,12 @@ namespace tenjix {
 					elevation_source = Elevation_Maps;
 					bathymetry_file = "maps/Bathymetry.png";
 					topography_file = "maps/Topography.png";
+					bathymetry_scale = 1.0f;
+					topography_scale = 1.0f;
+					maximum_elevation = 8850;
 					circulation_type = Deflected;
-					bathymetry_scale = 0.8f;
-					topography_scale = 0.7f;
 					circulation_iterations = 50;
+					lapse_rate = 6.0f;
 					sealevel = 0.0f;
 					thresholds.ocean = -0.50f;
 					thresholds.coast = -0.10f;
@@ -949,16 +969,18 @@ namespace tenjix {
 			unsigned pixels = map_texture->getWidth() * map_texture->getHeight();
 			float water_percentage = 100.0f * water_pixels / pixels;
 			ui::Text("%.1f%% Water, %.1f%% Land", water_percentage, 100.0f - water_percentage);
+			//ui::Text("elevation range [%.5f, %.5f] (%s [-1, +1])", elevation_minimum, elevation_maximum, (elevation_minimum >= -1.0f and elevation_maximum <= 1.0f) ? "lies within" : "exceeds");
 
 			if (map_hovered) {
 				auto mouse_position = signed2(ui::GetIO().MousePos) - map_position;
 				auto coordinates = (float2(mouse_position) / float2(map_resolution) * 2.0f - 1.0f) * float2(180, 90);
-				auto elevation = (elevation_map->getValue(mouse_position) - sealevel) * 10000.0f;
-				auto temperature = temperature_map->getValue(mouse_position) / 255.0f * 70.0f - 25.0f;
-				auto precipitation = precipitation_map->getValue(mouse_position) / 255.0f * 80.0f;
+				auto elevation = (elevation_map->getValue(mouse_position) - sealevel) * maximum_elevation;
+				auto temperature = convert_to_celcius(temperature_map->getValue(mouse_position));
+				//temperature = normalize_temperature(temperature_map->getValue(mouse_position));
+				auto precipitation = precipitation_map->getValue(mouse_position) / 255.0f * maximum_precipitation;
 				auto biome = get_biome_name(biome_map->getPixel(mouse_position));
 				ui::Text(u8"Position: %i, %i \nCoordinates: %+4.1f°, %+4.1f° \nElevation: %.1fm \nTemperature: %.1f°C \nPrecipitation: %.1fkg/m² \nBiome: %s",
-						 mouse_position.x, mouse_position.y, coordinates.x, coordinates.y, elevation, temperature, precipitation, biome.c_str());
+						 mouse_position.x, mouse_position.y, coordinates.x, coordinates.y, elevation, temperature, precipitation, biome);
 			} else {
 				ui::PushItemWidth(-250);
 				ui::Text("Use the mouse pointer to examine map details.");
@@ -1003,13 +1025,16 @@ namespace tenjix {
 						update_optimized |= ui::SliderFloat("Equator Distance Factor", equator_distance_factor, -1.0f, 1.0f, "%.2f", 1.0f, 0.0f);
 						update_optimized |= ui::SliderInt("Equator Distance Power", equator_distance_power, 1, 15, "%.0f", 10);
 					}
+					update_topography |= ui::SliderFloat("Maximum Elevation", maximum_elevation, 0.0f, 15000.0f, u8"%.0f m", 1.0f, 10000.0f);
 				}
 
 				if (biome_determination == Climate_Based) {
 
 					if (ui::CollapsingHeader("Temperature")) {
 						update_topography |= ui::SliderPercentage("Equator", equator, -1.0f, 1.0f, "%+.0f%%", 1.0f, 0.0f);
-						update_topography |= ui::SliderFloat("Lapse Rate", lapse_rate, 0.0f, 20.0f, u8"%.1f (°C/km)", 1.0f, 10.0f);
+						update_topography |= ui::SliderFloat("Lapse Rate", lapse_rate, 0.0f, 20.0f, u8"-%.1f °C/km", 1.0f, 10.0f);
+						update_topography |= ui::SliderFloat("Minimum Temperature", minimum_temperature, -100.0f, 0.0f, u8"%+.1f °C", 1.0f, -25.0f);
+						update_topography |= ui::SliderFloat("Maximum Temperature", maximum_temperature, 0.0f, 100.0f, u8"%+.1f °C", 1.0f, +45.0f);
 						update_climate |= ui::SliderFloat("Evaporation", evaporation_factor, 0.0f, 10.0f, "%.3f", 2.0f, 1.0f);
 						update_climate |= ui::SliderFloat("Transpiration", transpiration_factor, 0.0f, 10.0f, "%.3f", 2.0f, 0.25f);
 					}
@@ -1036,6 +1061,7 @@ namespace tenjix {
 							update_climate |= ui::SliderFloat("Humidity Saturation", humidity_saturation, 1.0f, 100.0f, "%.3f", 3.0f, 25.0f);
 							update_climate |= ui::Checkbox("Upper Precipitation", upper_precipitation);
 						}
+						ui::SliderFloat("Maximum Precipitation", maximum_precipitation, 0.0f, 200.0f, u8"%.1f kg/m²", 1.0f, 80.0f);
 					}
 
 				}
@@ -1079,8 +1105,6 @@ namespace tenjix {
 						update_biomes |= ui::ColorEdit3("Abyssal", biome_colors.abyssal);
 					}
 				}
-
-				ui::Text("elevation range [%.5f, %.5f] (%s [-1, +1])", elevation_minimum, elevation_maximum, (elevation_minimum >= -1.0f and elevation_maximum <= 1.0f) ? "lies within" : "exceeds");
 
 				ui::PopItemWidth();
 			}
