@@ -343,7 +343,7 @@ namespace tenjix {
 				return temperature_in_degrees / temperature_range_from_zero;
 			};
 
-			static const unsigned2 map_resolution = { 800, 450 };
+			static const unsigned2 map_resolution = { 1600, 900 };
 
 			if (not elevation_frame.initialized()) {
 				elevation_frame.framebuffer(map_resolution, GL_R32F);
@@ -711,7 +711,8 @@ namespace tenjix {
 				}
 			}
 
-			ui::BeginChild("map display", float2(map_resolution.x, 0));
+			static const float2 display_resolution = { 800, 450 };
+			ui::BeginChild("map display", float2(display_resolution.x, 0));
 			ui::PushItemWidth(180);
 			auto& map_display_list = biome_determination == Elevation_Based ? map_display_list_elevation : circulation_type == Deflected ? map_display_list_circulation_deflected : map_display_list_circulation_linear;
 			if (map_display >= map_display_list.size()) map_display = Biome;
@@ -763,7 +764,7 @@ namespace tenjix {
 			bool map_hovered = false;
 			signed2 map_position;
 			if (resources_available) {
-				ui::ImageButton(map_texture, map_texture->getSize(), 0);
+				ui::ImageButton(map_texture, display_resolution, 0);
 				map_hovered = ui::IsItemHoveredRect() and ui::IsWindowHovered();
 				map_position = ui::GetItemRectMin();
 				if (map_hovered) {
@@ -813,8 +814,8 @@ namespace tenjix {
 					elevation_source = CPU_Noise;
 					circulation_type = Linear;
 					seed = 0;
-					scale = 1.0f;
-					shift = { -150, -5200 };
+					scale = 2.0f;
+					shift = { -300, -5420 };
 					current_options = {};
 					current_options.octaves = 5;
 					use_continents = true;
@@ -836,8 +837,8 @@ namespace tenjix {
 					elevation_source = CPU_Noise;
 					circulation_type = Linear;
 					seed = 0;
-					scale = 0.66f;
-					shift = { -160, -4650 };
+					scale = 1.32f;
+					shift = { -320, -4880 };
 					current_options = {};
 					current_options.octaves = 5;
 					use_continents = true;
@@ -860,8 +861,8 @@ namespace tenjix {
 					elevation_source = GPU_Noise;
 					circulation_type = Deflected;
 					seed = 0;
-					scale = 0.6f;
-					shift = { 185, -7925 };
+					scale = 1.2f;
+					shift = { 360, -8160 };
 					current_options = {};
 					current_options.octaves = 5;
 					use_continents = true;
