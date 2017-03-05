@@ -29,6 +29,7 @@ namespace tenjix {
 		shared<Texture> map_texture;
 		shared<Texture> world_texture;
 
+		String height_file;
 		String bathymetry_file;
 		String topography_file;
 
@@ -55,6 +56,7 @@ namespace tenjix {
 
 		};
 
+		ElevationMap height_map;
 		ElevationMap bathymetry_map;
 		ElevationMap topography_map;
 
@@ -302,6 +304,7 @@ namespace tenjix {
 				case CPU_Noise:
 					return temperature_frame.compiled() and evapotranspiration_frame.compiled() and circulation_frame.compiled() and humidity_frame.compiled();
 				case GPU_Noise:
+				case Elevation_Map:
 				case Elevation_Maps:
 					return elevation_frame.compiled() and temperature_frame.compiled() and evapotranspiration_frame.compiled() and circulation_frame.compiled() and humidity_frame.compiled();
 				default:
@@ -328,7 +331,7 @@ namespace tenjix {
 			static bool debug_circulation = false;
 			static unsigned circulation_iterations = 25;
 			static float circulation_intensity = 1.0, orograpic_effect = 1.0;
-			static float bathymetry_scale = 1.0, topography_scale = 1.0;
+			static float bathymetry_scale = 1.0, topography_scale = 1.0, height_scale = 1.0;
 
 			static float maximum_elevation = 10000.0f, maximum_precipitation = 80.0f, maximum_temperature = +45.0f, minimum_temperature = -25.0f, lapse_rate = 6.0f;
 			float temperature_range = maximum_temperature - minimum_temperature;
@@ -363,11 +366,15 @@ namespace tenjix {
 					elevation_frame.fragment("shaders/generation/Elevation.fragment.shader", update_tectonic, Frame::Origin::UpperLeft);
 					resources_available = all_compiled();
 					break;
+				case Elevation_Map:
+					elevation_frame.fragment("shaders/generation/Elevation-Sampling.fragment.shader", update_tectonic, Frame::Origin::LowerLeft);
+					height_map.load(height_file);
+					resources_available = height_map.loaded() and all_compiled();
 				case Elevation_Maps:
 					elevation_frame.fragment("shaders/generation/Elevation-Composing.fragment.shader", update_tectonic, Frame::Origin::LowerLeft);
 					bathymetry_map.load(bathymetry_file);
 					topography_map.load(topography_file);
-					resources_available = bathymetry_map.loaded() and topography_map.loaded();
+					resources_available = bathymetry_map.loaded() and topography_map.loaded() and all_compiled();
 					break;
 				default:
 					throw_runtime_exception();
@@ -382,12 +389,18 @@ namespace tenjix {
 					print("update tectonic");
 					scale = clamp(scale * (1.0f - roll), 0.1f, 10.0f);
 					shift -= wrap_horizontally ? float2(drag.x, drag.y / scale) : float2(drag) / scale;
-					if (elevation_source == Elevation_Maps) {
-						elevation_frame.uniform("uBathymetryMap", 0);
-						elevation_frame.uniform("uTopographyMap", 1);
-						elevation_frame.uniform("uBathymetryScale", bathymetry_scale);
-						elevation_frame.uniform("uTopographyScale", topography_scale);
-						elevation_frame.render({ bathymetry_map.texture, topography_map.texture });
+					if (elevation_source == Elevation_Map or elevation_source == Elevation_Maps) {
+						if (elevation_source == Elevation_Map) {
+							elevation_frame.uniform("uElevationMap", 0);
+							elevation_frame.uniform("uElevationScale", height_scale);
+							elevation_frame.render({ height_map.texture });
+						} else {
+							elevation_frame.uniform("uBathymetryMap", 0);
+							elevation_frame.uniform("uTopographyMap", 1);
+							elevation_frame.uniform("uBathymetryScale", bathymetry_scale);
+							elevation_frame.uniform("uTopographyScale", topography_scale);
+							elevation_frame.render({ bathymetry_map.texture, topography_map.texture });
+						}
 						elevation_map = Channel32f::create(elevation_frame.texture()->createSource());
 						if (not elevation_buffer) elevation_buffer = Channel32f::create(*elevation_map);
 						else elevation_buffer->copyFrom(*elevation_map, elevation_map->getBounds());
@@ -542,6 +555,7 @@ namespace tenjix {
 						precipitation_frame.uniform("uHumidityMap", 3);
 						precipitation_frame.uniform("uResolution", map_resolution);
 						precipitation_frame.uniform("uSeaLevel", sealevel);
+						precipitation_frame.uniform("uEquator", equator);
 						precipitation_frame.uniform("uOrograpicEffect", orograpic_effect);
 						precipitation_frame.render({ elevation_frame.texture(), temperature_frame.texture(), circulation_frame.texture(), humidity_texture });
 						precipitation_map = Channel::create(precipitation_frame.texture()->createSource());
@@ -774,7 +788,14 @@ namespace tenjix {
 				}
 				//ui::Image(world_texture, world_texture->getSize());
 			} else {
-				if (elevation_source == Elevation_Maps) {
+				if (elevation_source == Elevation_Map) {
+					if (not height_map.loaded()) {
+						ui::Text("Waiting for elevation map specification ...");
+						if (not height_map.loaded()) ui::Text(Color(1, 0, 0, 1), stringify("Can't load elevation map \"", height_file, "\"."));
+					} else {
+						ui::Text("Loading elevation map ...");
+					}
+				} else if (elevation_source == Elevation_Maps) {
 					if (not bathymetry_map.loaded() or not topography_map.loaded()) {
 						ui::Text("Waiting for elevation map specification ...");
 						if (not bathymetry_map.loaded()) ui::Text(Color(1, 0, 0, 1), stringify("Can't load bathymetry map \"", bathymetry_file, "\"."));
@@ -909,6 +930,8 @@ namespace tenjix {
 					break;
 				case 5:
 					elevation_source = Elevation_Maps;
+					height_file = "maps/Elevation.png";
+					height_scale = 1.0f;
 					bathymetry_file = "maps/Bathymetry.png";
 					topography_file = "maps/Topography.png";
 					bathymetry_scale = 1.0f;
@@ -951,20 +974,23 @@ namespace tenjix {
 				ui::Text("Use the mouse pointer to examine map details.");
 
 				if (ui::CollapsingHeader("Elevation")) {
-					static Lot<String> elevation_source_list { "CPU Simplex Noise", "GPU Simplex Noise", "Bathymetry & Topography Maps" };
 					if (ui::Combo("Source##elevation", elevation_source, elevation_source_list)) {
 						switch (elevation_source) {
 							case CPU_Noise:
 								circulation_type = Linear;
 								break;
 							case GPU_Noise: break;
+							case Elevation_Map:	break;
 							case Elevation_Maps: break;
 						}
 						update_tectonic = true;
 					}
-					if (elevation_source == Elevation_Maps) {
-						ui::InputText("Bathymetry Map", bathymetry_file); ui::Hint("Grayscale elevation map with 1.0 = sea level");
-						ui::InputText("Topography Map", topography_file); ui::Hint("Grayscale elevation map with 0.0 = sea level");
+					if (elevation_source == Elevation_Map) {
+						if (ui::InputText("Elevation Map", height_file)) height_map.load(height_file);	ui::Hint("Grayscale elevation map with 0.5 = sea level");
+						update_tectonic |= ui::SliderFloat("Elevation Scaling", height_scale, 0.0f, 1.0f, "%.2f", 1.0f, 1.0f);
+					} else if (elevation_source == Elevation_Maps) {
+						if (ui::InputText("Bathymetry Map", bathymetry_file)) bathymetry_map.load(bathymetry_file);	ui::Hint("Grayscale elevation map with 1.0 = sea level");
+						if (ui::InputText("Topography Map", topography_file)) topography_map.load(topography_file);	ui::Hint("Grayscale elevation map with 0.0 = sea level");
 						update_tectonic |= ui::SliderFloat("Bathymetry Scaling", bathymetry_scale, 0.0f, 1.0f, "%.2f", 1.0f, 1.0f);
 						update_tectonic |= ui::SliderFloat("Topography Scaling", topography_scale, 0.0f, 1.0f, "%.2f", 1.0f, 1.0f);
 					} else {

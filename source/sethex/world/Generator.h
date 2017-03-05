@@ -9,8 +9,8 @@ namespace tenjix {
 
 		class Generator {
 
-			const Lot<String> elevation_source_list { "CPU Simplex Noise", "GPU Simplex Noise", "Bathymetry & Topography Maps" };
-			enum Elevation_Source { CPU_Noise, GPU_Noise, Elevation_Maps };
+			const Lot<String> elevation_source_list { "CPU Simplex Noise", "GPU Simplex Noise", "Bathymetry & Topography Maps", "Elevation Map" };
+			enum Elevation_Source { CPU_Noise, GPU_Noise, Elevation_Maps, Elevation_Map };
 			int elevation_source = CPU_Noise;
 
 			const Lot<String> circulation_type_list { "Coriolis dependend Linear Interpolation", "Coriolis deflected Pressure Differential" };
