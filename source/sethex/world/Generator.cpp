@@ -1067,6 +1067,7 @@ namespace tenjix {
 						add_color_edit(biome_colors.desert);
 						add_color_edit(biome_colors.savanna);
 						add_color_edit(biome_colors.rainforest);
+						add_color_edit(biome_colors.beach);
 						add_color_edit(biome_colors.coast);
 						add_color_edit(biome_colors.ocean);
 						add_color_edit(biome_colors.deep_ocean);
