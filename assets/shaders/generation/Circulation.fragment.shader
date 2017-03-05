@@ -43,7 +43,7 @@ float get_temperature(ivec2 texel) {
 // calculates air density based on circulation cells
 float calculate_base_density(ivec2 texel) {
 	float verticality = to_unsigned_range(calculate_distance_to_equator(texel));
-	return (cos(verticality * 3 * Tau) + 1.0) / 2.0;
+	return to_unsigned_range(cos(verticality * 3 * Tau));
 }
 
 // calculates air density based on circulation cells and temperature

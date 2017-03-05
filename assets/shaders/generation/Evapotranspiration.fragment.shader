@@ -31,8 +31,7 @@ float calculate_distance_to_equator() {
 // calculates moisture based on circulation cells
 float calculate_moisture() {
 	float verticality = to_unsigned_range(calculate_distance_to_equator());
-	// float verticality = Texinates.y - uEquator;
-	return -cos(verticality * 3 * Tau) * 0.5 + 0.5;
+	return to_unsigned_range(-cos(verticality * 3 * Tau));
 }
 
 void main() {
