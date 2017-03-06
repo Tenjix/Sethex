@@ -60,7 +60,7 @@ void main() {
 	float orographic_effect = calculate_orograpic_effect(elevation_gradient, wind_direction, land);
 	float inverse_orographic_effect = 1.0 - orographic_effect;
 
-	float intensity = float(land) * uIntensity * 0.5;
+	float intensity = float(land) * uIntensity;
 	float scale = float(uIteration) * 0.01;
 
 	// circulate humidity

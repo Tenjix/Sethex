@@ -14,6 +14,8 @@ uniform sampler2D uHumidityMap;
 
 uniform float uSeaLevel = 0.0;
 uniform float uEquator = 0.0;
+uniform float uIntensity = 1.0;
+uniform float uCirculation = 0.5;
 uniform float uOrograpicEffect = 1.0;
 
 in vec2 Texinates;
@@ -48,7 +50,7 @@ float calculate_distance_to_equator() {
 }
 
 // calculates precipitation based on circulation cells
-float base_precipitation() {
+float estimate_base_precipitation() {
 	float verticality = to_unsigned_range(calculate_distance_to_equator());
 	return to_unsigned_range(-cos(verticality * 3 * Tau));
 }
@@ -73,10 +75,12 @@ void main() {
 
 	float orographic_effect = calculate_orograpic_effect(elevation_gradient, wind_direction, land);
 
-	float base = base_precipitation();
+	float base = estimate_base_precipitation();
 	float general = humidity * temperature;
 	float orographic = humidity * orographic_effect;
-	float precipitation = min(1.1 * (0.5 * base + general + orographic), 1.0);
+	float estimated = (1.0 - uCirculation) * base;
+	float simulated = (2.0 * uCirculation) * (general + orographic);
+	float precipitation = float(land) * uIntensity * (estimated + simulated);
 
 	Output.r = precipitation;
 	Output.a = 1.0;

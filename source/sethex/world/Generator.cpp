@@ -326,11 +326,11 @@ namespace tenjix {
 			static bool use_continents = false;
 			static bool update_tectonic = true, update_topography = false, update_climate = false, update_display = false, update_biomes = false;
 			static float evaporation_factor = 1.0f, transpiration_factor = 0.25f, precipitation_factor = 1.0f, precipitation_decay = 0.05f;
-			static float humidity_saturation = 25.0f;
+			static float humidity_saturation = 50.0f;
 			static bool upper_precipitation = true;
 			static bool debug_circulation = false;
-			static unsigned circulation_iterations = 25;
-			static float circulation_intensity = 1.0, orograpic_effect = 1.0;
+			static unsigned circulation_iterations = 50;
+			static float circulation_intensity = 1.0, precipitation_intensity = 1.0, orograpic_effect = 1.0;
 			static float bathymetry_scale = 1.0, topography_scale = 1.0, height_scale = 1.0;
 
 			static float maximum_elevation = 10000.0f, maximum_precipitation = 80.0f, maximum_temperature = +45.0f, minimum_temperature = -25.0f, lapse_rate = 9.0f;
@@ -553,6 +553,8 @@ namespace tenjix {
 						precipitation_frame.uniform("uHumidityMap", 3);
 						precipitation_frame.uniform("uSeaLevel", sealevel);
 						precipitation_frame.uniform("uEquator", equator);
+						precipitation_frame.uniform("uIntensity", precipitation_intensity);
+						precipitation_frame.uniform("uCirculation", circulation_intensity);
 						precipitation_frame.uniform("uOrograpicEffect", orograpic_effect);
 						precipitation_frame.render({ elevation_frame.texture(), temperature_frame.texture(), circulation_frame.texture(), humidity_texture });
 						precipitation_map = Channel::create(precipitation_frame.texture()->createSource());
@@ -813,7 +815,6 @@ namespace tenjix {
 			if (ui::Combo("Preset##selection", selected_preset, { "Default", "Alpha World", "Beta World", "Continents", "Islands", "Earth" })) switch (selected_preset) {
 				case 0:
 					elevation_source = CPU_Noise;
-					circulation_type = Linear;
 					seed = 0;
 					scale = 1.0f;
 					shift = {};
@@ -830,7 +831,6 @@ namespace tenjix {
 					break;
 				case 1:
 					elevation_source = CPU_Noise;
-					circulation_type = Linear;
 					seed = 0;
 					scale = 2.0f;
 					shift = { -300, -5420 };
@@ -848,6 +848,8 @@ namespace tenjix {
 					thresholds.mountain = 0.40f;
 					thresholds.snowcap = 0.55f;
 					equator_distance_factor = 0.0f;
+					circulation_intensity = 1.0f;
+					precipitation_intensity = 1.0f;
 					lapse_rate = 9.0f;
 					transpiration_factor = 0.5f;
 					humidity_saturation = 50.0f;
@@ -856,7 +858,6 @@ namespace tenjix {
 					break;
 				case 2:
 					elevation_source = CPU_Noise;
-					circulation_type = Linear;
 					seed = 0;
 					scale = 1.32f;
 					shift = { -320, -4880 };
@@ -875,6 +876,8 @@ namespace tenjix {
 					thresholds.snowcap = 0.55f;
 					equator_distance_factor = -0.15f;
 					equator_distance_power = 15;
+					circulation_intensity = 1.0f;
+					precipitation_intensity = 1.0f;
 					lapse_rate = 9.0f;
 					transpiration_factor = 0.5f;
 					humidity_saturation = 50.0f;
@@ -883,9 +886,8 @@ namespace tenjix {
 					break;
 				case 3:
 					elevation_source = GPU_Noise;
-					circulation_type = Deflected;
 					seed = 0;
-					scale = 1.2f;
+					scale = 1.15f;
 					shift = { 360, -8160 };
 					current_options = {};
 					current_options.octaves = 5;
@@ -902,6 +904,8 @@ namespace tenjix {
 					thresholds.snowcap = 0.55f;
 					equator_distance_factor = -0.4f;
 					equator_distance_power = 15;
+					circulation_intensity = 1.0f;
+					precipitation_intensity = 1.0f;
 					lapse_rate = 9.0f;
 					transpiration_factor = 0.5f;
 					humidity_saturation = 50.0f;
@@ -910,7 +914,6 @@ namespace tenjix {
 					break;
 				case 4:
 					elevation_source = GPU_Noise;
-					circulation_type = Deflected;
 					seed = 0;
 					scale = 1.0f;
 					shift = { 330, -2330 };
@@ -929,6 +932,8 @@ namespace tenjix {
 					thresholds.snowcap = 0.55f;
 					equator_distance_factor = -0.4f;
 					equator_distance_power = 15;
+					circulation_intensity = 1.0f;
+					precipitation_intensity = 1.0f;
 					lapse_rate = 9.0f;
 					transpiration_factor = 0.5f;
 					humidity_saturation = 50.0f;
@@ -944,8 +949,9 @@ namespace tenjix {
 					bathymetry_scale = 1.0f;
 					topography_scale = 1.0f;
 					maximum_elevation = 8850;
-					circulation_type = Deflected;
 					circulation_iterations = 50;
+					circulation_intensity = 0.5f;
+					precipitation_intensity = 1.1f;
 					lapse_rate = 6.5f;
 					sealevel = 0.0f;
 					evaporation_factor = 1.0f;
@@ -1055,12 +1061,13 @@ namespace tenjix {
 						}
 						update_climate |= ui::SliderPercentage("Orograpic Effect", orograpic_effect, 0.0f, 1.0f, "%.0f%%", 1.0f, 1.0f);
 						if (circulation_type == Deflected) {
-							update_climate |= ui::SliderUnsigned("Circulation Iterations", circulation_iterations, 0, 50, "%.0f", 25);
-							update_climate |= ui::SliderFloat("Circulation Intensity", circulation_intensity, 0.0f, 1.0f, "%.3f", 1.0f, 1.0f);
+							update_climate |= ui::SliderUnsigned("Circulation Iterations", circulation_iterations, 0, 100, "%.0f", 50);
+							update_climate |= ui::SliderFloat("Circulation Intensity", circulation_intensity, 0.0f, 1.0f, "%.3f", 1.0f, 0.5f);
+							update_climate |= ui::SliderFloat("Precipitation Intensity", precipitation_intensity, 0.0f, 2.0f, "%.3f", 1.0f, 1.0f);
 						} else {
 							update_climate |= ui::SliderFloat("Precipitation Intensity", precipitation_factor, 0.0f, 10.0f, "%.3f", 2.0f, 1.0f);
 							update_climate |= ui::SliderFloat("Precipitation Decay", precipitation_decay, 0.0f, 1.0f, "%.3f", 2.0f, 0.05f);
-							update_climate |= ui::SliderFloat("Humidity Saturation", humidity_saturation, 1.0f, 100.0f, "%.3f", 3.0f, 25.0f);
+							update_climate |= ui::SliderFloat("Humidity Saturation", humidity_saturation, 1.0f, 100.0f, "%.3f", 2.0f, 50.0f);
 							update_climate |= ui::Checkbox("Upper Precipitation", upper_precipitation);
 						}
 						ui::SliderFloat("Maximum Precipitation", maximum_precipitation, 0.0f, 200.0f, u8"%.1f kg/m²", 1.0f, 80.0f);
