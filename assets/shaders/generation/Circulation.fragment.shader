@@ -7,7 +7,6 @@
 	layout(origin_upper_left) in vec4 gl_FragCoord;
 #endif
 
-uniform sampler2D uElevationMap;
 uniform sampler2D uTemperatureMap;
 
 uniform float uEquator = 0.0;

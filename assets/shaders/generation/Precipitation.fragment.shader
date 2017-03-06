@@ -12,7 +12,6 @@ uniform sampler2D uTemperatureMap;
 uniform sampler2D uCirculationMap;
 uniform sampler2D uHumidityMap;
 
-uniform uvec2 uResolution;
 uniform float uSeaLevel = 0.0;
 uniform float uEquator = 0.0;
 uniform float uOrograpicEffect = 1.0;
@@ -73,9 +72,9 @@ void main() {
 	float uphill = max(dot(wind_direction, -elevation_gradient.xz), 0.0);
 	float orographic_effect = land? uphill * slope * uOrograpicEffect : 0.0;
 
-	float precipitation = base_precipitation() * 0.5;
-	precipitation += humidity * (temperature + orographic_effect);
-	precipitation = min(precipitation, 1.0);
+	float base = base_precipitation();
+	float orographic = humidity * (temperature + orographic_effect);
+	float precipitation = min(0.5 * base + 1.25 * orographic, 1.0);
 
 	Output.r = precipitation;
 	Output.a = 1.0;

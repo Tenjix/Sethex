@@ -9,7 +9,6 @@
 
 uniform sampler2D uElevationMap;
 uniform sampler2D uTemperatureMap;
-uniform sampler2D uCirculationMap;
 
 uniform float uSeaLevel = 0.0;
 uniform float uEquator = 0.0;
@@ -28,22 +27,21 @@ float calculate_distance_to_equator() {
 	return abs(delta) / range;
 }
 
-// calculates moisture based on circulation cells
-float calculate_moisture() {
+// estimates moisture based on circulation cells
+float estimate_moisture() {
 	float verticality = to_unsigned_range(calculate_distance_to_equator());
-	return to_unsigned_range(-cos(verticality * 3 * Tau));
+	return to_unsigned_range(mix(-cos(verticality * 3 * Tau), -cos(verticality * Tau), 0.33));
 }
 
 void main() {
 
 	float elevation = texture(uElevationMap, Texinates).r;
 	float temperature = texture(uTemperatureMap, Texinates).r;
-	float wind_speed = texture(uCirculationMap, Texinates).b;
-	float moisture = calculate_moisture();
+	float moisture = estimate_moisture();
 
 	bool water = elevation <= uSeaLevel;
 	float evapotranspiration = water ? uEvaporation : uTranspiration;
-	float humidity = evapotranspiration * mix(0.5, 1.0, moisture) * mix(0.5, 1.0, temperature) * mix(0.75, 1.0, wind_speed);
+	float humidity = evapotranspiration * moisture;
 
 	Output.r = humidity;
 	Output.a = 1.0;

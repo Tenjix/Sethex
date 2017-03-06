@@ -333,7 +333,7 @@ namespace tenjix {
 			static float circulation_intensity = 1.0, orograpic_effect = 1.0;
 			static float bathymetry_scale = 1.0, topography_scale = 1.0, height_scale = 1.0;
 
-			static float maximum_elevation = 10000.0f, maximum_precipitation = 80.0f, maximum_temperature = +45.0f, minimum_temperature = -25.0f, lapse_rate = 6.0f;
+			static float maximum_elevation = 10000.0f, maximum_precipitation = 80.0f, maximum_temperature = +45.0f, minimum_temperature = -25.0f, lapse_rate = 6.5f;
 			float temperature_range = maximum_temperature - minimum_temperature;
 
 			auto convert_to_celcius = [&](uint8 temperature) {
@@ -518,33 +518,31 @@ namespace tenjix {
 					print("update climate");
 					if (circulation_type == Deflected) {
 						// calculate circulation
-						circulation_frame.uniform("uElevationMap", 0);
-						circulation_frame.uniform("uTemperatureMap", 1);
+						circulation_frame.uniform("uTemperatureMap", 0);
 						circulation_frame.uniform("uEquator", equator);
 						circulation_frame.uniform("uDebug", debug_circulation);
-						circulation_frame.render({ elevation_frame.texture(), temperature_frame.texture() });
+						circulation_frame.render({ elevation_frame.texture() });
 						circulation_map = Surface::create(circulation_frame.texture()->createSource());
 						// calculate evapotranspiration
 						evapotranspiration_frame.uniform("uElevationMap", 0);
 						evapotranspiration_frame.uniform("uTemperatureMap", 1);
-						evapotranspiration_frame.uniform("uCirculationMap", 2);
 						evapotranspiration_frame.uniform("uSeaLevel", sealevel);
 						evapotranspiration_frame.uniform("uEquator", equator);
 						evapotranspiration_frame.uniform("uEvaporation", evaporation_factor);
 						evapotranspiration_frame.uniform("uTranspiration", transpiration_factor);
-						evapotranspiration_frame.render({ elevation_frame.texture(), temperature_frame.texture(), circulation_frame.texture() });
+						evapotranspiration_frame.render({ elevation_frame.texture(), temperature_frame.texture() });
 						evapotranspiration_map = Channel::create(evapotranspiration_frame.texture()->createSource());
 						// calculate humidity by simulating calculation
 						humidity_frame.uniform("uElevationMap", 0);
-						humidity_frame.uniform("uTemperatureMap", 1);
-						humidity_frame.uniform("uCirculationMap", 2);
-						humidity_frame.uniform("uHumidityMap", 3);
+						humidity_frame.uniform("uCirculationMap", 1);
+						humidity_frame.uniform("uHumidityMap", 2);
 						humidity_frame.uniform("uSeaLevel", sealevel);
 						humidity_frame.uniform("uIntensity", circulation_intensity);
+						humidity_frame.uniform("uOrograpicEffect", orograpic_effect);
 						shared<Texture> humidity_texture = evapotranspiration_frame.texture();
 						for (unsigned iteration = 1; iteration <= circulation_iterations; iteration++) {
 							humidity_frame.uniform("uIteration", iteration);
-							humidity_frame.swap().render({ elevation_frame.texture(), temperature_frame.texture(), circulation_frame.texture(), humidity_texture });
+							humidity_frame.swap().render({ elevation_frame.texture(), circulation_frame.texture(), humidity_texture });
 							humidity_texture = humidity_frame.texture();
 						}
 						humidity_map = Channel::create(humidity_frame.texture()->createSource());
@@ -553,7 +551,6 @@ namespace tenjix {
 						precipitation_frame.uniform("uTemperatureMap", 1);
 						precipitation_frame.uniform("uCirculationMap", 2);
 						precipitation_frame.uniform("uHumidityMap", 3);
-						precipitation_frame.uniform("uResolution", map_resolution);
 						precipitation_frame.uniform("uSeaLevel", sealevel);
 						precipitation_frame.uniform("uEquator", equator);
 						precipitation_frame.uniform("uOrograpicEffect", orograpic_effect);
@@ -939,8 +936,10 @@ namespace tenjix {
 					maximum_elevation = 8850;
 					circulation_type = Deflected;
 					circulation_iterations = 50;
-					lapse_rate = 6.0f;
+					lapse_rate = 6.5f;
 					sealevel = 0.0f;
+					evaporation_factor = 1.0f;
+					transpiration_factor = 0.25f;
 					thresholds.ocean = -0.50f;
 					thresholds.coast = -0.10f;
 					thresholds.beach = 0.0f;
