@@ -39,21 +39,27 @@ vec3 gradient(sampler2D sampler, ivec2 texel, int delta) {
 	));
 }
 
+float calculate_orograpic_effect(vec3 elevation_gradient, vec2 wind_direction, bool land) {
+	float slope = land? 1.0 - dot(elevation_gradient, vec3(0,1,0)) : 0.0;
+	float uphill = max(dot(wind_direction, -elevation_gradient.xz), 0.0);
+	return uphill * slope * uOrograpicEffect;
+}
+
 void main() {
 
 	ivec2 resolution = textureSize(uElevationMap, 0);
 	ivec2 texel = ivec2(gl_FragCoord);
 
 	float elevation = texture(uElevationMap, Texinates).r;
+	vec3 elevation_gradient = gradient(uElevationMap, texel, 5);
 	float humidity = texture(uHumidityMap, Texinates).r;
 	vec2 wind_direction = normalize(texture(uCirculationMap, Texinates).rg);
 	float wind_speed = texture(uCirculationMap, Texinates).b;
-
-	vec3 elevation_gradient = gradient(uElevationMap, texel, 5);
-	float slope = 1.0 - dot(elevation_gradient, vec3(0,1,0));
-	float orographic_effect = 1.0 - slope * uOrograpicEffect;
-
 	bool land = elevation > uSeaLevel;
+
+	float orographic_effect = calculate_orograpic_effect(elevation_gradient, wind_direction, land);
+	float inverse_orographic_effect = 1.0 - orographic_effect;
+
 	float intensity = float(land) * uIntensity * 0.5;
 	float scale = float(uIteration) * 0.01;
 
@@ -63,8 +69,8 @@ void main() {
 	float outflow_humidity = texture(uHumidityMap, Texinates + wind_direction * wind_speed * scale).x;
 
 	float inflow = max(inflow_humidity - humidity, 0.0);
-	float outflow = max(humidity - outflow_humidity, 0.0) * uOrograpicEffect;
-	humidity += inflow * intensity;
+	float outflow = max(humidity - outflow_humidity, 0.0);
+	humidity += inflow * intensity * inverse_orographic_effect;
 	humidity -= outflow * intensity;
 
 	Output.r = humidity;

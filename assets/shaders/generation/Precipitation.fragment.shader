@@ -53,28 +53,30 @@ float base_precipitation() {
 	return to_unsigned_range(-cos(verticality * 3 * Tau));
 }
 
+float calculate_orograpic_effect(vec3 elevation_gradient, vec2 wind_direction, bool land) {
+	float slope = land? 1.0 - dot(elevation_gradient, vec3(0,1,0)) : 0.0;
+	float uphill = max(dot(wind_direction, -elevation_gradient.xz), 0.0);
+	return uphill * slope * uOrograpicEffect;
+}
+
 void main() {
 
 	ivec2 texel = ivec2(gl_FragCoord);
 
 	float elevation = read(uElevationMap, texel).r;
+	vec3 elevation_gradient = gradient(uElevationMap, texel, 5);
 	float temperature = read(uTemperatureMap, texel).r;
 	float humidity = read(uHumidityMap, texel).r;
 	vec2 wind_direction = normalize(texture(uCirculationMap, Texinates).rg);
 	float wind_speed = texture(uCirculationMap, Texinates).b;
 	bool land = elevation > uSeaLevel;
 
-	vec3 elevation_gradient = gradient(uElevationMap, texel, 5);
-	float slope = 1.0 - dot(elevation_gradient, vec3(0,1,0));
-	// vec3 temperature_gradient = gradient(uTemperatureMap, texel, 10);
-	// float temperature_slope = dot(temperature_gradient, vec3(0,1,0));
-
-	float uphill = max(dot(wind_direction, -elevation_gradient.xz), 0.0);
-	float orographic_effect = land? uphill * slope * uOrograpicEffect : 0.0;
+	float orographic_effect = calculate_orograpic_effect(elevation_gradient, wind_direction, land);
 
 	float base = base_precipitation();
-	float orographic = humidity * (temperature + orographic_effect);
-	float precipitation = min(0.5 * base + 1.25 * orographic, 1.0);
+	float general = humidity * temperature;
+	float orographic = humidity * orographic_effect;
+	float precipitation = min(1.1 * (0.5 * base + general + orographic), 1.0);
 
 	Output.r = precipitation;
 	Output.a = 1.0;
