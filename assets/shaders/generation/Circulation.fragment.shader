@@ -132,11 +132,11 @@ void main() {
 		} else if(Texinates.x < 0.5) {
 			Output.b = calculate_density(texel);
 		} else if(Texinates.x < 0.75) {
-			Output.r = max(-flow.y, 0.0);
-			Output.g = max(flow.y, 0.0);
+			Output.r = max(-flow.y*1.5, 0.0);
+			Output.g = max(flow.y*1.5, 0.0);
 		} else {
-			Output.r = max(-flow.x, 0.0);
-			Output.g = max(flow.x, 0.0);
+			Output.r = max(-flow.x*2.5, 0.0);
+			Output.g = max(flow.x*2.5, 0.0);
 		}
 	}
 
