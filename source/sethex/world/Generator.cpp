@@ -333,7 +333,7 @@ namespace tenjix {
 			static float circulation_intensity = 1.0, orograpic_effect = 1.0;
 			static float bathymetry_scale = 1.0, topography_scale = 1.0, height_scale = 1.0;
 
-			static float maximum_elevation = 10000.0f, maximum_precipitation = 80.0f, maximum_temperature = +45.0f, minimum_temperature = -25.0f, lapse_rate = 6.5f;
+			static float maximum_elevation = 10000.0f, maximum_precipitation = 80.0f, maximum_temperature = +45.0f, minimum_temperature = -25.0f, lapse_rate = 9.0f;
 			float temperature_range = maximum_temperature - minimum_temperature;
 
 			auto convert_to_celcius = [&](uint8 temperature) {
@@ -848,6 +848,9 @@ namespace tenjix {
 					thresholds.mountain = 0.40f;
 					thresholds.snowcap = 0.55f;
 					equator_distance_factor = 0.0f;
+					lapse_rate = 9.0f;
+					transpiration_factor = 0.5f;
+					humidity_saturation = 50.0f;
 					wrap_horizontally = true;
 					update_tectonic = true;
 					break;
@@ -872,6 +875,9 @@ namespace tenjix {
 					thresholds.snowcap = 0.55f;
 					equator_distance_factor = -0.15f;
 					equator_distance_power = 15;
+					lapse_rate = 9.0f;
+					transpiration_factor = 0.5f;
+					humidity_saturation = 50.0f;
 					wrap_horizontally = true;
 					update_tectonic = true;
 					break;
@@ -896,7 +902,9 @@ namespace tenjix {
 					thresholds.snowcap = 0.55f;
 					equator_distance_factor = -0.4f;
 					equator_distance_power = 15;
+					lapse_rate = 9.0f;
 					transpiration_factor = 0.5f;
+					humidity_saturation = 50.0f;
 					wrap_horizontally = true;
 					update_tectonic = true;
 					break;
@@ -921,7 +929,9 @@ namespace tenjix {
 					thresholds.snowcap = 0.55f;
 					equator_distance_factor = -0.4f;
 					equator_distance_power = 15;
+					lapse_rate = 9.0f;
 					transpiration_factor = 0.5f;
+					humidity_saturation = 50.0f;
 					wrap_horizontally = true;
 					update_tectonic = true;
 					break;
@@ -959,15 +969,17 @@ namespace tenjix {
 			//ui::Text("elevation range [%.5f, %.5f] (%s [-1, +1])", elevation_minimum, elevation_maximum, (elevation_minimum >= -1.0f and elevation_maximum <= 1.0f) ? "lies within" : "exceeds");
 
 			if (map_hovered) {
-				auto mouse_position = signed2(ui::GetIO().MousePos) - map_position;
-				auto coordinates = (float2(mouse_position) / float2(map_resolution) * 2.0f - 1.0f) * float2(180, 90);
-				auto elevation = (elevation_map->getValue(mouse_position) - sealevel) * maximum_elevation;
-				auto temperature = convert_to_celcius(temperature_map->getValue(mouse_position));
+				auto actual_mouse_position = signed2(ui::GetIO().MousePos) - map_position;
+				auto uniform_mouse_position = (float2(actual_mouse_position) / float2(display_resolution));
+				auto pixel = signed2(uniform_mouse_position  * float2(map_resolution));
+				auto coordinates = (uniform_mouse_position * 2.0f - 1.0f) * float2(180, 90);
+				auto elevation = (elevation_map->getValue(pixel) - sealevel) * maximum_elevation;
+				auto temperature = convert_to_celcius(temperature_map->getValue(pixel));
 				//temperature = normalize_temperature(temperature_map->getValue(mouse_position));
-				auto precipitation = precipitation_map->getValue(mouse_position) / 255.0f * maximum_precipitation;
-				auto biome = get_biome_name(biome_map->getPixel(mouse_position));
+				auto precipitation = precipitation_map->getValue(pixel) / 255.0f * maximum_precipitation;
+				auto biome = get_biome_name(biome_map->getPixel(pixel));
 				ui::Text(u8"Position: %i, %i \nCoordinates: %+4.1f°, %+4.1f° \nElevation: %.1fm \nTemperature: %.1f°C \nPrecipitation: %.1fkg/m² \nBiome: %s",
-						 mouse_position.x, mouse_position.y, coordinates.x, coordinates.y, elevation, temperature, precipitation, biome);
+						 pixel.x, pixel.y, coordinates.x, coordinates.y, elevation, temperature, precipitation, biome);
 			} else {
 				ui::PushItemWidth(-250);
 				ui::Text("Use the mouse pointer to examine map details.");
@@ -1022,7 +1034,7 @@ namespace tenjix {
 
 					if (ui::CollapsingHeader("Temperature")) {
 						update_topography |= ui::SliderPercentage("Equator", equator, -1.0f, 1.0f, "%+.0f%%", 1.0f, 0.0f);
-						update_topography |= ui::SliderFloat("Lapse Rate", lapse_rate, 0.0f, 20.0f, u8"-%.1f °C/km", 1.0f, 10.0f);
+						update_topography |= ui::SliderFloat("Lapse Rate", lapse_rate, 0.0f, 20.0f, u8"-%.1f °C/km", 1.0f, 9.0f);
 						update_topography |= ui::SliderFloat("Minimum Temperature", minimum_temperature, -100.0f, 0.0f, u8"%+.1f °C", 1.0f, -25.0f);
 						update_topography |= ui::SliderFloat("Maximum Temperature", maximum_temperature, 0.0f, 100.0f, u8"%+.1f °C", 1.0f, +45.0f);
 						update_climate |= ui::SliderFloat("Evaporation", evaporation_factor, 0.0f, 10.0f, "%.3f", 2.0f, 1.0f);
