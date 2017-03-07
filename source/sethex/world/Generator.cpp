@@ -261,7 +261,7 @@ namespace tenjix {
 				return biome_colors.deep_ocean; // deep ocean
 			}
 			// water
-			if (elevation < sealevel) {
+			if (elevation <= sealevel) {
 				water_pixels++;
 				// deep ocean
 				if (elevation < sealevel - 0.5f) return biome_colors.deep_ocean;
