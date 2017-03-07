@@ -28,10 +28,10 @@ vec2 to_signed_range(vec2 value) { return (value - 0.5) * 2.0; }
 vec3 to_signed_range(vec3 value) { return (value - 0.5) * 2.0; }
 vec4 to_signed_range(vec4 value) { return (value - 0.5) * 2.0; }
 
-// creates a rotation matrix
+// creates a rotation two-dimensional matrix
 mat2 rotation(float angle) {
-	float sinus = sin(angle), cosinus = cos(angle);
-	return mat2(cosinus, -sinus, sinus, cosinus);
+	float sine = sin(angle), cosine = cos(angle);
+	return mat2(cosine, -sine, sine, cosine);
 }
 
 // projects "value" into the wrapping range "range_begin" to "range_end"

@@ -11,6 +11,7 @@ uniform sampler2D uTemperatureMap;
 
 uniform float uEquator = 0.0;
 uniform float uBaseDensityInfluence = 2.0;
+uniform bool uDensityIncreasesWithTemperature = true;
 uniform bool uDebug = false;
 
 in vec2 Texinates;
@@ -48,7 +49,9 @@ float calculate_base_density(ivec2 texel) {
 // calculates air density based on circulation cells and temperature
 float calculate_density(ivec2 texel) {
 	texel = limit(texel, map_size);
-	return (uBaseDensityInfluence * calculate_base_density(texel) + get_temperature(texel)) / (uBaseDensityInfluence + 1.0);
+	float base = calculate_base_density(texel);
+	float deviation = uDensityIncreasesWithTemperature? get_temperature(texel) : 1.0 - get_temperature(texel);
+	return (uBaseDensityInfluence * base + deviation) / (uBaseDensityInfluence + 1.0);
 }
 
 // calculates air density deltas between opposing neighbor cells of the given texel
@@ -65,43 +68,39 @@ vec4 calculate_density_delta(ivec2 texel, int distance = 1) {
 	return delta;
 }
 
-// calculates air pressure based on air dentity deltas surrounding the given texel
-vec4 calculate_pressure(ivec2 texel, int octaves = 1, float decline = 0.5) {
-	vec4 pressure = vec4(0.0);
+// calculates air exchange based on air dentity deltas surrounding the given texel
+vec4 calculate_air_exchange(ivec2 texel, int octaves = 1, float decline = 0.5) {
+	vec4 exchange = vec4(0.0);
 	float intensity = 1.0;
 	float range = 0.0;
 	for (int octave = 0; octave < octaves; octave++) {
-		pressure += intensity * calculate_density_delta(texel, int(exp2(octave)));
+		exchange += intensity * calculate_density_delta(texel, int(exp2(octave)));
 		range += intensity;
 		intensity *= decline;
 	}
-	return pressure / range;
+	return exchange / range;
 }
 
 // deflects air flow depending on hemisphere and flow spead
 vec2 apply_coriolis_effect(ivec2 texel, vec2 flow) {
 	float latitude = float(texel.y) / map_size.y;
-	float equator = 0.5;
+	float equator = to_unsigned_range(uEquator);
 	float direction = sign(latitude - equator);
-	// todo: maybe don't deflect horizontal flow?
-	return rotation(Pi_Half * direction * length(flow)) * flow;
+	return rotation(Tau_Quarter * direction * length(flow)) * flow;
 }
 
-// calculates air flow at the given texel based on air pressure
-vec2 calculate_flow(ivec2 texel) {
+// calculates air flow at the given texel based on air exchange
+vec2 calculate_air_flow(ivec2 texel) {
 	vec2 east_direction = vec2(1, 0);
 	vec2 north_direction = vec2(0, 1);
 	vec2 northeast_direction = vec2(Sqrt_2_Inverse);
 	vec2 southeast_direction = vec2(Sqrt_2_Inverse, -Sqrt_2_Inverse);
 
-	vec4 pressure = calculate_pressure(texel, 7);
+	vec4 exchange = calculate_air_exchange(texel, 7);
+	float exchange_coefficient = 1.5;
+	exchange = clamp(exchange * exchange_coefficient, -1.0, 1.0);
 
-	float pressure_coefficient = 1.5;
-	pressure = clamp(pressure * pressure_coefficient, -1.0, 1.0);
-
-	vec2 flow = east_direction * pressure.x + north_direction * pressure.y + northeast_direction * pressure.z + southeast_direction * pressure.w;
-	// flow = pressure.xy;
-
+	vec2 flow = east_direction * exchange.x + north_direction * exchange.y + northeast_direction * exchange.z + southeast_direction * exchange.w;
 	flow = apply_coriolis_effect(texel, flow);
 
 	return flow;
@@ -110,7 +109,7 @@ vec2 calculate_flow(ivec2 texel) {
 // calculates the air flow gradient of the given pixel
 vec3 calculate_gradient(ivec2 texel) {
 	// return normalize(vec3(convert_flow_to_color(calculate_flow(texel)), 1.0));
-	vec2 flow = calculate_flow(texel);
+	vec2 flow = calculate_air_flow(texel);
 	return normalize(vec3(flow.x, 1.0, flow.y));
 }
 
@@ -119,7 +118,7 @@ void main() {
 	map_size = textureSize(uTemperatureMap, 0);
 	ivec2 texel = ivec2(gl_FragCoord);
 	
-	vec2 flow = calculate_flow(texel);
+	vec2 flow = calculate_air_flow(texel);
 
 	Output.rg = normalize(flow);
 	Output.b = length(flow);
@@ -128,15 +127,15 @@ void main() {
 	if(uDebug) {
 		Output.rgb = vec3(0.0);
 		if(Texinates.x < 0.25) {
-			Output.b = calculate_base_density(texel);
-		} else if(Texinates.x < 0.5) {
 			Output.b = calculate_density(texel);
+		} else if(Texinates.x < 0.5) {
+			Output.b = length(flow)*2.5;
 		} else if(Texinates.x < 0.75) {
 			Output.r = max(-flow.y*1.5, 0.0);
 			Output.g = max(flow.y*1.5, 0.0);
 		} else {
-			Output.r = max(-flow.x*2.5, 0.0);
-			Output.g = max(flow.x*2.5, 0.0);
+			Output.r = max(-flow.x*3.0, 0.0);
+			Output.g = max(flow.x*3.0, 0.0);
 		}
 	}
 
