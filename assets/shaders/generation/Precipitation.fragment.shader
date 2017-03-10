@@ -75,11 +75,8 @@ void main() {
 
 	float orographic_effect = calculate_orograpic_effect(elevation_gradient, wind_direction, land);
 
-	float base = estimate_base_precipitation();
-	float general = humidity * temperature;
-	float orographic = humidity * orographic_effect;
-	float estimated = (1.0 - uCirculation) * base;
-	float simulated = (2.0 * uCirculation) * (general + orographic);
+	float estimated = (1.0 - uCirculation) * estimate_base_precipitation();
+	float simulated = (2.0 * uCirculation) * (temperature + orographic_effect) * humidity;
 	float precipitation = float(land) * uIntensity * (estimated + simulated);
 
 	Output.r = precipitation;
