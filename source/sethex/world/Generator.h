@@ -9,6 +9,8 @@ namespace tenjix {
 
 		class Generator {
 
+			bool use_high_resolution = false;
+
 			const Lot<String> elevation_source_list { "CPU Simplex Noise", "GPU Simplex Noise", "Bathymetry & Topography Maps", "Elevation Map" };
 			enum Elevation_Source { CPU_Noise, GPU_Noise, Elevation_Maps, Elevation_Map };
 			int elevation_source = CPU_Noise;

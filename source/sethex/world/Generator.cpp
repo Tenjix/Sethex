@@ -346,7 +346,7 @@ namespace tenjix {
 				return temperature_in_degrees / temperature_range_from_zero;
 			};
 
-			static const unsigned2 map_resolution = { 1600, 900 };
+			static const unsigned2 map_resolution = use_high_resolution ? unsigned2(1600, 900) : unsigned2(800, 450);
 
 			if (not elevation_frame.initialized()) {
 				elevation_frame.framebuffer(map_resolution, GL_R32F);
@@ -812,6 +812,8 @@ namespace tenjix {
 
 			ui::BeginChild("map properties");
 			static int selected_preset = 0;
+			static float resulution_factor = use_high_resolution ? 1.0f : 0.5f;
+			static float resulution_adjustment = use_high_resolution ? 0.0f : 230.0f;
 			if (ui::Combo("Preset##selection", selected_preset, { "Default", "Alpha World", "Beta World", "Continents", "Islands", "Earth" })) switch (selected_preset) {
 				case 0:
 					elevation_source = CPU_Noise;
@@ -832,8 +834,8 @@ namespace tenjix {
 				case 1:
 					elevation_source = CPU_Noise;
 					seed = 0;
-					scale = 2.0f;
-					shift = { -300, -5420 };
+					scale = 2.0f * resulution_factor;
+					shift = { -300 * resulution_factor, -5420 + resulution_adjustment };
 					current_options = {};
 					current_options.octaves = 5;
 					use_continents = true;
@@ -859,8 +861,8 @@ namespace tenjix {
 				case 2:
 					elevation_source = CPU_Noise;
 					seed = 0;
-					scale = 1.32f;
-					shift = { -320, -4880 };
+					scale = 1.32f * resulution_factor;
+					shift = { -320 * resulution_factor, -4880 + resulution_adjustment };
 					current_options = {};
 					current_options.octaves = 5;
 					use_continents = true;
@@ -887,8 +889,8 @@ namespace tenjix {
 				case 3:
 					elevation_source = GPU_Noise;
 					seed = 0;
-					scale = 1.15f;
-					shift = { 360, -8160 };
+					scale = 1.15f * resulution_factor;
+					shift = { 360 * resulution_factor, -8160 + resulution_adjustment };
 					current_options = {};
 					current_options.octaves = 5;
 					use_continents = true;
@@ -915,8 +917,8 @@ namespace tenjix {
 				case 4:
 					elevation_source = GPU_Noise;
 					seed = 0;
-					scale = 1.0f;
-					shift = { 330, -2330 };
+					scale = 2.0f * resulution_factor;
+					shift = { 360 * resulution_factor, 2720 + resulution_adjustment };
 					current_options = {};
 					current_options.octaves = 5;
 					use_continents = true;
