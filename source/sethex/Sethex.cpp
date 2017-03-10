@@ -42,7 +42,7 @@ namespace tenjix {
 		};
 
 		void Sethex::setup() {
-			redirectOutputStreams(redirection_buffer);
+			//redirectOutputStreams(redirection_buffer);
 			getWindow()->setTitle("Sethex");
 			print("Sethex by Tenjix (Thomas Würstle)");
 			print("Cinder Version ", CINDER_VERSION_STR);
@@ -88,5 +88,6 @@ namespace tenjix {
 
 CINDER_APP(tenjix::sethex::Sethex, RendererGl(RendererGl::Options().version(4, 5)), [&](App::Settings* settings) {
 	settings->setWindowSize(1000, 560);
+	settings->setConsoleWindowEnabled();
 	settings->disableFrameRate();
 })
