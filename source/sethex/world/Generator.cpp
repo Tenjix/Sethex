@@ -480,7 +480,8 @@ namespace tenjix {
 						temperature_frame.uniform("uElevationScale", maximum_elevation * 0.001f);
 						temperature_frame.render({ elevation_frame.texture() });
 						temperature_map = Channel::create(temperature_frame.texture()->createSource());
-					} else {
+					}
+					if (elevation_source == CPU_Noise) {
 						if (not temperature_map) temperature_map = Channel::create(map_resolution.x, map_resolution.y);
 						auto buffer_iterator = elevation_buffer->getIter();
 						auto elevation_iterator = elevation_map->getIter();
@@ -1023,10 +1024,8 @@ namespace tenjix {
 						update_tectonic |= ui::SliderFloat("Persistence", current_options.persistence, 0.0f, 2.0f, "%.2f", 1.0f, saved_options.persistence); ui::Hint("Ctrl+Click to enter an exact value");
 						update_tectonic |= ui::SliderFloat("Power", current_options.power, 0.1f, 10.0f, "%.2f", 1.0f, saved_options.power); ui::Hint("Ctrl+Click to enter an exact value");
 						update_tectonic |= ui::Checkbox("Wrap Horizontally", wrap_horizontally);
-						if (elevation_source == CPU_Noise) {
-							ui::SameLine();
-							update_tectonic |= ui::Checkbox("Continents##use", use_continents);
-						}
+						ui::SameLine();
+						update_tectonic |= ui::Checkbox("Continents##use", use_continents);
 						if (use_continents) {
 							update_tectonic |= ui::SliderFloat("Continent Amplitude", continent_amplitude, 0.0f, 10.0f, "%.2f", 1.0f, 1.0f);
 							update_tectonic |= ui::SliderFloat("Continent Frequency", continent_frequency, 0.0f, 2.0f, "%.2f", 1.0f, 0.5f);
