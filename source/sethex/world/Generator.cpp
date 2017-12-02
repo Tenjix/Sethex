@@ -522,7 +522,7 @@ namespace tenjix {
 						circulation_frame.uniform("uTemperatureMap", 0);
 						circulation_frame.uniform("uEquator", equator);
 						circulation_frame.uniform("uDebug", debug_circulation);
-						circulation_frame.render({ elevation_frame.texture() });
+						circulation_frame.render({ temperature_frame.texture() });
 						circulation_map = Surface::create(circulation_frame.texture()->createSource());
 						// calculate evapotranspiration
 						evapotranspiration_frame.uniform("uElevationMap", 0);
