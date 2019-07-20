@@ -1,4 +1,4 @@
-﻿#include "Generator.h"
+#include "Generator.h"
 
 #include <cinder/interface/Imgui.h>
 #include <cinder/utilities/Assets.h>
@@ -370,6 +370,7 @@ namespace tenjix {
 					elevation_frame.fragment("shaders/generation/Elevation-Sampling.fragment.shader", update_tectonic, Frame::Origin::LowerLeft);
 					height_map.load(height_file);
 					resources_available = height_map.loaded() and all_compiled();
+					break;
 				case Elevation_Maps:
 					elevation_frame.fragment("shaders/generation/Elevation-Composing.fragment.shader", update_tectonic, Frame::Origin::LowerLeft);
 					bathymetry_map.load(bathymetry_file);
