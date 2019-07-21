@@ -88,7 +88,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>source;..\Utilities\source;..\Ensys\source;..\..\..\External Projects\C++\Cinder\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>source;Utilities\source;Ensys\source;..\..\..\External Projects\C++\Cinder\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_WIN32_WINNT=0x0601;_WINDOWS;NOMINMAX;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -106,7 +106,7 @@
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>Ensys.lib;OpenGL32.lib;cinder-$(PlatformToolset)_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\Ensys\binary\output\$(Platform)\$(Configuration);..\..\..\External Projects\C++\Cinder\lib\msw\$(PlatformTarget)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>Ensys\binary\output\$(Platform)\$(Configuration);..\..\..\External Projects\C++\Cinder\lib\msw\$(PlatformTarget)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>

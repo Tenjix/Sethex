@@ -1,0 +1,6 @@
+[submodule "Utilities"]
+	path = Utilities
+	url = https://github.com/Tenjix/Utilities.git
+[submodule "Ensys"]
+	path = Ensys
+	url = https://github.com/Tenjix/Ensys.git
