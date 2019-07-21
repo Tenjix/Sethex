@@ -13,15 +13,15 @@ namespace tenjix {
 
 			const Lot<String> elevation_source_list { "CPU Simplex Noise", "GPU Simplex Noise", "Bathymetry & Topography Maps", "Elevation Map" };
 			enum Elevation_Source { CPU_Noise, GPU_Noise, Elevation_Maps, Elevation_Map };
-			int elevation_source = CPU_Noise;
+			int elevation_source = GPU_Noise;
 
 			const Lot<String> circulation_type_list { "Coriolis dependend Linear Interpolation", "Coriolis deflected Pressure Differential" };
 			enum Circulation_Type { Linear, Deflected };
-			int circulation_type = Linear;
+			int circulation_type = Deflected;
 
 			const Lot<String> biome_determination_list { "Elevation based", "Elevation & Temperature & Precipitation based" };
 			enum Biome_Determination { Elevation_Based, Climate_Based };
-			int biome_determination = Elevation_Based;
+			int biome_determination = Climate_Based;
 
 			const Lot<String> map_display_list_circulation_deflected { "Biome", "Elevation", "Temperature", "Circulation", "Evapotranspiration", "Humidity", "Precipitation" };
 			const Lot<String> map_display_list_circulation_linear { "Biome", "Elevation", "Temperature", "Precipitation" };

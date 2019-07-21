@@ -10,8 +10,7 @@
 uniform sampler2D uTemperatureMap;
 
 uniform float uEquator = 0.0;
-uniform float uBaseDensityInfluence = 2.0;
-uniform bool uDensityIncreasesWithTemperature = true;
+uniform float uTemperatureInfluence = 0.5;
 uniform bool uDebug = false;
 
 in vec2 Texinates;
@@ -49,9 +48,9 @@ float calculate_base_density(ivec2 texel) {
 // calculates air density based on circulation cells and temperature
 float calculate_density(ivec2 texel) {
 	texel = limit(texel, map_size);
-	float base = calculate_base_density(texel);
-	float deviation = uDensityIncreasesWithTemperature? get_temperature(texel) : 1.0 - get_temperature(texel);
-	return (uBaseDensityInfluence * base + deviation) / (uBaseDensityInfluence + 1.0);
+	float density = calculate_base_density(texel);
+	float temperature = get_temperature(texel);
+	return density * (1.0 - uTemperatureInfluence) + (1.0 - temperature) * uTemperatureInfluence;
 }
 
 // calculates air density deltas between opposing neighbor cells of the given texel

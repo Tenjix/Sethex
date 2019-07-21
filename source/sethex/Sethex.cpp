@@ -87,7 +87,7 @@ namespace tenjix {
 }
 
 CINDER_APP(tenjix::sethex::Sethex, RendererGl(RendererGl::Options().version(4, 5)), [&](App::Settings* settings) {
-	settings->setWindowSize(1000, 560);
-	settings->setConsoleWindowEnabled();
+	settings->setWindowSize(1600, 900);
+	//settings->setConsoleWindowEnabled();
 	settings->disableFrameRate();
 })

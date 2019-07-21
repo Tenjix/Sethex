@@ -370,6 +370,7 @@ namespace tenjix {
 					elevation_frame.fragment("shaders/generation/Elevation-Sampling.fragment.shader", update_tectonic, Frame::Origin::LowerLeft);
 					height_map.load(height_file);
 					resources_available = height_map.loaded() and all_compiled();
+					break;
 				case Elevation_Maps:
 					elevation_frame.fragment("shaders/generation/Elevation-Composing.fragment.shader", update_tectonic, Frame::Origin::LowerLeft);
 					bathymetry_map.load(bathymetry_file);
@@ -522,7 +523,7 @@ namespace tenjix {
 						circulation_frame.uniform("uTemperatureMap", 0);
 						circulation_frame.uniform("uEquator", equator);
 						circulation_frame.uniform("uDebug", debug_circulation);
-						circulation_frame.render({ elevation_frame.texture() });
+						circulation_frame.render({ temperature_frame.texture() });
 						circulation_map = Surface::create(circulation_frame.texture()->createSource());
 						// calculate evapotranspiration
 						evapotranspiration_frame.uniform("uElevationMap", 0);
@@ -787,6 +788,9 @@ namespace tenjix {
 					update_tectonic = drag != Zero or roll != Zero;
 				}
 				//ui::Image(world_texture, world_texture->getSize());
+				ui::Text("Use the mouse pointer to examine map details.");
+				ui::Text("Drag the map to shift the generation origin.");
+				ui::Text("Uncheck the generator in the list on the left, to apply the map on the world.");
 			} else {
 				if (elevation_source == Elevation_Map) {
 					if (not height_map.loaded()) {
@@ -812,12 +816,17 @@ namespace tenjix {
 			ui::SameLine();
 
 			ui::BeginChild("map properties");
-			static int selected_preset = 0;
+			static int selected_preset = 3;
 			static float resulution_factor = use_high_resolution ? 1.0f : 0.5f;
 			static float resulution_adjustment = use_high_resolution ? 0.0f : 230.0f;
-			if (ui::Combo("Preset##selection", selected_preset, { "Default", "Alpha World", "Beta World", "Continents", "Islands", "Earth" })) switch (selected_preset) {
+			static bool selection_initialized = false;
+			bool update_selection = ui::Combo("Preset##selection", selected_preset, { "Default", "Alpha World", "Beta World", "Continents", "Islands", "Earth" }) || !selection_initialized;
+			selection_initialized = true;
+			if (update_selection) switch (selected_preset) {
 				case 0:
-					elevation_source = CPU_Noise;
+					elevation_source = GPU_Noise;
+					biome_determination = Climate_Based;
+					circulation_type = Deflected;
 					seed = 0;
 					scale = 1.0f;
 					shift = {};
@@ -972,10 +981,12 @@ namespace tenjix {
 
 			}
 
-			unsigned pixels = map_texture->getWidth() * map_texture->getHeight();
-			float water_percentage = 100.0f * water_pixels / pixels;
-			ui::Text("%.1f%% Water, %.1f%% Land", water_percentage, 100.0f - water_percentage);
-			//ui::Text("elevation range [%.5f, %.5f] (%s [-1, +1])", elevation_minimum, elevation_maximum, (elevation_minimum >= -1.0f and elevation_maximum <= 1.0f) ? "lies within" : "exceeds");
+			if (map_texture) {
+				unsigned pixels = map_texture->getWidth() * map_texture->getHeight();
+				float water_percentage = 100.0f * water_pixels / pixels;
+				ui::Text("%.1f%% Water, %.1f%% Land", water_percentage, 100.0f - water_percentage);
+				//ui::Text("elevation range [%.5f, %.5f] (%s [-1, +1])", elevation_minimum, elevation_maximum, (elevation_minimum >= -1.0f and elevation_maximum <= 1.0f) ? "lies within" : "exceeds");
+			}
 
 			if (map_hovered) {
 				auto actual_mouse_position = signed2(ui::GetIO().MousePos) - map_position;
@@ -991,7 +1002,6 @@ namespace tenjix {
 						 pixel.x, pixel.y, coordinates.x, coordinates.y, elevation, temperature, precipitation, biome);
 			} else {
 				ui::PushItemWidth(-250);
-				ui::Text("Use the mouse pointer to examine map details.");
 
 				if (ui::CollapsingHeader("Elevation")) {
 					if (ui::Combo("Source##elevation", elevation_source, elevation_source_list)) {

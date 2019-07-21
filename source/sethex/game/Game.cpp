@@ -42,17 +42,12 @@ namespace tenjix {
 			display.camera.lookAt(float3(0, 250, 0.001), float3(0));
 			display.camera.setFarClip(1000.0f);
 
-			shared<Mesh> cube = Mesh::create(geom::Cube());
-
-			string vertex_shader = loadString(loadAsset("shaders/Wireframe.vertex.shader"));
-			string fragment_shader = loadString(loadAsset("shaders/Wireframe.fragment.shader"));
-			string geometry_shader = loadString(loadAsset("shaders/Wireframe.geometry.shader"));
-			shared<Shader> wireframe_shader = Shader::create(vertex_shader, fragment_shader, geometry_shader);
-
 			Entity test_object = world.create_entity("test-object", [](Entity entity) {
+				entity.tag("Player");
 				entity.add<Geometry>()
 					//.mesh(Mesh::create(geom::Plane() >> geom::Rotate(quaternion(float3()))))
 					.mesh(Mesh::create(geom::Cube()))
+					.scaling(float3(0.25f))
 					.position(float3(0.0, 0.01, 0.0));
 				entity.add<Material>()
 					.add(Texture::create(loadImage(loadAsset("textures/test.diffuse.png"))))
@@ -61,10 +56,6 @@ namespace tenjix {
 					.add(Texture::create(loadImage(loadAsset("textures/test.normal.png"))));
 				entity.deactivate();
 			});
-
-			Entity player = world.create_entity("entity").tag("Player").deactivate();
-			player.add<Geometry>().mesh(cube).scaling(float3(0.25f));
-			player.add<Material>().shader(wireframe_shader);
 
 			wd::watch("shaders/*", [this, test_object](const fs::path& path) {
 				//print("compiling shader ...");
@@ -128,7 +119,7 @@ namespace tenjix {
 			static bool render_test_object = false;
 			static bool render_infos = false;
 			static bool render_demo = false;
-			static bool render_generator = false;
+			static bool render_generator = true;
 			static bool enable_tile_system = true;
 			static bool vertical_synchronization = true;
 			bool update_world = false;
@@ -136,17 +127,11 @@ namespace tenjix {
 				ui::ScopedWindow ui_window("Menu", ImGuiWindowFlags_NoTitleBar);
 				ui::Checkbox("Background", &render_background);
 				if (ui::Checkbox("World", &render_world)) {
-					auto tiles = world.find_entities_beginning("Tile #");
-					tiles.begin()->get<Instantiable>().active = render_world;
+					world.get<TileSystem>().get_entities().begin()->get<Instantiable>().active = render_world;
 				}
 				if (ui::Checkbox("Entity", &render_entity)) {
-					auto entity = world.find_entity("entity");
-					if (render_entity) entity.activate();
-					else entity.deactivate();
-				}
-				if (ui::Checkbox("Cube", &render_test_object)) {
 					auto entity = world.find_entity("test-object");
-					if (render_test_object) entity.activate();
+					if (render_entity) entity.activate();
 					else entity.deactivate();
 				}
 				ui::Checkbox("Infos", &render_infos);
